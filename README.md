@@ -30,6 +30,7 @@ Styles Guide(s): [link]
 - List all dependencies here
 - Don't forget to include versions
 
+- Roblox Studio (auto-updated): Hosts the game environment.
 - Rojo v2.1.2: used to sync codes between IDE and game environment.
 - Luau v1.0.5: used to provide support for Roblox's Luau language.
 - Luau Language Server: Implementates a language server for Luau programming language.
@@ -38,6 +39,7 @@ Styles Guide(s): [link]
 ### Downloading Dependencies
 Describe where to download the dependencies here. Some will likely require a web download. Provide links here. For IDE extensions, make sure your project works with the free version of them, and detail which IDE(s) these are available in. 
 
+- Roblox Studio: https://setup.rbxcdn.com/RobloxStudioInstaller.exe
 - Rojo via VSCode Marketplace: https://marketplace.visualstudio.com/items?itemName=evaera.vscode-rojo
 - Luau via VSCode Marketplace: https://marketplace.visualstudio.com/items?itemName=UnderMyWheel.roblox-lua
 - Luau Language Server via VSCode Marketplace: https://marketplace.visualstudio.com/items?itemName=JohnnyMorganz.luau-lsp
