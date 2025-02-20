@@ -1,4 +1,4 @@
-# Empire Tycoon : [Team 23]
+# Empire Tycoon by Team 23
 # Members
 Project Manager: Clayton Houser (@claytakiler)
 Communications Lead: Justin Russell (@justinat0r)
