@@ -1,9 +1,13 @@
 # Empire Tycoon by Team 23
 # Members
 Project Manager: Clayton Houser (@claytakiler)
+
 Communications Lead: Justin Russell (@justinat0r)
+
 Git Master: Mujtaba Malik (@m-malik622)
+
 Design Lead: Kauai Cooper (yet to be added)
+
 Quality Assurance Tester: Khánh Giang "Gerald" Lê (@g34rmeister)
 
 # About Our Software
