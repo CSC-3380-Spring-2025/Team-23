@@ -20,7 +20,7 @@ The game has strategic elements and gives players the ability to switch point of
 - MacOS
 - Windows 10, 11
 # Important Links
-Kanban Board: [link]\
+Kanban Board: https://imperium-studio.atlassian.net/jira/software/projects/ET/boards/2
 Designs: [link]\
 Styles Guide(s): [link]
 
