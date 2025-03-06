@@ -4,14 +4,13 @@ local DataStoreService = game:GetService("DataStoreService")
 --other scripts
 local DefaultPlayerData = require(game.ServerScriptService.Server.DefaultPlayerData)
 local SessionDataManager = require(game.ServerScriptService.Server.SessionDataManager)
-local Test = require(game.ServerScriptService.Server.Test)
-
 
 --globals
 local database = DataStoreService:GetDataStore("data")
+local Data = {}
 
 -- Function to load player data
-local function loadPlayerData(player: Player) : boolean
+function Data:loadPlayerData(player: Player) : boolean
 	local key: string = tostring(player.UserId)
 	local success: boolean
 	local errorMsg: any = nil
@@ -36,7 +35,7 @@ local function loadPlayerData(player: Player) : boolean
 		if playerData then
 			SessionDataManager:SetPlayerData(player, playerData)
 		else --if first time joining server
-			SessionDataManager:SetPlayerData(player,DefaultPlayerData.data)
+			SessionDataManager:SetPlayerData(player,DefaultPlayerData.data)			
 		end
 		return true
 	else
@@ -47,11 +46,9 @@ local function loadPlayerData(player: Player) : boolean
 end
 
 -- Function to save player data
-local function savePlayerData(player: Player) : boolean
-	print("Entering save player")
+function Data:savePlayerData(player: Player) : boolean
 	local key: string = tostring(player.UserId)
 	local data = SessionDataManager:GetPlayerData(player)
-
 	if data then
 		local success: boolean
 		local errorMsg: any = nil
@@ -78,22 +75,12 @@ local function savePlayerData(player: Player) : boolean
 	end
 end
 
--- Player joins: Load their data
-game.Players.PlayerAdded:Connect(function(player)
-	loadPlayerData(player) 
-end)
-
--- Player leaves: Save their data
-game.Players.PlayerRemoving:Connect(function(player)
-	savePlayerData(player)
-end)
-
 
 --Save all player data on server shutdown
-function ServerShutdown()
+function Data:ServerShutdown()
 	print("Server shutting down...")
 	for _, player in ipairs(Players:GetPlayers()) do
-		local saved = savePlayerData(player)
+		local saved = self.savePlayerData(player)
 		if not saved then
 			warn("Failed to save data for", player.Name, "before shutdown")
 		end
@@ -101,4 +88,4 @@ function ServerShutdown()
 	task.wait(3) -- Give time for saving before the server closes
 end
 
-game:BindToClose(ServerShutdown)
+return Data
