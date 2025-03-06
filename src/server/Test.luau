@@ -1,5 +1,5 @@
 local Test = {}
-local SessionDataManager = require(game.ServerScriptService.Server.SessionDataManager)
+local SessionDataManager = require(game.ServerScriptService.Server.DataServices.SessionDataManager)
 --set currency to 2 for gold without using interface
 function Test:assignGold(player)
 	print("entered function")
