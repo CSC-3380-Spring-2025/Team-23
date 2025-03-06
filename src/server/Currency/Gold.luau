@@ -1,4 +1,4 @@
-local Currency = require(game.ServerScriptService.server.Currency)
+local Currency = require(game.ServerScriptService.server.Currency.Currency)
 
 local Gold = setmetatable({}, { __index = Currency }) -- Inheriting from Currency
 Gold.__index = Gold

@@ -2,15 +2,15 @@
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 --other scripts
-local DefaultPlayerData = require(game.ServerScriptService.Server.DefaultPlayerData)
-local SessionDataManager = require(game.ServerScriptService.Server.SessionDataManager)
+local DefaultPlayerData = require(game.ServerScriptService.Server.DataServices.DefaultPlayerData)
+local SessionDataManager = require(game.ServerScriptService.Server.DataServices.SessionDataManager)
 
 --globals
 local database = DataStoreService:GetDataStore("data")
 local Data = {}
 
 -- Function to load player data
-function Data:loadPlayerData(player: Player) : boolean
+function Data:loadPlayerData(player: Player): boolean
 	local key: string = tostring(player.UserId)
 	local success: boolean
 	local errorMsg: any = nil
@@ -20,7 +20,7 @@ function Data:loadPlayerData(player: Player) : boolean
 
 	repeat
 		success, errorMsg = pcall(function()
-			playerData=database:GetAsync(key)
+			playerData = database:GetAsync(key)
 		end)
 		if not success then
 			warn(errorMsg)
@@ -35,7 +35,7 @@ function Data:loadPlayerData(player: Player) : boolean
 		if playerData then
 			SessionDataManager:SetPlayerData(player, playerData)
 		else --if first time joining server
-			SessionDataManager:SetPlayerData(player,DefaultPlayerData.data)			
+			SessionDataManager:SetPlayerData(player, DefaultPlayerData.data)
 		end
 		return true
 	else
@@ -46,7 +46,7 @@ function Data:loadPlayerData(player: Player) : boolean
 end
 
 -- Function to save player data
-function Data:savePlayerData(player: Player) : boolean
+function Data:savePlayerData(player: Player): boolean
 	local key: string = tostring(player.UserId)
 	local data = SessionDataManager:GetPlayerData(player)
 	if data then
@@ -74,7 +74,6 @@ function Data:savePlayerData(player: Player) : boolean
 		end
 	end
 end
-
 
 --Save all player data on server shutdown
 function Data:ServerShutdown()
