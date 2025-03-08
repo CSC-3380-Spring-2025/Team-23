@@ -6,19 +6,19 @@ In addition, it provides multiple utilities for an Object below.
 local Object = {}
 Object.__index = Object
 
-function Object.new(Name)
-    local self = setmetatable({}, Object)
+function Object.new(Name: string) : any
+    local self: any = setmetatable({}, Object)
     self.Name = Name or error("Class did not define \"Name\" when instantiated", 5)
     return self
 end
 
-local function NestedCopy(Instance)
+local function NestedCopy(Instance: any) : any
     if type(Instance) ~= "table" then
         --Not table, recursive copy not needed.
         return Instance
     else
         --Table so need to create independant copy
-        local tableCopy = {}
+        local tableCopy: any = {}
         for key, value in pairs(Instance) do
             tableCopy[key] = NestedCopy(value)
         end
@@ -26,8 +26,8 @@ local function NestedCopy(Instance)
     end
 end
 
-function Object:IsInstance(Instance, Parent)
-    local metaTable = getmetatable(Instance)
+function Object:IsInstance(Instance: any, Parent: any) : boolean
+    local metaTable: any = getmetatable(Instance)
 
     --Iterate over the instance's meta table
     while metaTable do
@@ -39,8 +39,8 @@ function Object:IsInstance(Instance, Parent)
     return false --Not instance of parent
 end
 
-function Object:IsObject(Instance, Object)
-    local metaTable = getmetatable(Instance)
+function Object:IsObject(Instance: any, Object: any) : boolean
+    local metaTable: any = getmetatable(Instance)
     if metaTable == Object then
         return true
     else
@@ -48,9 +48,9 @@ function Object:IsObject(Instance, Object)
     end
 end
 
-function Object:TypeCast(Instance, Cast)
+function Object:TypeCast(Instance: any, Cast: any) : any
     if Object:IsInstance(Instance, Cast) then
-        local castedInstance = Cast.new(Instance.Name)
+        local castedInstance: any = Cast.new(Instance.Name)
 
         --Preserve the fields of previous instance if consistent with super class
         --local currentTable = getmetatable(Instance)
@@ -70,7 +70,7 @@ function Object:TypeCast(Instance, Cast)
     end
 end
 
-function Object:Equal(InstanceA, InstanceB)
+function Object:Equal(InstanceA: any, InstanceB: any) : boolean
     --Check if keys in instance a are in instance b/have same value
     for key, value in pairs(InstanceA) do
         if type(value) == "table" then
@@ -92,7 +92,7 @@ function Object:Equal(InstanceA, InstanceB)
     return true--All keys and values match
 end
 
-function Object:Supersedes(Class)
+function Object:Supersedes(Class: any)
     Class.__index = Class
     setmetatable(Class, self)
 end
