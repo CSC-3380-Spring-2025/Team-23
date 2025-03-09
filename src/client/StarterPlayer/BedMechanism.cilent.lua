@@ -30,7 +30,6 @@ local function onPromptTriggered(Prompt, Player) : ()
 		local sleepPause: BasePart = bed:FindFirstChild("SleepPause")
 		Prompt.Enabled = false
 		
-		print("I'm sleeping")
 		--- animation
 		hum.WalkSpeed = 0 --freezes the player
 		hum.JumpPower = 0
@@ -43,16 +42,13 @@ local function onPromptTriggered(Prompt, Player) : ()
 		
 		--- health
 		bed.WakeUp.Enabled = true
-		bed.Touched:Connect(function(characterPart)
-		print("Bed touchy touchy") --debug statment
 		local humanoid: Humanoid = localPlayer.Character.Humanoid --function to get humanoid from character
 		print(humanoid.Health)
-			while(hrp.Anchored == false) do
+		while(bed.WakeUp.Enabled == true) do
 			task.wait(1)
 			humanoid.Health = humanoid.Health + 1
 			end
-			
-		end)
+		
 		
 		
 	elseif Prompt.Name == "WakeUp" then
