@@ -1,23 +1,37 @@
 --[[
- * SessionDataManager - A module script that handles the storage and management of all players' data while in server.
+ * SessionDataManager - A singleton object that handles the storage and management of all players' data while in server.
  *
  * The data is indexed by the player's user ID, and it can be accessed, modified, or removed as needed during the game session.
  *
  * The sessionData table is the primary storage for player data, with the user ID as the key and the player's data table as the value.
- * To view the structure of a player's data table, refer to the DefaultPlayerData module script.  
+ * To view the structure of a player's data table, refer to the DefaultPlayerData module script. 
  *
 ]]  
 
-local Object = require(script.Parent.Object)
+local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local SessionDataManager: table = {}
 Object:Supersedes(SessionDataManager)
 
+local sessionDataManagerInstance = nil
 
-function SessionDataManager.new(Name)
-    local self = Object.new(Name)
+
+--[[
+* new - Singleton constructor for the class.
+*
+* @return - Returns the instance of SessionDataManager. If an instance has already been created, calling this constructor again will return the
+* existing instance instead of creating a new one.
+]]
+function SessionDataManager.new()
+	print("in session data manger constructor")
+	if sessionDataManagerInstance then
+		return sessionDataManagerInstance -- Return existing instance
+	end
+	
+	local self = Object.new("SessionDataManager")
 	self.sessionData = {} -- Table to store all players' session data
-    setmetatable(self, SessionDataManager)
-    return self
+	setmetatable(self, SessionDataManager)
+	sessionDataManagerInstance = self
+	return self
 end
 
 --[[
@@ -29,6 +43,7 @@ end
 * if found, or nil if the player’s data is not found.
 ]]
 function SessionDataManager:GetPlayerData(userID: number): table?
+	print("In get player data in session data manager", self)
 	if not self.sessionData[userID] then
 		return nil
 	end
