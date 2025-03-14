@@ -1,87 +1,220 @@
---[[
- * SessionDataManager - A singleton object that handles the storage and management of all players' data while in server.
- *
- * The data is indexed by the player's user ID, and it can be accessed, modified, or removed as needed during the game session.
- *
- * The sessionData table is the primary storage for player data, with the user ID as the key and the player's data table as the value.
- * To view the structure of a player's data table, refer to the DefaultPlayerData module script. 
- *
-]]  
-
+--[[ObjectGeneration - Handles spawning items in terrain]]
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
-local SessionDataManager: table = {}
-Object:Supersedes(SessionDataManager)
 
-local sessionDataManagerInstance = nil
+local spawnLocation = workspace:FindFirstChild("SpawnLocation")  -- Retrieve SpawnLocation
+local basePlate = workspace:FindFirstChild("Baseplate")  -- Retrieve Baseplate
 
 
---[[
-* new - Singleton constructor for the class.
-*
-* @return - Returns the instance of SessionDataManager. If an instance has already been created, calling this constructor again will return the
-* existing instance instead of creating a new one.
-]]
-function SessionDataManager.new()
-	print("in session data manger constructor")
-	if sessionDataManagerInstance then
-		return sessionDataManagerInstance -- Return existing instance
-	end
-	
-	local self = Object.new("SessionDataManager")
-	self.sessionData = {} -- Table to store all players' session data
-	setmetatable(self, SessionDataManager)
-	sessionDataManagerInstance = self
+local ObjectGeneration = {}
+Object:Supersedes(ObjectGeneration)
+
+--Constructor where the only parameter is the name of the instance
+function ObjectGeneration.new(Name) 
+	local self = Object.new(Name)
+	setmetatable(self, ObjectGeneration)  
 	return self
 end
 
 --[[
-* GetPlayerData - Retrieves the data table for a specific player from the sessionData table.
-*
-* @userID - The user id for the player whose data is to be retrieved.
-*
-* @return - Returns the player's data table from the sessionData global table
-* if found, or nil if the player’s data is not found.
+ * shouldSpawnItem - Determines if an item should spawn based on its probability of spawning.
+ * 
+ * @probability - A float between 0.00 and 1 that represents the probability of the item spawning when the function is called.
+ * For example: 0.5 = 50% chance of spawning.
+ * 
+ * @return - boolean - Returns true if the item should spawn. Otherwise returns false.
 ]]
-function SessionDataManager:GetPlayerData(userID: number): table?
-	print("In get player data in session data manager", self)
-	if not self.sessionData[userID] then
-		return nil
-	end
-	return self.sessionData[userID]
+local function shouldSpawnItem(probability: number): boolean
+	local randomNumber = math.random(0.01, 1.00)
+	return randomNumber <= probability
 end
-
---[[  
-	* SetPlayerData - Adds or changes player's data to the global sessionData table.
-	*
-	* @userID - The user id for the player whose data is to be retrieved.
-	*
-	* @return - Returns true if the data was successfully added to the
-	* sessionData table, or false if the data was not provided.
-]]
-function SessionDataManager:SetPlayerData(userID: number, data: table): boolean
-	if data then
-		self.sessionData[userID] = data
-		return true
-	end
-	return false
-end
-
 
 --[[
-	* RemovePlayerData - Removes a player from the global sessionData table.
-	*
-	* @userID - The user ID of the player whose data is to be removed.
-	*
-	* @return - Returns true if the player's data was successfully removed,
-	* or false if the player’s data was not found in the sessionData table.
+ * IsPartAtPosition - Checks if any part of an object is at a given position, excluding certain objects
+ * like the terrain where the item spawns on, the spawn location, and the base plate. This is useful to detect if other items 
+ * like trees or buildings are present at the spawn position.
+ * 
+ * @position - The position (Vector3) where the check will be performed.
+ * @terrain - The terrain (Instance) in which the item will spawn, which will be excluded from the check.
+ * 
+ * @return - boolean - Returns true if one or more parts are found at the position (excluding terrain, 
+ *                     spawn location, and base plate), otherwise returns false.
 ]]
-function SessionDataManager:RemovePlayerData(userID: number): boolean
-	if self.sessionData[userID] then
-		self.sessionData[userID] = nil
-		return true
+local function IsPartAtPosition(position: Vector3, terrain: Instance): boolean
+	local overlapParams = OverlapParams.new()
+	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+	overlapParams.FilterDescendantsInstances = { terrain, spawnLocation, basePlate }
+
+	local parts = workspace:GetPartBoundsInBox(CFrame.new(position), Vector3.one * 0.1, overlapParams)
+	print("Parts detected", parts)
+	return #parts > 0
+end
+
+local function SpawnToolOrModelAtRandom(
+	centerX: number,
+	centerZ: number,
+	areaLength: number,
+	areaWidth: number,
+	itemToSpawn: Model | Tool,
+	terrain: Instance,
+	spawnDelay: number,
+	spawnChance: number
+)
+	while true do
+		task.wait(spawnDelay)
+		if shouldSpawnItem(spawnChance) then
+			local validSpawn: boolean = false
+			repeat
+				local X: number = math.random(centerX - (areaLength / 2), centerX + (areaLength / 2))
+				local Z: number = math.random(centerZ - (areaWidth / 2), centerZ + (areaWidth / 2))
+				--set up ray
+				local raycastParams: RaycastParams = RaycastParams.new()
+				raycastParams.FilterType = Enum.RaycastFilterType.Include
+				raycastParams.FilterDescendantsInstances = { terrain }
+				local origin: Vector3 = Vector3.new(X, 690, Z)
+				local direction: Vector3 = Vector3.new(0, -690, 0) -- Goes directly downward
+				local ray: Workspace = workspace:Raycast(origin, direction, raycastParams)
+				--spawn item when ray hits terrain floor
+				if ray then
+					local spawnLocation: Vector3 = ray.Position
+					--if item exists at spawn location, regenerate new spawn location
+					if IsPartAtPosition(Vector3.new(spawnLocation), terrain) then
+						validSpawn = true
+					else
+						local spawnedItem: Model | Tool = itemToSpawn:Clone()
+						spawnedItem:SetPrimaryPartCFrame(CFrame.new(spawnLocation))
+						spawnedItem.Parent = workspace
+					end
+				else
+					print("Error: ray did not hit terrain")
+					return false
+				end
+			until validSpawn
+		end
 	end
-	return false
 end
 
 
-return SessionDataManager
+local function SpawnBasePartAtRandom(
+	centerX: number,
+	centerZ: number,
+	areaLength: number,
+	areaWidth: number,
+	itemToSpawn: BasePart,
+	terrain: Instance,
+	spawnDelay: number,
+	spawnChance: number
+)
+	while true do
+		task.wait(spawnDelay)
+		if shouldSpawnItem(spawnChance) then
+			repeat
+				local validSpawn: boolean = true
+				local X: number = math.random(centerX - (areaLength / 2), centerX + (areaLength / 2))
+				local Z: number = math.random(centerZ - (areaWidth / 2), centerZ + (areaWidth / 2))
+				--set up ray
+				local raycastParams: RaycastParams = RaycastParams.new()
+				raycastParams.FilterType = Enum.RaycastFilterType.Include
+				raycastParams.FilterDescendantsInstances = { terrain }
+				local origin: Vector3 = Vector3.new(X, 690, Z)
+				local direction: Vector3 = Vector3.new(0, -690, 0) -- Goes directly downward
+				local ray: Workspace = workspace:Raycast(origin, direction, raycastParams)
+				--spawn item when ray hits terrain floor
+				if ray then
+					local spawnLocation: Vector3 = ray.Position
+					--if item exists at spawn location, regenerate new spawn location
+					if IsPartAtPosition(Vector3.new(spawnLocation), terrain) then
+						validSpawn = false
+					else
+						local spawnedItem: BasePart = itemToSpawn:Clone()
+						spawnedItem.position = spawnLocation
+						spawnedItem.Parent = workspace
+					end
+				else
+					print("Error: ray did not hit terrain")
+					return false
+				end
+			until validSpawn
+		end
+	end
+end
+
+--[[
+ * SpawnItemAtRandom - Spawns a given item at a random location within a specified area on the terrain floor.
+ * The item has a specified chance of spawning every n seconds.
+ * The function uses raycasting to ensure that the item spawns on the terrain floor, regardless of the y-position 
+ * of the terrain, and checks if the position is clear of other items before spawning.
+ * 
+ * @centerX - The x-coordinate of the center of the spawning area (number). Usually found via terrain.Position.X
+ * @centerZ - The z-coordinate of the center of the spawning area (number). Usually found via terrain.Position.Z
+ * @areaLength - The length of the spawning area (number). Usually found via terrain.size.X
+ * @areaWidth - The width of the spawning area (number). Usually found via terrain.size.z
+ * @itemToSpawn - The item to spawn, which can be any Object (Model/Tool).
+ * @terrain - The terrain object in which the item will spawn. This refers to the terrain floor and will be used to 
+ *            determine where the item is placed.
+ * @spawnDelay - The delay in seconds between each potential spawn (number).
+ * @spawnChance - The chance that the item will spawn on each delay (number between 0.01 and 1.00).
+ * 
+ * @return - Boolean. This function returns true if it ends without ever hiting an exception. If an error occurs anywhere 
+ * in the function, the function will return false
+ * 
+ * Notes:
+ * - This function uses raycasting to ensure that the item spawns on the terrain floor, regardless of the terrain's 
+ *   current y-position.
+ * - The function checks if there are any other parts at the spawn location using `IsPartAtPosition`. If other parts 
+ *   (like trees or buildings) are detected, it will regenerate the spawn location.
+ * - If the item is a tool, it must have a PrimaryPart in order to be positioned correctly. If a tool does not have 
+ *   a PrimaryPart, the program will return false.
+ * 
+ * Example usage:
+ * ObjectGeneration:SpawnItemAtRandom(0, 0, 50, 50, someItem, terrain, 5, 50)
+ * This will attempt to spawn `someItem` within a 50x50 area centered at (0, 0) on the terrain, 
+ * with a 50% chance every 5 seconds.
+]]
+function ObjectGeneration:SpawnItemAtRandom(
+	centerX: number,
+	centerZ: number,
+	areaLength: number,
+	areaWidth: number,
+	itemToSpawn: Object,
+	terrain: Instance,
+	spawnDelay: number,
+	spawnChance: number
+)
+	if itemToSpawn:IsA("Tool") or itemToSpawn:IsA("Model") then
+		if itemToSpawn.PrimaryPart then
+			return SpawnToolOrModelAtRandom(
+				centerX,
+				centerZ,
+				areaLength,
+				areaWidth,
+				itemToSpawn,
+				terrain,
+				spawnDelay,
+				spawnChance
+			)
+		else
+			print("Item or Model to spawn does not posses a primary part. Please give it one")
+			return false
+		end
+	elseif itemToSpawn:IsA("BasePart") then
+		return SpawnBasePartAtRandom(
+			centerX,
+			centerZ,
+			areaLength,
+			areaWidth,
+			itemToSpawn,
+			terrain,
+			spawnDelay,
+			spawnChance
+		)
+	else
+		print("Item passed in needs to be a tool, model, or basepart")
+		return false
+	end
+end
+
+function ObjectGeneration:SpawnItemsAtOnce()
+	--todo: implement function where n items spawn all at once in random locations aorund a given area
+end
+
+return ObjectGeneration
