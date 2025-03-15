@@ -1,11 +1,12 @@
-local Currency = require(game.ServerScriptService.server.Currency.Currency)
+local Currency = require(script.Parent.Gold)
 
-local Gold = setmetatable({}, { __index = Currency }) -- Inheriting from Currency
-Gold.__index = Gold
+local Gold = {}
+Currency:Supersedes(Gold) --Gold inherits from Currency superclass
 
-function Gold.new(amount: number)
-    local self = setmetatable(Currency.new("Gold", amount), Gold) 
-    return self
+function Gold.new(Name: string, amount: number)
+	local self = Currency.new(Name, amount)
+	setmetatable(self, Gold) 
+	return self
 end
 
 return Gold
