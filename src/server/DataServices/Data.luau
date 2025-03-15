@@ -71,9 +71,9 @@ function Data:loadPlayerData(player: Player): boolean
 		print("Connected to database")
 		if playerData then
 			
-			SessionDataManagerInstance:SetPlayerData(player.UserId, playerData)
+			SessionDataManagerInstance:setPlayerData(player.UserId, playerData)
 		else --if first time joining server
-			SessionDataManagerInstance:SetPlayerData(player.UserId, DefaultPlayerData.data)
+			SessionDataManagerInstance:setPlayerData(player.UserId, DefaultPlayerData.data)
 		end
 		return true
 	else
@@ -101,7 +101,7 @@ end
 ]]
 function Data:savePlayerData(player: Player): boolean
 	local key: string = tostring(player.UserId)
-	local data = SessionDataManagerInstance:GetPlayerData(player.UserId)
+	local data = SessionDataManagerInstance:getPlayerData(player.UserId)
 	print("data from data",data)
 	if data then
 		local success: boolean
