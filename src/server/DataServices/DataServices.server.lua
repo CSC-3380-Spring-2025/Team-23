@@ -9,9 +9,10 @@ local Players = game:GetService("Players")
 local Data = require(script.Parent.Data)
 local BuildingDataManager = require(script.Parent.BuildingDataManager)
 
+
 local function RunData()
+
 	--Initialize classes to call
-	local BuildingDataManagerInstance = BuildingDataManager.new("BuildingDataManagerInstance")
 	local DataInstance = Data.new("DataInstance")
 	-- Player joins: Load their data
 	game.Players.PlayerAdded:Connect(function(player)

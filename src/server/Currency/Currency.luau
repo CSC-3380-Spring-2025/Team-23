@@ -45,6 +45,7 @@ end
  * @return - None
 ]]
 function Currency:SetAmount(value)
+
     if value > 0 then 
     self.amount = value
     end
@@ -61,6 +62,7 @@ end
  * @return - None 
 ]]
 function Currency:ModAmountBy(value)
+
     if value > 0 then
         self.amount = self.amount + value
     else 

@@ -5,7 +5,6 @@ local SessionDataManager = require(script.Parent.SessionDataManager)
 --services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-
 local BuildingDataManager = {}
 Object:Supersedes(BuildingDataManager) 
 
@@ -18,6 +17,7 @@ function BuildingDataManager.new(Name) --parameter that asks for Name
 	setmetatable(self, BuildingDataManager)  
 	return self
 end
+
 
 local function LoadBasePart(player: Player, playerPlotOrigin: CFrame, buildingType: string, buildingData: table): boolean
 	print("entered loadbase part for", buildingData)

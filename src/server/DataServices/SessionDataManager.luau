@@ -61,6 +61,7 @@ end
 	* @return - Returns true if the data was successfully added to the
 	* sessionData table, or false if the data was not provided.
 ]]
+
 function SessionDataManager:SetPlayerData(userID: number, data: table): boolean
 	if data then
 		self.mutexLock:Lock()
