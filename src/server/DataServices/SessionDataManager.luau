@@ -42,7 +42,7 @@ end
 * @return - Returns the player's data table from the sessionData global table
 * if found, or nil if the player’s data is not found.
 ]]
-function SessionDataManager:GetPlayerData(userID: number): table?
+function SessionDataManager:getPlayerData(userID: number): table?
 	print("In get player data in session data manager", self)
 	if not self.sessionData[userID] then
 		return nil
@@ -58,7 +58,7 @@ end
 	* @return - Returns true if the data was successfully added to the
 	* sessionData table, or false if the data was not provided.
 ]]
-function SessionDataManager:SetPlayerData(userID: number, data: table): boolean
+function SessionDataManager:setPlayerData(userID: number, data: table): boolean
 	if data then
 		self.sessionData[userID] = data
 		return true
@@ -75,7 +75,7 @@ end
 	* @return - Returns true if the player's data was successfully removed,
 	* or false if the player’s data was not found in the sessionData table.
 ]]
-function SessionDataManager:RemovePlayerData(userID: number): boolean
+function SessionDataManager:removePlayerData(userID: number): boolean
 	if self.sessionData[userID] then
 		self.sessionData[userID] = nil
 		return true
