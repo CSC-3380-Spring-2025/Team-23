@@ -23,7 +23,7 @@ end
  * 
  * @return - boolean - Returns true if the item should spawn. Otherwise returns false.
 ]]
-local function shouldSpawnItem(probability: number): boolean
+local function ShouldSpawnItem(probability: number): boolean
 	local randomNumber = math.random(0.01, 1.00)
 	return randomNumber <= probability
 end
@@ -61,7 +61,7 @@ local function SpawnToolOrModelAtRandom(
 )
 	while true do
 		task.wait(spawnDelay)
-		if shouldSpawnItem(spawnChance) then
+		if ShouldSpawnItem(spawnChance) then
 			local validSpawn: boolean = false
 			repeat
 				local X: number = math.random(centerX - (areaLength / 2), centerX + (areaLength / 2))
@@ -106,7 +106,7 @@ local function SpawnBasePartAtRandom(
 )
 	while true do
 		task.wait(spawnDelay)
-		if shouldSpawnItem(spawnChance) then
+		if ShouldSpawnItem(spawnChance) then
 			repeat
 				local validSpawn: boolean = true
 				local X: number = math.random(centerX - (areaLength / 2), centerX + (areaLength / 2))

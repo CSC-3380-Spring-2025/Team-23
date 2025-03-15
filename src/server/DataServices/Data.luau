@@ -47,7 +47,9 @@ end
  * @return - boolean - Returns true if data retrieval is successful, otherwise  
  *                     returns false and kicks the player from the game.  
 ]]  
-function Data:loadPlayerData(player: Player): boolean
+
+function Data:LoadPlayerData(player: Player): boolean
+
 	local key: string = tostring(player.UserId)
 	local success: boolean
 	local errorMsg: any = nil
@@ -70,10 +72,9 @@ function Data:loadPlayerData(player: Player): boolean
 	if success then
 		print("Connected to database")
 		if playerData then
-			
-			SessionDataManagerInstance:setPlayerData(player.UserId, playerData)
+			SessionDataManagerInstance:SetPlayerData(player.UserId, playerData)
 		else --if first time joining server
-			SessionDataManagerInstance:setPlayerData(player.UserId, DefaultPlayerData.data)
+			SessionDataManagerInstance:SetPlayerData(player.UserId, DefaultPlayerData.data)
 		end
 		return true
 	else
@@ -99,10 +100,11 @@ end
  * @return - boolean - Returns true if data is successfully saved, otherwise
  *                     returns false if an error occurs during saving.
 ]]
-function Data:savePlayerData(player: Player): boolean
+function Data:SavePlayerData(player: Player): boolean
 	local key: string = tostring(player.UserId)
-	local data = SessionDataManagerInstance:getPlayerData(player.UserId)
+	local data = SessionDataManagerInstance:GetPlayerData(player.UserId)
 	print("data from data",data)
+
 	if data then
 		local success: boolean
 		local errorMsg: any = nil

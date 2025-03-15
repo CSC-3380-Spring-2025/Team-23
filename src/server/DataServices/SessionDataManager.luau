@@ -6,14 +6,19 @@
  * The sessionData table is the primary storage for player data, with the user ID as the key and the player's data table as the value.
  * To view the structure of a player's data table, refer to the DefaultPlayerData module script. 
  *
+ * NOTE: This system utilizes ServerMutexSeq to ensure safe concurrent access to player data.  
+
 ]]  
 
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
+local ServerMutexSeq = require(game.ServerScriptService.Server.ServerUtilities.ServerMutexSeq)
 local SessionDataManager: table = {}
 Object:Supersedes(SessionDataManager)
 
+--Instance variables
 local sessionDataManagerInstance = nil
-
+local sessionData = nil -- Table to store all players' session data
+local mutexLock = nil
 
 --[[
 * new - Singleton constructor for the class.
@@ -22,13 +27,12 @@ local sessionDataManagerInstance = nil
 * existing instance instead of creating a new one.
 ]]
 function SessionDataManager.new()
-	print("in session data manger constructor")
 	if sessionDataManagerInstance then
 		return sessionDataManagerInstance -- Return existing instance
 	end
-	
 	local self = Object.new("SessionDataManager")
-	self.sessionData = {} -- Table to store all players' session data
+	self.sessionData = {} 
+	self.mutexLock = ServerMutexSeq.new("SessionDataManagerMutexKey")
 	setmetatable(self, SessionDataManager)
 	sessionDataManagerInstance = self
 	return self
@@ -42,12 +46,11 @@ end
 * @return - Returns the player's data table from the sessionData global table
 * if found, or nil if the player’s data is not found.
 ]]
-function SessionDataManager:getPlayerData(userID: number): table?
-	print("In get player data in session data manager", self)
-	if not self.sessionData[userID] then
-		return nil
-	end
-	return self.sessionData[userID]
+function SessionDataManager:GetPlayerData(userID: number): table?
+	self.mutexLock:Lock()
+	local userData: table = self.sessionData[userID] or nil
+	self.mutexLock:Unlock()
+	return userData
 end
 
 --[[  
@@ -58,9 +61,12 @@ end
 	* @return - Returns true if the data was successfully added to the
 	* sessionData table, or false if the data was not provided.
 ]]
-function SessionDataManager:setPlayerData(userID: number, data: table): boolean
+
+function SessionDataManager:SetPlayerData(userID: number, data: table): boolean
 	if data then
+		self.mutexLock:Lock()
 		self.sessionData[userID] = data
+		self.mutexLock:Unlock()
 		return true
 	end
 	return false
@@ -75,11 +81,14 @@ end
 	* @return - Returns true if the player's data was successfully removed,
 	* or false if the player’s data was not found in the sessionData table.
 ]]
-function SessionDataManager:removePlayerData(userID: number): boolean
+function SessionDataManager:RemovePlayerData(userID: number): boolean
+	self.mutexLock:Lock()
 	if self.sessionData[userID] then
 		self.sessionData[userID] = nil
+		self.mutexLock:Unlock()
 		return true
 	end
+	self.mutexLock:Unlock()
 	return false
 end
 

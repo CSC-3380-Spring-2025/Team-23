@@ -27,12 +27,12 @@ function Currency.new(Name: string, amount: number)
 	return self
 end
 
-function Currency:getAmount()
 --[[
  * getAmount - Retrieves the current amount of currency.
  * 
  * @return - (number) - The current value of `self.amount`.
 ]]
+function Currency:GetAmount()
     return self.amount
 end
 
@@ -44,7 +44,8 @@ end
  *
  * @return - None
 ]]
-function Currency:setAmount(value)
+function Currency:SetAmount(value)
+
     if value > 0 then 
     self.amount = value
     end
@@ -60,7 +61,8 @@ end
  * 
  * @return - None 
 ]]
-function Currency:modAmountBy(value)
+function Currency:ModAmountBy(value)
+
     if value > 0 then
         self.amount = self.amount + value
     else 
