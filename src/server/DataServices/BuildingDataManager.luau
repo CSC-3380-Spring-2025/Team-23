@@ -19,7 +19,7 @@ function BuildingDataManager.new(Name) --parameter that asks for Name
 	return self
 end
 
-local function loadBasePart(player: Player, playerPlotOrigin: CFrame, buildingType: string, buildingData: table): boolean
+local function LoadBasePart(player: Player, playerPlotOrigin: CFrame, buildingType: string, buildingData: table): boolean
 	print("entered loadbase part for", buildingData)
 	local buildingName: string = buildingData.buildingName
 
@@ -84,7 +84,7 @@ local function loadBasePart(player: Player, playerPlotOrigin: CFrame, buildingTy
 end
 
 
-local function loadModel(player: Player, playerPlotOrigin: CFrame, buildingType: string, buildingData: table): boolean
+local function LoadModel(player: Player, playerPlotOrigin: CFrame, buildingType: string, buildingData: table): boolean
 	local buildingName: string = buildingData.buildingName
 
 	-- Check if the building template exists in ReplicatedStorage
@@ -152,8 +152,8 @@ local function loadModel(player: Player, playerPlotOrigin: CFrame, buildingType:
 end
 
 
-function BuildingDataManager:loadBuildings(player: Player, playerPlotOrigin: CFrame)
-	local playerData: table = SessionDataManagerInstance:getPlayerData(player.UserId)
+function BuildingDataManager:LoadBuildings(player: Player, playerPlotOrigin: CFrame)
+	local playerData: table = SessionDataManagerInstance:GetPlayerData(player.UserId)
 	print("entering load buildings. data im working with", playerData)
 	local playerBuildingData: table = playerData.Base
 	for buildingType, buildingTypeData in pairs(playerBuildingData) do
@@ -161,9 +161,9 @@ function BuildingDataManager:loadBuildings(player: Player, playerPlotOrigin: CFr
 			print("buuliding", building)
 			local buildingMade: boolean = false
 			if building.buildingType == "basePart" then
-				buildingMade = loadBasePart(player, playerPlotOrigin, buildingType, building)
+				buildingMade = LoadBasePart(player, playerPlotOrigin, buildingType, building)
 			elseif building.buildingType == "model" then
-				buildingMade = loadModel(player, playerPlotOrigin, buildingType, building)	
+				buildingMade = LoadModel(player, playerPlotOrigin, buildingType, building)	
 			else
 				warn("building type not recognised", building.buildingType, "for", building.buildingName)
 			end
@@ -219,14 +219,14 @@ function BuildingDataManager:loadBuildings(player: Player, playerPlotOrigin: CFr
 		Backpack = {}
 	}
 	
-	SessionDataManagerInstance:setPlayerData(player.UserId, test_table)
+	SessionDataManagerInstance:SetPlayerData(player.UserId, test_table)
 	]]
 end
 
 
 
-function BuildingDataManager:saveBuildings(player: Player)
-	local playerData: table = SessionDataManagerInstance:getPlayerData(player.UserId)
+function BuildingDataManager:SaveBuildings(player: Player)
+	local playerData: table = SessionDataManagerInstance:GetPlayerData(player.UserId)
 	local playerBuildingData: table = playerData.Base
 	-- Check if Users PlayerPlot exists in Workspace
 	local playerPlot = Workspace:FindFirstChild("PlayerPlots")
