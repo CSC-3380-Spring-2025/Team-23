@@ -23,6 +23,8 @@ end
 
 local myPickaxe = Pickaxe.new("Pickaxe 1", myPickaxeTool)
 
+local myPickaxeInstance = Pickaxe.new("Pickaxe 2", myPickaxeTool)
+
 print(myPickaxe.Name)
 
 myPickaxeTool.Activated:Connect(function()
