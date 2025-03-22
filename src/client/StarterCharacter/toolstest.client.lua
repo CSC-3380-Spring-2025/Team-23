@@ -21,12 +21,17 @@ if isFirst then
     isFirst = false
 end
 
-local myPickaxe = Pickaxe.new("Pickaxe 1", myPickaxeTool)
+local whiteList = {
+    "Coal"
+}
 
-local myPickaxeInstance = Pickaxe.new("Pickaxe 2", myPickaxeTool)
+local myPickaxe = Pickaxe.new("Pickaxe 1", myPickaxeTool, 5, 8, 10, whiteList)
 
 print(myPickaxe.Name)
 
 myPickaxeTool.Activated:Connect(function()
-    myPickaxe:Activated()
+    local success = myPickaxe:Activate()
+    if success then
+        myPickaxe:CoolDown() 
+    end
 end)
