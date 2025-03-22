@@ -3,9 +3,11 @@ local Players : Players = game:GetService("Players")
 
 --Variables
 local Backpacks : array = {} -- Holds all of the backpacks of all players
+local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 
 local Handler = {}
 Handler.__index = Handler
+Object:Supersedes(Handler)
 
 local BackpackSize : number = 150 -- How many items can be put into the backpack at its base?
 local BackpackWeights : array = { -- Weight limits for different types of encumberance
@@ -261,7 +263,7 @@ function Handler:CreateBackpack(Player : Player, Size : number) : ()
 end
 
 function Handler.new(Name, Amount)
-	local self: table = setmetatable({}, Handler)
+	local self: table = Object.new(Name)
 	self.Name = Name or "Item"
 	self.Amount = Amount or 0
 	return self
