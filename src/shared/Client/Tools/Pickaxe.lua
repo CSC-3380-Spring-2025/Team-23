@@ -26,63 +26,6 @@ local oreCollectedSound = 3908308607
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
 
-local function StrikeSound(SoundId, Target)
-	local sound = Instance.new("Sound")
-	sound.SoundId = "rbxassetid://" .. SoundId
-	sound.Parent = Target
-	sound:Play()
-	print("Played audio!")
-	--Destroy to prevent memory leaks
-	sound.Ended:Once(function()
-		sound:Destroy()
-	end)
-end
-
-local function HandleIntegrity(Target, Effectiveness)
-	local integrity = Target:GetAttribute("Integrity")
-	local newIntegrity = integrity - Effectiveness
-	if newIntegrity <= 0 then
-		--Give Coal if last strike
-        --Hide ore while sound then destroy to prevent audio issues
-		Target.Transparency = 1
-		local sound = Instance.new("Sound")
-		sound.SoundId = "rbxassetid://" .. oreCollectedSound
-		sound.Parent = Target
-		sound:Play()
-		print("Played audio!")
-		--Destroy to prevent memory leaks
-		sound.Ended:Once(function()
-			sound:Destroy()
-            Target:Destroy()
-		end)
-		return true
-	else
-		--Lower integrity
-		Target:SetAttribute("Integrity", newIntegrity)
-		return false
-	end
-end
-
---Below functions are helper functions that specify behaivor of each ore type
-
-local function Iron(Target, Position, Effectiveness)
-	StrikeSound(7650220708, Target)
-	local finished = HandleIntegrity(Target, Effectiveness)
-	if finished then
-		--Give Iron
-	end
-	print(Target.Name .. " Is Iron!")
-end
-
-local function Coal(Target, Position, Effectiveness)
-	StrikeSound(7650220708, Target)
-	local finished = HandleIntegrity(Target, Effectiveness)
-	if finished then
-		--Give coal
-	end
-	print(Target.Name .. " Is Coal!")
-end
-
 local function PlayAnimation(Animation, Target)
 	local character = player.Character
 	if not character then
@@ -142,7 +85,7 @@ local function WithinDistance(Target, MaxDistance)
 		return nil
 	end
 
-	--Turn player to target
+	--Check target distance
 	local rootPart = character:FindFirstChild("HumanoidRootPart")
 	if rootPart then
 		if (rootPart.Position - Target.Position).Magnitude <= MaxDistance then
@@ -151,6 +94,63 @@ local function WithinDistance(Target, MaxDistance)
 	end
 
 	return false
+end
+
+local function StrikeSound(SoundId, Target)
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://" .. SoundId
+	sound.Parent = Target
+	sound:Play()
+	print("Played audio!")
+	--Destroy to prevent memory leaks
+	sound.Ended:Once(function()
+		sound:Destroy()
+	end)
+end
+
+local function HandleIntegrity(Target, Effectiveness)
+	local integrity = Target:GetAttribute("Integrity")
+	local newIntegrity = integrity - Effectiveness
+	if newIntegrity <= 0 then
+		--Give Coal if last strike
+        --Hide ore while sound then destroy to prevent audio issues
+		Target.Transparency = 1
+		local sound = Instance.new("Sound")
+		sound.SoundId = "rbxassetid://" .. oreCollectedSound
+		sound.Parent = Target
+		sound:Play()
+		print("Played audio!")
+		--Destroy to prevent memory leaks
+		sound.Ended:Once(function()
+			sound:Destroy()
+            Target:Destroy()
+		end)
+		return true
+	else
+		--Lower integrity
+		Target:SetAttribute("Integrity", newIntegrity)
+		return false
+	end
+end
+
+--Below functions are helper functions that specify behaivor of each ore type
+
+local function Iron(Target, Position, Effectiveness)
+	StrikeSound(7650220708, Target)
+	local finished = HandleIntegrity(Target, Effectiveness)
+	if finished then
+		--Give Iron
+	end
+	print(Target.Name .. " Is Iron!")
+end
+
+local function Coal(Target, Position, Effectiveness)
+	StrikeSound(7650220708, Target)
+	local finished = HandleIntegrity(Target, Effectiveness)
+	if finished then
+		--Give coal
+	end
+	print(Target.Name .. " Is Coal!")
 end
 
 --[[
