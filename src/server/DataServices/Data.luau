@@ -9,14 +9,14 @@
  * player data from the global session data table, which contains all active players' data.  
  *  
  * To view the structure of a player's data, refer to the DefaultPlayerData module.  
-]]  
+]]
 --services
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 --other scripts
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local DefaultPlayerData = require(script.Parent.DefaultPlayerData)
-local SessionDataManager = require(script.Parent.SessionDataManager)
+local SessionDataManager = require(game.ReplicatedStorage.Shared.Utilities.DataServices.SessionDataManager)
 
 --globals
 local Data = {}
@@ -25,13 +25,11 @@ local database = DataStoreService:GetDataStore("data")
 local SessionDataManagerInstance: table = SessionDataManager.new()
 
 --Constructor that has no parameters apart from instance name
-function Data.new(Name) 
+function Data.new(Name)
 	local self = Object.new(Name)
-	setmetatable(self, Data)  
+	setmetatable(self, Data)
 	return self
 end
-
-
 
 --[[  
  * loadPlayerData - Retrieves player data from the Roblox DataStore.  
@@ -46,10 +44,9 @@ end
  *  
  * @return - boolean - Returns true if data retrieval is successful, otherwise  
  *                     returns false and kicks the player from the game.  
-]]  
+]]
 
 function Data:LoadPlayerData(player: Player): boolean
-
 	local key: string = tostring(player.UserId)
 	local success: boolean
 	local errorMsg: any = nil
@@ -84,7 +81,6 @@ function Data:LoadPlayerData(player: Player): boolean
 	end
 end
 
-
 --[[  
  * savePlayerData - Retrieves the player's data from the global data table using the
  * SessionDataManager module. The data is then stored in the DataStore.
@@ -103,7 +99,7 @@ end
 function Data:SavePlayerData(player: Player): boolean
 	local key: string = tostring(player.UserId)
 	local data = SessionDataManagerInstance:GetPlayerData(player.UserId)
-	print("data from data",data)
+	print("data from data", data)
 
 	if data then
 		local success: boolean
@@ -130,6 +126,5 @@ function Data:SavePlayerData(player: Player): boolean
 		end
 	end
 end
-
 
 return Data

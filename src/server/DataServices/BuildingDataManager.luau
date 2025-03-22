@@ -7,7 +7,7 @@
 ]]
 --module scripts
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
-local SessionDataManager = require(script.Parent.SessionDataManager)
+local SessionDataManager = require(game.ReplicatedStorage.Shared.Utilities.DataServices.SessionDataManager)
 
 --services
 local ReplicatedStorage = game:GetService("ReplicatedStorage") --For building templates
