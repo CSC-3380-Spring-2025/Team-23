@@ -42,14 +42,21 @@ function NPC.new(Name, Rig, Health, RewardValue, Tools, SpawnPos)
     self.__Waypoints = waypoints
     self.__PathFindingTask = nil --Task set to executing the pathfinding
     self.__HomePoint = nil
-    self.__FollowTask = nil
     return self
 end
 
-local function PrepWaypoint(StartPosition, EndPositon, Self, Overwrite)
-    local path = PathfindingService:CreatePath()
+--[[
+Helper function for preparing a waypoint
+    @param StartPosition (Vector3) position to start from
+    @param EndPosition (Vector3) position to end at
+    @param Self (instance) instance of current class making this call
+    @param Overwrite (boolean) indicates weather to overwrite other set waypoints
+    @return (boolean) true on success or false on fail
+--]]
+local function PrepWaypoint(StartPosition, EndPositon, Self, Overwrite) : boolean
+    local path: Path = PathfindingService:CreatePath()
     --Wrap in pcall to detect a fail
-    local success, errorMessage = pcall(function()
+    local success: boolean, errorMessage: string = pcall(function()
         path:ComputeAsync(StartPosition, EndPositon)
     end)
 
@@ -69,7 +76,8 @@ end
 Sets a singular waypoint and cancels any linked waypoints
     SetWaypoint is only intended for a singular waypoint and does not allow for a chain of waypoints
     However SetLinkedWaypoint may extend an already existing way point set by SetWaypoint
-    @param
+    @param Position (Vector3) position of waypoint to set
+    @return (boolean) True on success or false on fail
 --]]
 function NPC:SetWaypoint(Position) : boolean
     self:CancelWaypoints()
@@ -79,6 +87,8 @@ end
 --[[
 Extends an existing waypoint, or extends the waypoint previously set in a chain
     allows for long term movement plans
+    @param Position (Vector3) position of waypoint to set
+    @return (boolean) True on success or false on fail
 --]]
 function NPC:SetLinkedWaypoint(Position) : boolean
     --If currently traversing cancel it
@@ -86,11 +96,11 @@ function NPC:SetLinkedWaypoint(Position) : boolean
         self:CancelWaypoints()
     end
     --If existing waypoint get its position as position else use current pos
-    local startPos = self.__RootPart.Position
+    local startPos: Vector3 = self.__RootPart.Position
     if self.__Waypoints ~= nil then
-        local lastSet = self.__Waypoints[#self.__Waypoints]
+        local lastSet: {PathWaypoint} = self.__Waypoints[#self.__Waypoints]
         if lastSet ~= nil then
-            local lastPoint = lastSet[#lastSet]
+            local lastPoint: PathWaypoint = lastSet[#lastSet]
             if lastPoint ~= nil then
                 startPos = lastPoint.Position
             end
@@ -99,19 +109,10 @@ function NPC:SetLinkedWaypoint(Position) : boolean
     return PrepWaypoint(startPos, Position, self, false)
 end
 
-local function RemoveElementByValue(Table, Value)
-    for index, currentValue in ipairs(Table) do
-        if Value == currentValue then
-            table.remove(Table, index) 
-            break
-        end
-    end
-end
-
 --[[
 Tells the NPC to begin traversing the current set of waypoints
 --]]
-function NPC:TraverseWaypoints()
+function NPC:TraverseWaypoints() : ()
     --Check to prevent double traverse
     if self.__PathFindingTask then
         warn("Attempted to call TraverseWaypoints() while previous call to TraverseWaypoints() is stull running")
@@ -157,44 +158,48 @@ end
 
 --[[
 Sets the exact position an NPC will attempt to return to when there are no more pathingfinding commands.
+    @param HomePointPosition (Vector3) the position that is considerd home for the NPC
 --]]
 function NPC:SetHomePoint(HomePointPosition)
     self.__HomePoint = HomePointPosition
 end
 
+--[[
+Makes the NPC return to the set home point
+--]]
 function NPC:ReturnHome()
     if not self.__HomePoint then
         warn("ReturnHome() called but no HomePoint set")
         return
     end
     self:CancelWaypoints()
-    local success = PrepWaypoint(self.__RootPart.Position, self.__HomePoint, self, true)
+    local success: boolean = PrepWaypoint(self.__RootPart.Position, self.__HomePoint, self, true)
     if success then
         self:TraverseWaypoints()
     end
 end
 
+
+--WORK IN PROGRESS START:
 --[[
 Sets an NPC to follow a given opject
     The object may be any object including a player or another NPC etc.
     Creating a waypoint will undo a follow command.
 --]]
 function NPC:Follow(Object)
-    self.__FollowTask = task.spawn(function()
-        --Cancel any other waypoints
-        
+    self:CancelWaypoints() --Cancel any prev tasks.
+    self.__PathFindingTask = task.spawn(function()
         --Start loop to follow player
-        local lastPlayerPos = nil
-        while true do
-            local currentPlayerPos = self.__RootPart.Position
-            if (not (not lastPlayerPos)) and (currentPlayerPos ~= lastPlayerPos) then
-                local success = self:SetWaypoint(currentPlayerPos)
+        local lastObjPos: Vector3 = nil
+        while true and Object do
+            local currentObjPos: Vector3 = Object.Position
+            if (not (not lastObjPos)) and (currentObjPos ~= lastObjPos) then
+                local success: boolean = self:SetWaypoint(currentObjPos)
                 if success then
                     self:TraverseWaypoints()
                 end
-
             end
-            lastPlayerPos = currentPlayerPos
+            lastObjPos = currentObjPos
         end
     end)
 end
@@ -213,5 +218,7 @@ function NPC:DropReward()
     --May NOT take ANY parameters. Must use instance variables by using self.__RewardValue
     error("Must Implement DropReward!") --Remove this to start
 end
+
+--WORK IN PROGRESS END
 
 return NPC
