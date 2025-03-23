@@ -41,6 +41,8 @@ function NPC.new(Name, Rig, Health, RewardValue, Tools, SpawnPos)
     local waypoints: {{Vector3}} = {}
     self.__Waypoints = waypoints
     self.__PathFindingTask = nil --Task set to executing the pathfinding
+    self.__HomePoint = nil
+    self.__HomePointEnabled = false
     return self
 end
 
@@ -153,7 +155,7 @@ end
 Cancels waypoints of any type
     Sends back to home point if set
 --]]
-function NPC:CancelWaypoints() : boolean
+function NPC:CancelWaypoints() : ()
     if self.__PathFindingTask then
         task.cancel(self.__PathFindingTask)
         self.__PathFindingTask = nil --Reset pathfindingtask to indicate no pathfinding
@@ -163,28 +165,39 @@ function NPC:CancelWaypoints() : boolean
         self.__Humanoid:MoveTo(self.__RootPart.Position)
     end
     self.__Waypoints = {}
-    return false
+
+    --Return to homepoint if enabled
+    if self.__HomePointEnabled then
+        if not self.__HomePoint then
+            warn("HomePoint enabled but no HomePoint set")
+            return
+        end
+        local success = self:SetWaypoint(self.__HomePoint)
+        if success then
+            self:TraverseWaypoints()
+        end
+    end
 end
 
 --[[
 Sets the exact position an NPC will attempt to return to when there are no more pathingfinding commands.
 --]]
 function NPC:SetHomePoint(HomePointPosition)
-    
+    self.__HomePoint = HomePointPosition
 end
 
 --[[
 Enables homepoint functionality
 --]]
 function NPC:EnableHomePoint()
-    
+    self.__HomePointEnabled = true
 end
 
 --[[
 Disables HomePoint functionality
 --]]
 function NPC:DisableHomePoint()
-    
+    self.__HomePointEnabled = false
 end
 
 --[[

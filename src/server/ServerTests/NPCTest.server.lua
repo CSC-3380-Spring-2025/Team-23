@@ -9,10 +9,14 @@ local NPC1 = NPC.new("NPC 1", rigsFolder.DefaultNPC, 100, 0, nil, Vector3.new(0,
 local waypoints = Workspace:FindFirstChild("PathfindingTest")
 local waypoint1 = waypoints:FindFirstChild("Waypoint1")
 local waypoint10 = waypoints:FindFirstChild("Waypoint10")
+local homePoint = waypoints:FindFirstChild("HomePoint")
 
 task.wait(5)
 local success = false
 --local success = NPC1:SetLinkedWaypoint(waypoint10.Position)
+
+NPC1:SetHomePoint(homePoint.Position)
+NPC1:EnableHomePoint()
 
 --LinkedWaypoint test
 for i = 1, 12 do
