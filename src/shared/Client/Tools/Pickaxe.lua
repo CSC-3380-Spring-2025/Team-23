@@ -15,17 +15,17 @@ Constructor for a pick axe instance
 	Name (String) name of the pickaxe
 	Tool (Tool) tool to be scripted for
 	CoolDown (number) cool down time 
-	Radious (number) number in studs you have to be in to mine an object
+	Radius (number) number in studs you have to be in to mine an object
 	Effectiveness (number) damage done to an object with each blow
 	WhiteList ({string}) tables of strings that represent the types of ore whitelsited
 --]]
-function Pickaxe.new(Name: string, Tool: Tool, CoolDown: number, Radious: number, Effectiveness: number, WhiteList: {string}?)
+function Pickaxe.new(Name: string, Tool: Tool, CoolDown: number, Radius: number, Effectiveness: number, WhiteList: {string}?)
 	local self = Object.new(Name)
 	setmetatable(self, Pickaxe)
 	self.__Tool = Tool
 	self.__CoolDown = CoolDown or 0
 	self.__Cooled = true
-	self.__Radious = Radious
+	self.__Radius = Radius
 	self.__WhiteList = WhiteList or nil
 	self.__Effectiveness = Effectiveness or error('No "Effectiveness" provided for pickaxe constructor.')
 	return self
@@ -104,7 +104,7 @@ local function CheckList(OreObject: BasePart, List: {string}?) : boolean
 end
 
 --[[
-Checks if player is within radious of player
+Checks if player is within Radius of player
 	@param Target (BasePart) ore part to check for within distance
 	@param MaxDistance (number) max distance to check for
 	@return (boolean) true on within distance or false otherwise
@@ -220,7 +220,7 @@ function Pickaxe:Activate() : boolean
 	local position: Vector3 = mouse.Hit.Position
 
 	--Check player distance
-	if not WithinDistance(target, self.__Radious) then
+	if not WithinDistance(target, self.__Radius) then
 		return false
 	end
 
