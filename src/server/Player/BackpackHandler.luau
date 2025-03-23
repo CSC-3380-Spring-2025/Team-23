@@ -304,7 +304,7 @@ function BackpackHandler:CalculateCurrentWeight(Player : Player, AddedWeight : n
     return WeightClass
 end
 
-function BackpackHandler:GetName()
+function BackpackHandler:GetName() : string
 	return self.__Name
 end
 
