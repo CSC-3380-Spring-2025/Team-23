@@ -1,3 +1,13 @@
+--[[  
+ * BackpackHandler - Superclass of all item and tool classes.  
+ *  
+ * This class represents a full backpack interaction system for players, allowing for
+ * easy manipulation, creation, and removal of all types of items, as well as moving
+ * items into the hotbar for use. It extends the Object class.
+]]
+
+
+
 --Services
 local Players : Players = game:GetService("Players")
 
@@ -5,7 +15,7 @@ local Players : Players = game:GetService("Players")
 local Backpacks : array = {} -- Holds all of the backpacks of all players
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 
-local BackpackHandler = {}
+local BackpackHandler : table = {}
 BackpackHandler.__index = BackpackHandler
 Object:Supersedes(BackpackHandler)
 
@@ -78,6 +88,15 @@ function BackpackHandler:CreateItem(ItemName : string, Amount : number) : table
 	return CreatedItems
 end
 
+--[[
+@Description: Creates a new "item" object by calling the item's .new function with the specified amount. Will automatically split items into groups if the amount exceeds the item's max stack.
+@Param Player (Player): The player this tool is to be attached to.
+@Param ToolName (String): The name of the tool that is to be created.
+@Param Amount (Number): How many of these tools should be in the created stack.
+@Param Durability (Number): What durability should the tool have
+@Param Effectiveness (Number): What level is this tool (1-3)
+@Return CreatedItems (Table): Returns a table with all of the created item objects.
+]]
 function BackpackHandler:CreateTool(Player : Player, ToolName : string, Amount : number, Durability : number, Effectiveness : number) : table
 	if not Tools[ToolName] then 
 		print("Item doesn't exist!") 
@@ -221,11 +240,13 @@ function BackpackHandler:AddItemToBackPack(Player : Player, ItemName:string, Sta
 end
 
 --[[
-@Description: Adds an item to the defined player's backpack.
+@Description: Creates a new "tool" object by calling the item's .new function with the specified amount. Will automatically split items into groups if the amount exceeds the item's max stack.
 @Param Player (Player): The player who will have the items added to their backpack.
-@Param ItemName (String): The name of the item to be added.
-@Param Stack (Number): How many items should be added to the player's backpack.
+@Param ItemName (String): The name of the tool that is to be created.
+@Param Stack (Number): How many of these tools should be in the created stack.
 @Param ItemData (Any): Instead of creating a new item, the function will use this for all calculations. Used for things like existing items being picked up.
+@Param Durability (Number): What durability should the tool have.
+@Param Effectiveness (Number): What level is this tool (1-3).
 ]]
 function BackpackHandler:AddToolToBackPack(Player : Player, ItemName:string, Stack : number,  ItemData : any, Durability : number, Effectiveness : number) : ()
 	if not ItemData then
@@ -318,7 +339,11 @@ function BackpackHandler:DropItem(Player:Player, ItemName : string, DropAmount :
 	end
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
 end
-
+--[[
+@Description: Drops a tool from the player's backpack.
+@Param Player (Player): The player who will have the tool dropped.
+@Param ToolID (Number): The tool's unique GUID identifier.
+]]
 function BackpackHandler:DropTool(Player:Player, ToolID : number) : ()
 	if not Backpacks[Player] then
 		warn("How you gon drop something when you don't even have a backpack?")
@@ -344,7 +369,12 @@ function BackpackHandler:DropTool(Player:Player, ToolID : number) : ()
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
 end
 
-function BackpackHandler:DestroyTool(Player:Player, ToolID : number)
+--[[
+@Description: Destroys a tool in the player's backpack.
+@Param Player (Player): The player who will have the tool Destroyed.
+@Param ToolID (Number): The tool's unique GUID identifier.
+]]
+function BackpackHandler:DestroyTool(Player:Player, ToolID : number) : ()
 	if not Backpacks[Player] then
 		warn("How you gon destroy something when you don't even have a backpack?")
 		return
@@ -397,7 +427,7 @@ function BackpackHandler.new(Name, Amount)
 end
 
 --[[
-@Description: Quickly tests the system to make sure nothing errors out. Results are printed and should be checked against what is expected.
+@Description: Quickly tests the item side of the system to make sure nothing errors out. Results are printed and should be checked against what is expected.
 ]]
 function BackpackHandler:TestItems() : ()
 	task.wait(5)
@@ -415,7 +445,9 @@ function BackpackHandler:TestItems() : ()
 		BackpackHandler:AddItemToBackPack(v, "Coal", 150)
 	end
 end
-
+--[[
+@Description: Quickly tests the tool side of the system to make sure nothing errors out. Results are printed and should be checked against what is expected.
+]]
 function BackpackHandler:TestTools() : ()
 	task.wait(5)
 	for i,v in pairs(game:GetService("Players"):GetChildren()) do
@@ -447,7 +479,7 @@ end
 
 ToolHandler:Init(BackpackHandler)
 
-for i,v in pairs(ToolStorage:GetChildren()) do -- Indexes all items within the Tools array
+for i,v in pairs(ToolStorage:GetChildren()) do -- Indexes all tools within the Tools array
 	local tool = require(v);
 	Tools[v.Name] = tool
 end
