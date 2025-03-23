@@ -4,7 +4,7 @@ All base classes MUST inherit from this.
 In addition, it provides multiple utilities for an Object below.
 All objects inherit these utilities.
 --]]
-local Object : any = {}
+local Object: any = {}
 Object.__index = Object --Set Object has lookup.
 
 --[[
