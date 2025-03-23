@@ -5,10 +5,12 @@ local Players : Players = game:GetService("Players")
 local Backpacks : array = {} -- Holds all of the backpacks of all players
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 
-local Handler = {}
-Handler.__index = Handler
-Object:Supersedes(Handler)
+local BackpackHandler = {}
+BackpackHandler.__index = BackpackHandler
+Object:Supersedes(BackpackHandler)
 
+local ToolHandler = require(game.ServerScriptService.Server.Player.ToolHandler)
+local ItemStatistics = require(script.Parent.ItemData)
 local BackpackSize : number = 150 -- How many items can be put into the backpack at its base?
 local BackpackWeights : array = { -- Weight limits for different types of encumberance
 	[50] = "Light";
@@ -16,29 +18,35 @@ local BackpackWeights : array = { -- Weight limits for different types of encumb
 	[100] = "Heavy";
 } 
 
-local ToolStorage : Folder = game.ServerScriptService.Server.Items
+local ItemStorage : Folder = game.ServerScriptService.Server.Items
+
+local Items : array = {} -- Storage for tool modules for easily figuring out things like size without making a new object
+
+-- Functions
+for i,v in pairs(ItemStorage:GetChildren()) do -- Indexes all items within the Tools array
+	local tool = require(v);
+	Items[v.Name] = tool
+end
+
+local ToolStorage : Folder = game.ServerScriptService.Server.Tools
 
 local Tools : array = {} -- Storage for tool modules for easily figuring out things like size without making a new object
 
 -- Functions
 
-for i,v in pairs(ToolStorage:GetChildren()) do -- Indexes all items within the Tools array
-	local tool = require(v);
-	Tools[tool:GetName()] = tool
-end
 --[[
 @Description: Creates a new "item" object by calling the item's .new function with the specified amount. Will automatically split items into groups if the amount exceeds the item's max stack.
 @Param ItemName (String): The name of the item that is to be created.
 @Param Amount (Number): How many of these items should be in the created stack.
 @Return CreatedItems (Table): Returns a table with all of the created item objects.
 ]]
-function Handler:CreateItem(ItemName : string, Amount : number) : table
-	if not Tools[ItemName] then 
+function BackpackHandler:CreateItem(ItemName : string, Amount : number) : table
+	if not Items[ItemName] then 
 		print("Item doesn't exist!") 
 		return {} 
 	end
-	local Item = Tools[ItemName];
-	local MaxStack : number = Item:GetMaxStack();
+	local Item = Items[ItemName];
+	local MaxStack : number = ItemStatistics[ItemName]["MaxStack"];
 	local StacksToMake : number
 	local TotalInLastStack : number
 	if Amount > MaxStack then
@@ -60,21 +68,59 @@ function Handler:CreateItem(ItemName : string, Amount : number) : table
 	local CreatedItems : table = {}
 	for i = 1, StacksToMake do
 		if not TotalInLastStack or i < StacksToMake then
-			local Stack = Item.new(MaxStack, Handler)
+			local Stack = Item.new(MaxStack, BackpackHandler)
 			table.insert(CreatedItems, Stack)
 		else
-			local Stack = Item.new(TotalInLastStack, Handler)
+			local Stack = Item.new(TotalInLastStack, BackpackHandler)
 			table.insert(CreatedItems, Stack)
 		end
 	end
 	return CreatedItems
+end
+
+function BackpackHandler:CreateTool(Player : Player, ToolName : string, Amount : number, Durability : number, Effectiveness : number) : table
+	if not Tools[ToolName] then 
+		print("Item doesn't exist!") 
+		return {} 
+	end
+	local Tool = Tools[ToolName];
+	local MaxStack : number = ItemStatistics[ToolName]["MaxStack"];
+	local StacksToMake : number
+	local TotalInLastStack : number
+	if Amount > MaxStack then
+		if Amount % MaxStack ~= 0 then
+			while Amount > MaxStack do
+				task.wait()
+				Amount -= MaxStack;
+				StacksToMake += 1
+			end
+			StacksToMake += 1
+			TotalInLastStack = Amount;
+		else
+			StacksToMake = Amount/MaxStack
+		end
+	else
+		StacksToMake = 1
+		TotalInLastStack = Amount
+	end
+	local CreatedTools : table = {}
+	for i = 1, StacksToMake do
+		if not TotalInLastStack or i < StacksToMake then
+			local Stack = Tool.new(Player, Amount, Durability, Effectiveness)
+			table.insert(CreatedTools, Stack)
+		else
+			local Stack = Tool.new(Player, Amount, Durability, Effectiveness)
+			table.insert(CreatedTools, Stack)
+		end
+	end
+	return CreatedTools
 end
 --[[
 @Description: Returns the total weight in the current player's backpack.
 @Param Player (Player): The player who will have their backpack checked.
 @Return Weight (Number): Returns a number representing the total weight in the player's backpack.
 ]]
-function Handler:GetWeight(Player : Player) : number
+function BackpackHandler:GetBackpackWeight(Player : Player) : number
 	if not Backpacks[Player] then 
 		return 0
 	end
@@ -85,7 +131,7 @@ end
 @Param Player (Player): The player who will have their backpack checked.
 @Return Contents (Array): Returns an array with all of the items in the player's backpack.
 ]]
-function Handler:GetContents(Player : Player) : array
+function BackpackHandler:GetContents(Player : Player) : array
 	if not Backpacks[Player] then 
 		return {}
 	end
@@ -97,7 +143,7 @@ end
 @Param Amount (Number): The amount the backpack size should be increased/decreased.
 @Param ReplaceNumber (Boolean): If true, instead of adding/subtracting the number from the backpack, the number will be set as the new backpack size.
 ]]
-function Handler:AdjustBackpackSize(Player : Player, Amount : number, ReplaceNumber : boolean) : ()
+function BackpackHandler:AdjustBackpackSize(Player : Player, Amount : number, ReplaceNumber : boolean) : ()
 	if not Backpacks[Player] then 
 		return 
 	end
@@ -112,7 +158,7 @@ end
 @Param Player (Player): The player who will have their backpack checked.
 @Return TotalItems (Number): Returns a number representing all of the items in the player's backpack.
 ]]
-function Handler:GetTotalItems(Player : Player) : number
+function BackpackHandler:GetTotalItems(Player : Player) : number
 	if not Backpacks[Player] then 
 		return 0
 	end
@@ -123,7 +169,7 @@ end
 @Param Player (Player): The player who will have their backpack checked.
 @Return Size (Number): Returns a number representing the size of the player's backpack.
 ]]
-function Handler:GetBackpackSize(Player : Player) : number
+function BackpackHandler:GetBackpackSize(Player : Player) : number
 	if not Backpacks[Player] then 
 		return 0
 	end
@@ -135,7 +181,7 @@ end
 @Param Player (Player): The player who will have their backpack checked.
 @Return IsFull (Boolean): Returns true if the player's backpack has a totalitem amount equal to or more than the backpack's size, and false if not.
 ]]
-function Handler:IsFull(Player : Player) : boolean
+function BackpackHandler:IsFull(Player : Player) : boolean
 	if not Backpacks[Player] then 
 		return false
 	end
@@ -149,12 +195,44 @@ end
 @Param Stack (Number): How many items should be added to the player's backpack.
 @Param ItemData (Any): Instead of creating a new item, the function will use this for all calculations. Used for things like existing items being picked up.
 ]]
-function Handler:AddToBackPack(Player : Player, ItemName:string, Stack : number,  ItemData : any) : ()
+function BackpackHandler:AddItemToBackPack(Player : Player, ItemName:string, Stack : number,  ItemData : any) : ()
 	if not ItemData then
-		ItemData = Handler:CreateItem(ItemName, Stack)
+		ItemData = BackpackHandler:CreateItem(ItemName, Stack)
 	end
 	if not Backpacks[Player] then
-		Handler:CreateBackpack(Player, BackpackSize)
+		BackpackHandler:CreateBackpack(Player, BackpackSize)
+	end
+	local TargetBackpack : array = Backpacks[Player]
+
+	if TargetBackpack["TotalItems"] + Stack > TargetBackpack["Size"] then
+		print("Not enough space in the backpack!")
+		ItemData = nil -- Delete the reference so garbage collection cleans it up
+		return
+	end
+	local AddedWeight : number = ItemStatistics[ItemName]["Weight"] * Stack
+	for i,v in pairs(ItemData) do
+		table.insert(TargetBackpack["Contents"], v)
+		print(v)
+		print("Inserted ".. v.Name.. " at stack " .. v.Amount .. " with weight ".. v.Weight)
+	end
+	BackpackHandler:CalculateCurrentWeight(Player, AddedWeight)
+	TargetBackpack.Weight += AddedWeight
+	TargetBackpack.TotalItems += Stack 
+end
+
+--[[
+@Description: Adds an item to the defined player's backpack.
+@Param Player (Player): The player who will have the items added to their backpack.
+@Param ItemName (String): The name of the item to be added.
+@Param Stack (Number): How many items should be added to the player's backpack.
+@Param ItemData (Any): Instead of creating a new item, the function will use this for all calculations. Used for things like existing items being picked up.
+]]
+function BackpackHandler:AddToolToBackPack(Player : Player, ItemName:string, Stack : number,  ItemData : any, Durability : number, Effectiveness : number) : ()
+	if not ItemData then
+		ItemData = BackpackHandler:CreateTool(Player, ItemName, Stack, Durability, Effectiveness)
+	end
+	if not Backpacks[Player] then
+		BackpackHandler:CreateBackpack(Player, BackpackSize)
 	end
 	local TargetBackpack : array = Backpacks[Player]
 
@@ -165,28 +243,24 @@ function Handler:AddToBackPack(Player : Player, ItemName:string, Stack : number,
 	end
 	local AddedWeight : number = 0
 	for i,v in pairs(ItemData) do
-		AddedWeight += v.Weight
+		AddedWeight += ItemStatistics[ItemName]["Weight"]
 		table.insert(TargetBackpack["Contents"], v)
 		print(v)
-		print("Inserted ".. v.Name.. " at stack " .. v.Amount .. " with weight ".. v.Weight)
-		if v.IsTool then
-			v.ID = game:GetService("HttpService"):GenerateGUID()
-			table.insert(TargetBackpack["UseableItems"], v)
-		end
+		print("Inserted ".. v.Name.. " at stack " .. v.Amount .. " with weight ".. ItemStatistics[ItemName]["Weight"])
+		table.insert(TargetBackpack["UseableItems"], v)
 	end
-	Handler:CalculateCurrentWeight(Player, AddedWeight)
-
-
+	BackpackHandler:CalculateCurrentWeight(Player, AddedWeight)
 	TargetBackpack.Weight += AddedWeight
 	TargetBackpack.TotalItems += Stack 
 end
+
 --[[
 @Description: Checks the current weight of the player's backpack and returns a string describing it.
 @Param Player (Player): The player who will have their backpack weight checked.
 @Param AddedWeight (Number): This is added to the backpack's current weight to calculate the effects of adding another item with this weight.
 @Return WeightClass (String): This represents the player's current encumberance in string form.
 ]]
-function Handler:CalculateCurrentWeight(Player : Player, AddedWeight : number) : string
+function BackpackHandler:CalculateCurrentWeight(Player : Player, AddedWeight : number) : string
 	local TargetBackpack : array = Backpacks[Player]
 	if not TargetBackpack then return "Light" end
 	local TotalWeight : number = TargetBackpack["Weight"] + AddedWeight
@@ -198,7 +272,7 @@ function Handler:CalculateCurrentWeight(Player : Player, AddedWeight : number) :
 			TargetWeight = i
 		end
 	end
-	-- TODO: Tie this in with an overarching player handler so it doesn't edit their walkspeed seperately
+	-- TODO: Tie this in with an overarching player BackpackHandler so it doesn't edit their walkspeed seperately
 	if WeightClass == "Light" then
 		print("Player is at light weight!")
 	elseif WeightClass == "Medium" then
@@ -209,15 +283,19 @@ function Handler:CalculateCurrentWeight(Player : Player, AddedWeight : number) :
     return WeightClass
 end
 
+function BackpackHandler:GetName()
+	return self.__Name
+end
+
 --[[
 @Description: Drops an item from the player's backpack.
 @Param Player (Player): The player who will have the item dropped.
 @Param ItemName (String): The name of the item that should be dropped from the backpack.
 @Param DropAmount (Number): How many items should be dropped from the stack.
 ]]
-function Handler:DropItem(Player:Player, ItemName : string, DropAmount : number) : ()
+function BackpackHandler:DropItem(Player:Player, ItemName : string, DropAmount : number) : ()
 	if not Backpacks[Player] then
-		print("How you gon drop something when you don't even have a backpack?")
+		warn("How you gon drop something when you don't even have a backpack?")
 		return
 	end
 	local TargetBackpack : array = Backpacks[Player]
@@ -225,10 +303,10 @@ function Handler:DropItem(Player:Player, ItemName : string, DropAmount : number)
 		--TODO: Get models and put a function here to interact with them and drop items
 		if v.Amount >= DropAmount then
 			v.Amount -= DropAmount
-			TargetBackpack["Weight"] -= v.Weight
+			TargetBackpack["Weight"] -= ItemStatistics[v:GetName()]["Weight"] * v.Amount
 			TargetBackpack["TotalItems"] -= DropAmount
-			print("Removed ".. v.Name.. " for " .. DropAmount .. " with weight ".. v.Weight)
-			v.Weight = v:GetWeight() * v.Amount
+			print("Removed ".. v:GetName().. " for " .. DropAmount .. " with weight ".. v.Weight)
+			v.Weight = ItemStatistics[v:GetName()]["Weight"] * v.Amount
 			DropAmount -= v.Amount
 			if v.Amount <= 0 then
 				table.remove(TargetBackpack["Contents"], c)
@@ -238,10 +316,57 @@ function Handler:DropItem(Player:Player, ItemName : string, DropAmount : number)
 			break
 		end
 	end
-	Handler:CalculateCurrentWeight(Player, 0)
+	BackpackHandler:CalculateCurrentWeight(Player, 0)
 end
 
-function Handler:MoveItemToToolbar(Player : Player, ItemData, ItemID : string) : ()
+function BackpackHandler:DropTool(Player:Player, ToolID : number) : ()
+	if not Backpacks[Player] then
+		warn("How you gon drop something when you don't even have a backpack?")
+		return
+	end
+	local TargetBackpack : array = Backpacks[Player]
+	for c,v in pairs(TargetBackpack["Contents"]) do
+		--TODO: Get models and put a function here to interact with them and drop items
+		if v.ToolID and  v.ToolID == ToolID then
+			v.Amount -= 1
+			TargetBackpack["Weight"] -= ItemStatistics[v:GetName()]["Weight"]
+			TargetBackpack["TotalItems"] -= 1
+			print("Removed ".. v:GetName().. " for " .. 1 .. " with weight ".. ItemStatistics[v:GetName()]["Weight"])
+			v.Weight = ItemStatistics[v:GetName()]["Weight"] * v.Amount
+			if v.Amount <= 0 then
+				table.remove(TargetBackpack["Contents"], c)
+				table.remove(TargetBackpack["UsableItems"], c)
+				table.remove(TargetBackpack["ToolbarItems"], c)
+			end
+			break
+		end
+	end
+	BackpackHandler:CalculateCurrentWeight(Player, 0)
+end
+
+function BackpackHandler:DestroyTool(Player:Player, ToolID : number)
+	if not Backpacks[Player] then
+		warn("How you gon destroy something when you don't even have a backpack?")
+		return
+	end
+	local TargetBackpack : array = Backpacks[Player]
+	for c,v in pairs(TargetBackpack["Contents"]) do
+		--TODO: Get models and put a function here to interact with them and drop items
+		if v.ID and  v.ID == ToolID then
+			table.remove(TargetBackpack["Contents"], c)
+			table.remove(TargetBackpack["UseableItems"], c)
+			table.remove(TargetBackpack["ToolbarItems"], c)
+			TargetBackpack["Weight"] -= ItemStatistics[v:GetName()]["Weight"]
+			TargetBackpack["TotalItems"] -= 1
+			print("Removed ".. v.__Name.. " for " .. 1 .. " with weight ".. ItemStatistics[v:GetName()]["Weight"])
+			v = nil
+			break
+		end
+	end
+	BackpackHandler:CalculateCurrentWeight(Player, 0)
+end
+
+function BackpackHandler:MoveItemToToolbar(Player : Player, ItemData, ItemID : string) : ()
 
 end
 
@@ -250,7 +375,7 @@ end
 @Param Player (Player): The player who will have their backpack created.
 @Param Size (Number): The size of the created backpack.
 ]]
-function Handler:CreateBackpack(Player : Player, Size : number) : ()
+function BackpackHandler:CreateBackpack(Player : Player, Size : number) : ()
 	if not Backpacks[Player] then
 		Backpacks[Player] = {
 			["Size"] = Size or BackpackSize;
@@ -258,35 +383,73 @@ function Handler:CreateBackpack(Player : Player, Size : number) : ()
 			["TotalItems"] = 0;
 			["Contents"] = {};
 			["UseableItems"] = {};
+			["ToolbarItems"] = {};
 		}
 	end
 end
 
-function Handler.new(Name, Amount)
+function BackpackHandler.new(Name, Amount)
 	local self: table = Object.new(Name)
-	self.Name = Name or "Item"
-	self.Amount = Amount or 0
+	setmetatable(self, BackpackHandler) 
+	self.__Name = Name or "Item"
+	self.Amount = Amount or 1
 	return self
 end
 
 --[[
 @Description: Quickly tests the system to make sure nothing errors out. Results are printed and should be checked against what is expected.
 ]]
-function Handler:Test() : ()
+function BackpackHandler:TestItems() : ()
 	task.wait(5)
 	for i,v in pairs(game:GetService("Players"):GetChildren()) do
-		Handler:AddToBackPack(v, "Coal", 150)
-		print(Handler:IsFull(v))
-		print(Handler:GetTotalItems(v))
-		print(Handler:GetContents(v))
-		print(Handler:GetWeight(v))
-		Handler:DropItem(v, "Coal", 50)
-		print(Handler:IsFull(v))
-		print(Handler:GetTotalItems(v))
-		print(Handler:GetContents(v))
-		print(Handler:GetWeight(v))
-		Handler:AddToBackPack(v, "Coal", 150)
+		BackpackHandler:AddItemToBackPack(v, "Coal", 150)
+		print(BackpackHandler:IsFull(v))
+		print(BackpackHandler:GetTotalItems(v))
+		print(BackpackHandler:GetContents(v))
+		print(BackpackHandler:GetBackpackWeight(v))
+		BackpackHandler:DropItem(v, "Coal", 50)
+		print(BackpackHandler:IsFull(v))
+		print(BackpackHandler:GetTotalItems(v))
+		print(BackpackHandler:GetContents(v))
+		print(BackpackHandler:GetBackpackWeight(v))
+		BackpackHandler:AddItemToBackPack(v, "Coal", 150)
 	end
 end
 
-return Handler
+function BackpackHandler:TestTools() : ()
+	task.wait(5)
+	for i,v in pairs(game:GetService("Players"):GetChildren()) do
+		BackpackHandler:AddToolToBackPack(v, "Axe", 1,  nil, 100, 1)
+		print(BackpackHandler:IsFull(v))
+		print(BackpackHandler:GetTotalItems(v))
+		print(BackpackHandler:GetContents(v))
+		print(BackpackHandler:GetBackpackWeight(v))
+		for c,d in pairs(BackpackHandler:GetContents(v)) do
+			if d.__IsTool then
+				print("Yup, it's a tool")
+				d:Activate()
+				d:Unequip()
+				d:Equip()
+				d:DecreaseHealthByHit(50)
+				d:GetName()
+				print(d:GetDurability())
+				d:BreakTool()
+			end
+		end
+		BackpackHandler:DropTool(v, 25)
+		print(BackpackHandler:IsFull(v))
+		print(BackpackHandler:GetTotalItems(v))
+		print(BackpackHandler:GetContents(v))
+		print(BackpackHandler:GetBackpackWeight(v))
+		BackpackHandler:AddToolToBackPack(v, "Axe", 1,  nil, 100, 1)
+	end
+end
+
+ToolHandler:Init(BackpackHandler)
+
+for i,v in pairs(ToolStorage:GetChildren()) do -- Indexes all items within the Tools array
+	local tool = require(v);
+	Tools[v.Name] = tool
+end
+print(Tools)
+return BackpackHandler
