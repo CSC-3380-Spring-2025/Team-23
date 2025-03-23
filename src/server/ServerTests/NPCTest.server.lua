@@ -16,7 +16,6 @@ local success = false
 --local success = NPC1:SetLinkedWaypoint(waypoint10.Position)
 
 NPC1:SetHomePoint(homePoint.Position)
-NPC1:EnableHomePoint()
 
 --LinkedWaypoint test
 for i = 1, 12 do
@@ -31,8 +30,29 @@ if success then
     NPC1:TraverseWaypoints()
 end
 
-task.wait(5)
+task.wait(10)
+
+--[[
+success = NPC1:SetWaypoint(waypoint1.Position)
+if success then
+    NPC1:TraverseWaypoints()
+end
+--]]
+
+----[[
 print("Stopping waypoints!")
-NPC1:CancelWaypoints()
+--NPC1:CancelWaypoints()
+NPC1:ReturnHome()
+
+task.wait(20)
+
+----[[
+success = NPC1:SetLinkedWaypoint(waypoint10.Position)
+if success then
+    NPC1:TraverseWaypoints() 
+end
+--]]
+
 
 print("Am I sitll going?")
+--]]
