@@ -9,13 +9,14 @@
  * NOTE: This system utilizes ServerMutexSeq to ensure safe concurrent access to player data.  
 
 ]]  
-
+local BridgeNet2 = require(game.ReplicatedStorage.BridgeNet2)
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local ServerMutexSeq = require(game.ServerScriptService.Server.ServerUtilities.ServerMutexSeq)
 local SessionDataManager: table = {}
 Object:Supersedes(SessionDataManager)
 
 --Instance variables
+local PlayerDataManagerBridge = BridgeNet2.ReferenceBridge("PlayerDataManager")
 local sessionDataManagerInstance = nil
 local sessionData = nil -- Table to store all players' session data
 local mutexLock = nil
@@ -61,7 +62,6 @@ end
 	* @return - Returns true if the data was successfully added to the
 	* sessionData table, or false if the data was not provided.
 ]]
-
 function SessionDataManager:SetPlayerData(userID: number, data: table): boolean
 	if data then
 		self.mutexLock:Lock()
@@ -91,6 +91,16 @@ function SessionDataManager:RemovePlayerData(userID: number): boolean
 	self.mutexLock:Unlock()
 	return false
 end
+
+
+--Listen for PlayerDataManager to fire 
+PlayerDataManagerBridge:Connect(function(player, requestType: string)
+	if requestType == "RequestPlayerData" then
+		local playerDataTable: table = SessionDataManager:GetPlayerData(player.userID)
+		-- Fire the player data back to the client
+		PlayerDataManagerBridge:Fire(player, "PlayerDataResponse", playerDataTable)
+	end
+end)
 
 
 return SessionDataManager
