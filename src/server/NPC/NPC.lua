@@ -40,6 +40,7 @@ function NPC.new(Name, Rig, Health, RewardValue, Tools, SpawnPos)
     --Spawn NPC here eventually at SpawnPos
     local waypoints: {{Vector3}} = {}
     self.__Waypoints = waypoints
+    self.__PathFindingTask = nil --Task set to executing the pathfinding
     return self
 end
 
@@ -120,7 +121,12 @@ end
 Tells the NPC to begin traversing the current set of waypoints
 --]]
 function NPC:TraverseWaypoints()
-    task.spawn(function()
+    --Check to prevent double traverse
+    if self.__PathFindingTask then
+        warn("Attempted to call TraverseWaypoints() while previous call to TraverseWaypoints() is stull running")
+        return
+    end
+    self.__PathFindingTask = task.spawn(function()
         if self.__Waypoints == nil then
             return
         end
@@ -134,6 +140,7 @@ function NPC:TraverseWaypoints()
                 end
                 self.__Humanoid:MoveTo(waypoint.Position)
                 self.__Humanoid.MoveToFinished:Wait() --Handle cases where they get stuck before it ends eventually else this will make them stuck
+                print("Stopped humanoid")
             end
             --RemoveElementByValue(self.__Waypoints, set)
         end
@@ -147,6 +154,15 @@ Cancels waypoints of any type
     Sends back to home point if set
 --]]
 function NPC:CancelWaypoints() : boolean
+    if self.__PathFindingTask then
+        task.cancel(self.__PathFindingTask)
+        self.__PathFindingTask = nil --Reset pathfindingtask to indicate no pathfinding
+    end
+    if not self.__Humanoid.MoveToFinished then
+        --If still moving end movement
+        self.__Humanoid:MoveTo(self.__RootPart.Position)
+    end
+    self.__Waypoints = {}
     return false
 end
 

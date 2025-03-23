@@ -27,4 +27,8 @@ if success then
     NPC1:TraverseWaypoints()
 end
 
+task.wait(5)
+print("Stopping waypoints!")
+NPC1:CancelWaypoints()
+
 print("Am I sitll going?")
