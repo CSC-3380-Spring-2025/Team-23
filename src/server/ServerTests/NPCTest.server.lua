@@ -11,8 +11,20 @@ local waypoint1 = waypoints:FindFirstChild("Waypoint1")
 local waypoint10 = waypoints:FindFirstChild("Waypoint10")
 
 task.wait(5)
+local success = false
+--local success = NPC1:SetLinkedWaypoint(waypoint10.Position)
 
-local success = NPC1:SetWaypoint(waypoint10.Position)
+--LinkedWaypoint test
+for i = 1, 12 do
+    local point = waypoints:FindFirstChild("Waypoint" .. i)
+    success = NPC1:SetLinkedWaypoint(point.Position)
+    if not success then
+        break
+    end
+end
+
 if success then
     NPC1:TraverseWaypoints()
 end
+
+print("Am I sitll going?")

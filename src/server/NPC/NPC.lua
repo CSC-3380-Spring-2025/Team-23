@@ -59,6 +59,25 @@ function NPC:Unfollow(Object) : boolean
     return false
 end
 
+local function PrepWaypoint(StartPosition, EndPositon, Self, Overwrite)
+    local path = PathfindingService:CreatePath()
+    --Wrap in pcall to detect a fail
+    local success, errorMessage = pcall(function()
+        path:ComputeAsync(StartPosition, EndPositon)
+    end)
+
+    if success then
+        if Overwrite then
+            Self.__Waypoints = {} --Clear prev waypoints  
+        end
+        table.insert(Self.__Waypoints, path:GetWaypoints()) --Insert at end of table
+        return true
+    else
+        warn("NPC \"" .. Self.__NPC.Name .. "\" failed to find a path. " .. errorMessage)
+        return false
+    end
+end
+
 --[[
 Sets a singular waypoint and cancels any linked waypoints
     SetWaypoint is only intended for a singular waypoint and does not allow for a chain of waypoints
@@ -66,20 +85,7 @@ Sets a singular waypoint and cancels any linked waypoints
     @param
 --]]
 function NPC:SetWaypoint(Position) : boolean
-    local path = PathfindingService:CreatePath()
-    --Wrap in pcall to detect a fail
-    local success, errorMessage = pcall(function()
-        path:ComputeAsync(self.__RootPart.Position, Position)
-    end)
-
-    if success then
-        table.insert(self.__Waypoints, path:GetWaypoints()) --Insert at end of table
-        return true
-    else
-        warn("NPC \"" .. self.__NPC.Name .. "\" failed to find a path")
-        return false
-    end
-    return false
+    return PrepWaypoint(self.__RootPart.Position, Position, self, true)
 end
 
 --[[
@@ -87,29 +93,53 @@ Extends an existing waypoint, or extends the waypoint previously set in a chain
     allows for long term movement plans
 --]]
 function NPC:SetLinkedWaypoint(Position) : boolean
-    return false
+    --If existing waypoint get its position as position else use current pos
+    local startPos = self.__RootPart.Position
+    if self.__Waypoints ~= nil then
+        local lastSet = self.__Waypoints[#self.__Waypoints]
+        if lastSet ~= nil then
+            local lastPoint = lastSet[#lastSet]
+            if lastPoint ~= nil then
+                startPos = lastPoint.Position
+            end
+        end
+    end
+    return PrepWaypoint(startPos, Position, self, false)
+end
+
+local function RemoveElementByValue(Table, Value)
+    for index, currentValue in ipairs(Table) do
+        if Value == currentValue then
+            table.remove(Table, index) 
+            break
+        end
+    end
 end
 
 --[[
 Tells the NPC to begin traversing the current set of waypoints
 --]]
 function NPC:TraverseWaypoints()
-    if self.__Waypoints == nil then
-        return
-    end
-    for _, set in pairs(self.__Waypoints) do
-        if set == nil then
+    task.spawn(function()
+        if self.__Waypoints == nil then
             return
         end
-        for _, waypoint in pairs(set) do
-            if waypoint == nil then
+        for _, set in ipairs(self.__Waypoints) do
+            if set == nil then
                 return
             end
-            self.__Humanoid:MoveTo(waypoint.Position)
-            self.__Humanoid.MoveToFinished:Wait() --Handle cases where they get stuck before it ends eventually else this will make them stuck
+            for _, waypoint in pairs(set) do
+                if waypoint == nil then
+                    return
+                end
+                self.__Humanoid:MoveTo(waypoint.Position)
+                self.__Humanoid.MoveToFinished:Wait() --Handle cases where they get stuck before it ends eventually else this will make them stuck
+            end
+            --RemoveElementByValue(self.__Waypoints, set)
         end
-        table.remove(self.__Waypoints, 1)--Remove set from front of table like que once completed
-    end
+        --Traverse complete. Remove current prev waypoints
+        self.__Waypoints = {}
+    end)
 end
 
 --[[
