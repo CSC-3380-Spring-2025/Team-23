@@ -18,7 +18,7 @@ Constructor that creates an NPC
     @param Tools (undetermined)
     @param SpawnPos (Vector3) position to spawn NPC at
 --]]
-function NPC.new(Name, Rig, Health, RewardValue, Tools, SpawnPos)
+function NPC.new(Name: string, Rig: Model, Health: number, RewardValue: number, Tools: Tool, SpawnPos: Vector3)
     local self = Object.new(Name)
     setmetatable(self, NPC)
     --Set up NPC body
@@ -53,7 +53,7 @@ Helper function for preparing a waypoint
     @param Overwrite (boolean) indicates weather to overwrite other set waypoints
     @return (boolean) true on success or false on fail
 --]]
-local function PrepWaypoint(StartPosition, EndPositon, Self, Overwrite) : boolean
+local function PrepWaypoint(StartPosition: Vector3, EndPositon: Vector3, Self: any, Overwrite: boolean) : boolean
     local path: Path = PathfindingService:CreatePath()
     --Wrap in pcall to detect a fail
     local success: boolean, errorMessage: string = pcall(function()
@@ -79,7 +79,7 @@ Sets a singular waypoint and cancels any linked waypoints
     @param Position (Vector3) position of waypoint to set
     @return (boolean) True on success or false on fail
 --]]
-function NPC:SetWaypoint(Position) : boolean
+function NPC:SetWaypoint(Position: Vector3) : boolean
     self:CancelWaypoints()
     return PrepWaypoint(self.__RootPart.Position, Position, self, true)
 end
@@ -90,7 +90,7 @@ Extends an existing waypoint, or extends the waypoint previously set in a chain
     @param Position (Vector3) position of waypoint to set
     @return (boolean) True on success or false on fail
 --]]
-function NPC:SetLinkedWaypoint(Position) : boolean
+function NPC:SetLinkedWaypoint(Position: Vector3) : boolean
     --If currently traversing cancel it
     if self.__PathFindingTask then
         self:CancelWaypoints()
@@ -160,7 +160,7 @@ end
 Sets the exact position an NPC will attempt to return to when there are no more pathingfinding commands.
     @param HomePointPosition (Vector3) the position that is considerd home for the NPC
 --]]
-function NPC:SetHomePoint(HomePointPosition)
+function NPC:SetHomePoint(HomePointPosition: Vector3)
     self.__HomePoint = HomePointPosition
 end
 
@@ -186,7 +186,7 @@ Sets an NPC to follow a given opject
     The object may be any object including a player or another NPC etc.
     Creating a waypoint will undo a follow command.
 --]]
-function NPC:Follow(Object)
+function NPC:Follow(Object: BasePart)
     self:CancelWaypoints() --Cancel any prev tasks.
     self.__PathFindingTask = task.spawn(function()
         --Start loop to follow player
@@ -207,7 +207,7 @@ end
 --[[
 Cancels a Follow command
 --]]
-function NPC:Unfollow(Object) : boolean
+function NPC:Unfollow() : boolean
     return false
 end
 
