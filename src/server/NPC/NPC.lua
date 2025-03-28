@@ -4,6 +4,7 @@ This class functions as a general purpouse manager for creating non dialogue NPC
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PathfindingService = game:GetService("PathfindingService")
 local Workspace = game:GetService("Workspace")
+local Runservice = game:GetService("RunService")
 local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
 local NPC = {}
 Object:Supersedes(NPC)
@@ -54,6 +55,9 @@ Helper function for preparing a waypoint
     @return (boolean) true on success or false on fail
 --]]
 local function PrepWaypoint(StartPosition: Vector3, EndPositon: Vector3, Self: any, Overwrite: boolean) : boolean
+    print("Checking instances")
+    print(StartPosition)
+    print(EndPositon)
     local path: Path = PathfindingService:CreatePath()
     --Wrap in pcall to detect a fail
     local success: boolean, errorMessage: string = pcall(function()
@@ -180,26 +184,46 @@ function NPC:ReturnHome()
 end
 
 
---WORK IN PROGRESS START:
+
 --[[
 Sets an NPC to follow a given opject
     The object may be any object including a player or another NPC etc.
     Creating a waypoint will undo a follow command.
+    @param Object (BasePart) the object to follow
 --]]
-function NPC:Follow(Object: BasePart)
-    self:CancelWaypoints() --Cancel any prev tasks.
+function NPC:Follow(Object: BasePart) : ()
+    if self.__Waypoints then
+        self:CancelWaypoints() --Cancel any prev tasks.
+    end
+
     self.__PathFindingTask = task.spawn(function()
         --Start loop to follow player
         local lastObjPos: Vector3 = nil
-        while true and Object do
+        --Indefinetly follow given object
+        while true do
             local currentObjPos: Vector3 = Object.Position
-            if (not (not lastObjPos)) and (currentObjPos ~= lastObjPos) then
-                local success: boolean = self:SetWaypoint(currentObjPos)
+            --If object has moved set new waypoints
+            if currentObjPos ~= lastObjPos then
+                self.__Waypoints = {} --Reset waypoints
+                local success: boolean = PrepWaypoint(self.__RootPart.Position, currentObjPos, self, true)
+                --If valid path start following player
                 if success then
-                    self:TraverseWaypoints()
+                    --Traverse waypoints in each set of waypoints
+                    for _, set in ipairs(self.__Waypoints) do
+                        if set == nil then
+                            break
+                        end
+                        for _, waypoint in pairs(set) do
+                            if waypoint == nil then
+                                return
+                            end
+                            self.__Humanoid:MoveTo(waypoint.Position)
+                        end
+                    end
                 end
             end
             lastObjPos = currentObjPos
+            Runservice.Heartbeat:Wait()--Waits per frame
         end
     end)
 end
@@ -207,10 +231,11 @@ end
 --[[
 Cancels a Follow command
 --]]
-function NPC:Unfollow() : boolean
-    return false
+function NPC:Unfollow() : ()
+    self:CancelWaypoints()
 end
 
+--WORK IN PROGRESS START:
 --[[
 Drops the reward amount in a money bag when an NPC is killed
 --]]
