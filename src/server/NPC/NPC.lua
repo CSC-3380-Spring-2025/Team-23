@@ -15,7 +15,7 @@ Constructor that creates an NPC
     @param Name (string) name of the NPC
     @param Rig (rig) rig to make an NPC (the body)
     @param Health (number) health value to set NPC at
-    @param RewardValue (number) the amount of gold droped for a player when NPC dies.
+    @param RewardValue (number) the amount of gold dropped for a player when NPC dies.
     @param Tools (undetermined)
     @param SpawnPos (Vector3) position to spawn NPC at
 --]]
@@ -161,7 +161,7 @@ function NPC:CancelWaypoints() : ()
 end
 
 --[[
-Sets the exact position an NPC will attempt to return to when there are no more pathingfinding commands.
+Sets the exact position an NPC will attempt to return to when there are no more pathfinding commands.
     @param HomePointPosition (Vector3) the position that is considerd home for the NPC
 --]]
 function NPC:SetHomePoint(HomePointPosition: Vector3)
@@ -186,7 +186,7 @@ end
 
 
 --[[
-Sets an NPC to follow a given opject
+Sets an NPC to follow a given object
     The object may be any object including a player or another NPC etc.
     Creating a waypoint will undo a follow command.
     @param Object (BasePart) the object to follow
