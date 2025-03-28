@@ -9,6 +9,22 @@ local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
 local NPC = {}
 Object:Supersedes(NPC)
 
+--[[
+Alters the cost of a path to take for an NPC
+    example:
+    Wood = 1,
+    Neon = 100,
+--]]
+local costTable: {any} = {
+    
+}
+
+--Specifies allowed behaivore
+local agentParameters: {any} = {
+    AgentCanJump = true,
+    AgentCanClimb = true,
+    Costs = costTable
+}
 
 --[[
 Constructor that creates an NPC
@@ -58,13 +74,13 @@ local function PrepWaypoint(StartPosition: Vector3, EndPositon: Vector3, Self: a
     print("Checking instances")
     print(StartPosition)
     print(EndPositon)
-    local path: Path = PathfindingService:CreatePath()
+    local path: Path = PathfindingService:CreatePath(agentParameters)
     --Wrap in pcall to detect a fail
     local success: boolean, errorMessage: string = pcall(function()
         path:ComputeAsync(StartPosition, EndPositon)
     end)
 
-    if success then
+    if success and path.Status == Enum.PathStatus.Success then
         if Overwrite then
             Self.__Waypoints = {} --Clear prev waypoints  
         end
@@ -135,6 +151,10 @@ function NPC:TraverseWaypoints() : ()
                     return
                 end
                 self.__Humanoid:MoveTo(waypoint.Position)
+                --Handle jump conditions
+                if waypoint.Action == Enum.PathWaypointAction.Jump then
+                    self.__Humanoid.Jump = true
+                end
                 self.__Humanoid.MoveToFinished:Wait() --Handle cases where they get stuck before it ends eventually else this will make them stuck
                 print("Stopped humanoid")
             end
