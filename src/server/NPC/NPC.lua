@@ -16,13 +16,14 @@ Alters the cost of a path to take for an NPC
     Neon = 100,
 --]]
 local costTable: {any} = {
-    
+
 }
 
 --Specifies allowed behaivore
 local agentParameters: {any} = {
     AgentCanJump = true,
     AgentCanClimb = true,
+    AgentRadious = 4,
     Costs = costTable
 }
 
