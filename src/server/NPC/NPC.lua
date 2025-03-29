@@ -10,6 +10,24 @@ local NPC = {}
 Object:Supersedes(NPC)
 
 --[[
+Alters the cost of a path to take for an NPC
+    example:
+    Wood = 1,
+    Neon = 100,
+--]]
+local costTable: {any} = {
+
+}
+
+--Specifies allowed behaivore
+local agentParameters: {any} = {
+    AgentCanJump = true,
+    AgentCanClimb = true,
+    AgentRadious = 4,
+    Costs = costTable
+}
+
+--[[
 Constructor that creates an NPC
     @param Name (string) name of the NPC
     @param Rig (rig) rig to make an NPC (the body)
@@ -38,7 +56,7 @@ function NPC.new(Name: string, Rig: Model, Health: number, RewardValue: number, 
 	self.__RewardValue = RewardValue or 0
 	--Add tools to npc here eventually
 	--Spawn NPC here eventually at SpawnPos
-	local waypoints: { { Vector3 } } = {}
+	local waypoints: {Path} = {}
 	self.__Waypoints = waypoints
 	self.__PathFindingTask = nil --Task set to executing the pathfinding
 	self.__HomePoint = nil
@@ -53,18 +71,18 @@ Helper function for preparing a waypoint
     @param Overwrite (boolean) indicates weather to overwrite other set waypoints
     @return (boolean) true on success or false on fail
 --]]
-local function PrepWaypoint(StartPosition: Vector3, EndPositon: Vector3, Self: any, Overwrite: boolean): boolean
-	local path: Path = PathfindingService:CreatePath()
+local function PrepWaypoint(StartPosition: Vector3, EndPositon: Vector3, Self: any, Overwrite: boolean) : boolean
+	local path: Path = PathfindingService:CreatePath(agentParameters)
 	--Wrap in pcall to detect a fail
 	local success: boolean, errorMessage: string = pcall(function()
 		path:ComputeAsync(StartPosition, EndPositon)
 	end)
 
-	if success then
+	if success and path.Status == Enum.PathStatus.Success then
 		if Overwrite then
 			Self.__Waypoints = {} --Clear prev waypoints
 		end
-		table.insert(Self.__Waypoints, path:GetWaypoints()) --Insert at end of table
+		table.insert(Self.__Waypoints, path) --Insert at end of table
 		return true
 	else
 		warn('NPC "' .. Self.__NPC.Name .. '" failed to find a path. ' .. errorMessage)
@@ -98,15 +116,118 @@ function NPC:SetLinkedWaypoint(Position: Vector3): boolean
 	--If existing waypoint get its position as position else use current pos
 	local startPos: Vector3 = self.__RootPart.Position
 	if self.__Waypoints ~= nil then
-		local lastSet: { PathWaypoint } = self.__Waypoints[#self.__Waypoints]
-		if lastSet ~= nil then
-			local lastPoint: PathWaypoint = lastSet[#lastSet]
+		local lastPath: Path = self.__Waypoints[#self.__Waypoints]
+		if lastPath ~= nil then
+            local lastWaypoints: {PathWaypoint} = lastPath:GetWaypoints()
+			local lastPoint: PathWaypoint = lastWaypoints[#lastWaypoints]
 			if lastPoint ~= nil then
 				startPos = lastPoint.Position
 			end
 		end
 	end
 	return PrepWaypoint(startPos, Position, self, false)
+end
+
+--[[
+Recalculates a path to determine if path is still viable.
+	@param Path (Path) the path to validate
+	@return (boolean) true on valid or false otherwise
+--]]
+local function ValidatePath(Path: Path) : boolean
+    local waypoints: {PathWaypoint} = (Path:GetWaypoints())
+    local firstPos: Vector3 = waypoints[1].Position
+    local lastPos: Vector3 = waypoints[#waypoints].Position
+    local newPath: Path = PathfindingService:CreatePath(agentParameters)
+    local success: boolean, errorMessage: string = pcall(function()
+		newPath:ComputeAsync(firstPos, lastPos)
+	end)
+
+    if success and newPath.Status == Enum.PathStatus.Success then
+        return true
+    else
+        warn("Path is no longer viable")
+        return false
+    end
+end
+
+--[[
+Finds a new path between two positions
+	@param FirstPos (Vector3) position to start at
+	@param LastPos (Vector3) position to end at
+	@return (Path?) path on success else nil otherwise
+--]]
+local function ReroutePath(FirstPos: Vector3, LastPos: Vector3) : Path?
+    local newPath: Path = PathfindingService:CreatePath(agentParameters)
+    local success: boolean, errorMessage: string = pcall(function()
+		newPath:ComputeAsync(FirstPos, LastPos)
+	end)
+
+    if success and newPath.Status == Enum.PathStatus.Success then
+        return newPath
+    else
+        return nil
+    end
+end
+
+--[[
+Reroutes a given path from its current position to the next paths end position
+	@param Self (instance) instance of the class
+	@param Path (Path) path to reroute
+	@return (boolean) true on success or false otherwise
+--]]
+local function Reroute(Self: any, Path: Path) : boolean
+    --Find current path index
+    local originalPathIndex: number = 1
+    for i, path in ipairs(Self.__Waypoints) do
+        if path == Path then
+            originalPathIndex = i
+        end
+    end
+
+    local currentPathWaypoints: {PathWaypoint} = Path:GetWaypoints()
+    local currentPathStart: PathWaypoint = currentPathWaypoints[1]
+    local nextPathIndex: number = originalPathIndex + 1
+    local nextPath: Path = Self.__Waypoints[nextPathIndex]
+    while nextPath ~= nil do
+        local nextPathWaypoints: {PathWaypoint} = nextPath:GetWaypoints()
+        local nextPathEnd: PathWaypoint = nextPathWaypoints[#nextPathWaypoints]
+        --Attempt to find path to next endpoint
+        local newPath: Path? = ReroutePath(currentPathStart.Position, nextPathEnd.Position)
+        if newPath then
+            Self.__Waypoints[originalPathIndex + 1] = newPath
+            return true --End loop. Reroute successful
+        end
+        table.remove(Self.__Waypoints, nextPathIndex) --Next path failed. Remove from list
+        --Next path was shifted to same index.
+        nextPath = Self.__Waypoints[nextPathIndex]
+    end
+    return false --Could not find path or was no next path
+end
+
+--[[
+Defines the behavior of an NPC when a path becomes blocked
+	@param Self (instance) instance of the class
+	@param Path (Path) the path that failed.
+	@return (boolean) true on path was cleared else false otherwise
+	@return (boolean) true on reroute or false otherwise
+--]]
+local function BlockedFallBack(Self: any, Path: Path) : (boolean, boolean)
+    --Check if path is valid again every 2 seconds for 5 times.
+    for i = 1, 5 do
+        task.wait(2)
+        local validPath: boolean = ValidatePath(Path)
+        if validPath then
+            return true, false
+        end
+    end
+
+    --Attempt to reoute to next waypoint
+    local rerouteSuccess: boolean = Reroute(Self, Path)
+    if rerouteSuccess then
+        return false, true
+    end
+
+    return false, false --Attempt failed
 end
 
 --[[
@@ -122,21 +243,46 @@ function NPC:TraverseWaypoints(): ()
 		if self.__Waypoints == nil then
 			return
 		end
-		for _, set in ipairs(self.__Waypoints) do
-			if set == nil then
+		for _, path in ipairs(self.__Waypoints) do
+			if path == nil then
 				return
 			end
-			for _, waypoint in pairs(set) do
+            --Check if path is still valid
+            if not ValidatePath(path) then
+                local pathCleared: boolean, hasRerouted: boolean = BlockedFallBack(self, path)
+                if hasRerouted then
+                    continue--Skip to next loop because next path has been rerouted from current position.
+                elseif not pathCleared then
+                    --All attempts failed. Abandon traverse.
+                    self.__Waypoints = {} --Reset waypoints
+                    self.__PathFindingTask = nil
+                    return
+                end
+            end
+			for _, waypoint in pairs(path:GetWaypoints()) do
 				if waypoint == nil then
 					return
 				end
 				self.__Humanoid:MoveTo(waypoint.Position)
+                --Handle jump conditions
+                if waypoint.Action == Enum.PathWaypointAction.Jump then
+                    self.__Humanoid.Jump = true
+                end
 				self.__Humanoid.MoveToFinished:Wait() --Handle cases where they get stuck before it ends eventually else this will make them stuck
 			end
 		end
 		--Traverse complete. Remove current prev waypoints
 		self.__Waypoints = {}
+		self.__PathFindingTask = nil
 	end)
+end
+
+function NPC:IsTraversing() : boolean
+    if self.__PathFindingTask then
+        return true
+    else
+        return false
+    end
 end
 
 --[[
@@ -188,11 +334,11 @@ local function TraverseFollowPoints(Self: any, CurrentObjPos: Vector3) : ()
 	--If valid path start following player
 	if success then
 		--Traverse waypoints in each set of waypoints
-		for _, set in ipairs(Self.__Waypoints) do
-			if set == nil then
+		for _, path in ipairs(Self.__Waypoints) do
+			if path == nil then
 				break
 			end
-			for _, waypoint in pairs(set) do
+			for _, waypoint in pairs(path:GetWaypoints()) do
 				if waypoint == nil then
 					return
 				end
