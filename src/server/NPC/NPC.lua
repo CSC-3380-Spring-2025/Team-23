@@ -173,6 +173,7 @@ end
 Reroutes a given path from its current position to the next paths end position
 	@param Self (instance) instance of the class
 	@param Path (Path) path to reroute
+	@return (boolean) true on success or false otherwise
 --]]
 local function Reroute(Self: any, Path: Path) : boolean
     --Find current path index
@@ -207,24 +208,26 @@ end
 Defines the behavior of an NPC when a path becomes blocked
 	@param Self (instance) instance of the class
 	@param Path (Path) the path that failed.
+	@return (boolean) true on path was cleared else false otherwise
+	@return (boolean) true on reroute or false otherwise
 --]]
-local function BlockedFallBack(Self: any, Path: Path) : boolean
+local function BlockedFallBack(Self: any, Path: Path) : (boolean, boolean)
     --Check if path is valid again every 2 seconds for 5 times.
     for i = 1, 5 do
         task.wait(2)
         local validPath: boolean = ValidatePath(Path)
         if validPath then
-            return true
+            return true, false
         end
     end
 
     --Attempt to reoute to next waypoint
     local rerouteSuccess: boolean = Reroute(Self, Path)
     if rerouteSuccess then
-        return true
+        return false, true
     end
 
-    return false --Attempt failed
+    return false, false --Attempt failed
 end
 
 --[[
@@ -246,10 +249,10 @@ function NPC:TraverseWaypoints(): ()
 			end
             --Check if path is still valid
             if not ValidatePath(path) then
-                local fallBackSuccess: boolean = BlockedFallBack(self, path)
-                if fallBackSuccess then --this needs to be reworked for face where fallback doe snot need to reroute. Do double return boolean
+                local pathCleared: boolean, hasRerouted: boolean = BlockedFallBack(self, path)
+                if hasRerouted then
                     continue--Skip to next loop because next path has been rerouted from current position.
-                else
+                elseif not pathCleared then
                     --All attempts failed. Abandon traverse.
                     self.__Waypoints = {} --Reset waypoints
                     self.__PathFindingTask = nil
