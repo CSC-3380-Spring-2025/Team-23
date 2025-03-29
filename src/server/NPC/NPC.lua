@@ -273,6 +273,7 @@ function NPC:TraverseWaypoints(): ()
 		end
 		--Traverse complete. Remove current prev waypoints
 		self.__Waypoints = {}
+		self.__PathFindingTask = nil
 	end)
 end
 
