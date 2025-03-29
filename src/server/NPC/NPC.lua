@@ -160,27 +160,29 @@ end
 
 local function Reroute(Self, Path)
     --Find current path index
-    local pathIndex = 1
+    local originalPathIndex = 1
     for i, path in ipairs(Self.__Waypoints) do
         if path == Path then
-            pathIndex = i
+            originalPathIndex = i
         end
     end
 
-    --Redirect to next path end point
-    local nextPath = Self.__Waypoints[pathIndex + 1]
-    if nextPath then
-        local currentPathWaypoints = Path:GetWaypoints()
-        local currentPathStart = currentPathWaypoints[1]
+    local currentPathWaypoints = Path:GetWaypoints()
+    local currentPathStart = currentPathWaypoints[1]
+    local nextPathIndex = originalPathIndex + 1
+    local nextPath = Self.__Waypoints[nextPathIndex]
+    while nextPath ~= nil do
         local nextPathWaypoints = nextPath:GetWaypoints()
         local nextPathEnd = nextPathWaypoints[#nextPathWaypoints]
-
         --Attempt to find path to next endpoint
         local newPath = ReroutePath(currentPathStart.Position, nextPathEnd.Position)
         if newPath then
-            Self.__Waypoints[pathIndex + 1] = newPath
-            return true
+            Self.__Waypoints[originalPathIndex + 1] = newPath
+            return true --End loop. Reroute successful
         end
+        table.remove(Self.__Waypoints, nextPathIndex) --Next path failed. Remove from list
+        --Next path was shifted to same index.
+        nextPath = Self.__Waypoints[nextPathIndex]
     end
     return false --Could not find path or was no next path
 end
@@ -231,11 +233,12 @@ function NPC:TraverseWaypoints(): ()
             --Check if path is still valid
             if not ValidatePath(path) then
                 local fallBackSuccess = BlockedFallBack(self, path)
-                if fallBackSuccess then
+                if fallBackSuccess then --this needs to be reworked for face where fallback doe snot need to reroute
                     continue--Skip to next loop because next path has been rerouted from current position.
                 else
                     --All attempts failed. Abandon traverse.
-                    self:CancelWaypoints()
+                    self.__Waypoints = {} --Reset waypoints
+                    self.__PathFindingTask = nil
                     return
                 end
             end
@@ -260,6 +263,14 @@ function NPC:TraverseWaypoints(): ()
 		--Traverse complete. Remove current prev waypoints
 		self.__Waypoints = {}
 	end)
+end
+
+function NPC:IsTraversing()
+    if self.__PathFindingTask then
+        return true
+    else
+        return false
+    end
 end
 
 --[[
