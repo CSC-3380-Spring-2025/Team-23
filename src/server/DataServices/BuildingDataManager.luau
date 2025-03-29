@@ -1,28 +1,19 @@
---[[
- * BuildingDataManager - This module loads a player's buildings when they join or when their plot is reassigned, 
- *                using data stored in the `Base` section of their player data table. 
- *                When a player leaves or their plot is reassigned, it removes and saves their buildings 
- *                back into their data table for future use.
- *
-]]
 --module scripts
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
-local SessionDataManager = require(script.Parent.SessionDataManager)
-
+local SessionDataManager = require(game.ServerScriptService.Server.DataServices.SessionDataManager)
 --services
-local ReplicatedStorage = game:GetService("ReplicatedStorage") --For building templates
-local Workspace = game:GetService("Workspace") --To spawn or remove player buildings
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local BuildingDataManager = {}
-Object:Supersedes(BuildingDataManager) 
-
+Object:Supersedes(BuildingDataManager)
 
 local SessionDataManagerInstance: table = SessionDataManager.new()
 
 --Constructor that takes in no parameters
-function BuildingDataManager.new(Name) 
+function BuildingDataManager.new(Name)
 	local self = Object.new(Name)
-	setmetatable(self, BuildingDataManager)  
+	setmetatable(self, BuildingDataManager)
 	return self
 end
 
@@ -42,17 +33,21 @@ end
  * @return - (boolean) Returns `true` if the building was successfully loaded and placed.
  *                     Returns `false` if an error occurs, such as a missing template or workspace folder.
 ]]
-local function LoadBasePart(player: Player, playerPlotOrigin: CFrame, buildingType: string, buildingData: table): boolean
-	print("entered loadbase part for", buildingData)
-	local buildingName: string = buildingData.buildingName
+local function LoadBasePart(
+	Player: Player,
+	PlayerPlotOrigin: CFrame,
+	BuildingType: string,
+	BuildingData: table
+): boolean
+	local buildingName: string = BuildingData.buildingName
 
 	-- Check if the building template exists in ReplicatedStorage
-	local buildingTemplate = ReplicatedStorage:FindFirstChild("Buildings") 
-		and ReplicatedStorage.Buildings:FindFirstChild(buildingType) 
-		and ReplicatedStorage.Buildings[buildingType]:FindFirstChild(buildingName)
+	local buildingTemplate = ReplicatedStorage:FindFirstChild("Buildings")
+		and ReplicatedStorage.Buildings:FindFirstChild(BuildingType)
+		and ReplicatedStorage.Buildings[BuildingType]:FindFirstChild(buildingName)
 
 	if not buildingTemplate then
-		warn("Building template not found: " .. buildingType .. " / " .. buildingName)
+		warn("Building template not found: " .. BuildingType .. " / " .. buildingName)
 		return false
 	end
 
@@ -60,16 +55,16 @@ local function LoadBasePart(player: Player, playerPlotOrigin: CFrame, buildingTy
 	local newBuilding = buildingTemplate:Clone()
 
 	-- Create CFrames from data and apply them to the building relative to playplot
-	local relCframe: table = buildingData.CFrame
+	local relCframe: table = BuildingData.CFrame
 
-	local relativeCFrame: CFrame = CFrame.new(relCframe[1], relCframe[2], relCframe[3]) 
+	local relativeCFrame: CFrame = CFrame.new(relCframe[1], relCframe[2], relCframe[3])
 		* CFrame.Angles(math.rad(relCframe[4] or 0), math.rad(relCframe[5] or 0), math.rad(relCframe[6] or 0))
 
-	newBuilding.CFrame = playerPlotOrigin * relativeCFrame
+	newBuilding.CFrame = PlayerPlotOrigin * relativeCFrame
 
-	if buildingData.properties then
-		for propertyName, propertyValue in pairs(buildingData.properties) do
-			if propertyValue ~= nil then 
+	if BuildingData.properties then
+		for propertyName, propertyValue in pairs(BuildingData.properties) do
+			if propertyValue ~= nil then
 				if propertyName == "Color" and type(propertyValue) == "table" then
 					newBuilding[propertyName] = Color3.new(unpack(propertyValue)) -- Converts {R, G, B} to Color3
 				else
@@ -82,8 +77,8 @@ local function LoadBasePart(player: Player, playerPlotOrigin: CFrame, buildingTy
 		newBuilding.Anchored = true
 	end
 
-	if buildingData.attributes then
-		for attrName, attrValue in pairs(buildingData.attributes) do
+	if BuildingData.attributes then
+		for attrName, attrValue in pairs(BuildingData.attributes) do
 			if attrValue ~= nil then
 				newBuilding:SetAttribute(attrName, attrValue)
 			end
@@ -94,10 +89,10 @@ local function LoadBasePart(player: Player, playerPlotOrigin: CFrame, buildingTy
 	local playerPlots = Workspace:FindFirstChild("PlayerPlots")
 
 	if playerPlots then
-		local playerPlot = playerPlots:FindFirstChild(player.UserId)
+		local playerPlot = playerPlots:FindFirstChild(Player.UserId)
 		if not playerPlot then
 			playerPlot = Instance.new("Folder")
-			playerPlot.Name = tostring(player.UserId)
+			playerPlot.Name = tostring(Player.UserId)
 			playerPlot.Parent = playerPlots
 		end
 		-- Create the new building inside players playerPlot
@@ -108,20 +103,20 @@ local function LoadBasePart(player: Player, playerPlotOrigin: CFrame, buildingTy
 		warn("PlayerPlots folder not found")
 		return false
 	end
-
 end
 
---Documentation can be found in LoadBasePart.
-local function LoadModel(player: Player, playerPlotOrigin: CFrame, buildingType: string, buildingData: table): boolean
-	local buildingName: string = buildingData.buildingName
+--Similar to LoadBasePart so view documentation for that.
+local function LoadModel(Player: Player, PlayerPlotOrigin: CFrame, BuildingType: string, BuildingData: table): boolean
+	local buildingName: string = BuildingData.buildingName
 
 	-- Check if the building template exists in ReplicatedStorage
 	local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
-	local buildingTemplate = buildingsFolder and buildingsFolder:FindFirstChild(buildingType) 
-		and buildingsFolder[buildingType]:FindFirstChild(buildingName)
+	local buildingTemplate = buildingsFolder
+		and buildingsFolder:FindFirstChild(BuildingType)
+		and buildingsFolder[BuildingType]:FindFirstChild(buildingName)
 
 	if not buildingTemplate or not buildingTemplate:IsA("Model") then
-		warn("Model template not found: " .. buildingType .. " / " .. buildingName)
+		warn("Model template not found: " .. BuildingType .. " / " .. buildingName)
 		return false
 	end
 
@@ -135,15 +130,15 @@ local function LoadModel(player: Player, playerPlotOrigin: CFrame, buildingType:
 	end
 
 	-- Create CFrames from data and apply relative positioning
-	local relCframe: table = buildingData.CFrame
-	local relativeCFrame: CFrame = CFrame.new(relCframe[1], relCframe[2], relCframe[3]) 
+	local relCframe: table = BuildingData.CFrame
+	local relativeCFrame: CFrame = CFrame.new(relCframe[1], relCframe[2], relCframe[3])
 		* CFrame.Angles(math.rad(relCframe[4] or 0), math.rad(relCframe[5] or 0), math.rad(relCframe[6] or 0))
 
-	newBuilding:SetPrimaryPartCFrame(playerPlotOrigin * relativeCFrame)
+	newBuilding:SetPrimaryPartCFrame(PlayerPlotOrigin * relativeCFrame)
 
 	-- Apply properties with special handling for CFrame and Color3
-	if buildingData.properties then
-		for propertyName, propertyValue in pairs(buildingData.properties) do
+	if BuildingData.properties then
+		for propertyName, propertyValue in pairs(BuildingData.properties) do
 			if propertyValue ~= nil then
 				if propertyName == "Color" and type(propertyValue) == "table" then
 					newBuilding.PrimaryPart[propertyName] = Color3.new(unpack(propertyValue)) -- Converts {R, G, B} to Color3
@@ -156,8 +151,8 @@ local function LoadModel(player: Player, playerPlotOrigin: CFrame, buildingType:
 	end
 
 	-- Apply attributes
-	if buildingData.attributes then
-		for attrName, attrValue in pairs(buildingData.attributes) do
+	if BuildingData.attributes then
+		for attrName, attrValue in pairs(BuildingData.attributes) do
 			if attrValue ~= nil then
 				newBuilding:SetAttribute(attrName, attrValue)
 			end
@@ -168,15 +163,14 @@ local function LoadModel(player: Player, playerPlotOrigin: CFrame, buildingType:
 	local playerPlots = Workspace:FindFirstChild("PlayerPlots")
 
 	if playerPlots then
-		local playerPlot = playerPlots:FindFirstChild(player.UserId)
+		local playerPlot = playerPlots:FindFirstChild(Player.UserId)
 		if not playerPlot then
 			playerPlot = Instance.new("Folder")
-			playerPlot.Name = tostring(player.UserId)
+			playerPlot.Name = tostring(Player.UserId)
 			playerPlot.Parent = playerPlots
 		end
 		-- Create the new building inside players playerPlot
 		newBuilding.Parent = playerPlot
-		print("Successfully loaded building:", buildingName)
 		return true
 	else
 		warn("PlayerPlots folder not found")
@@ -194,30 +188,29 @@ end
  * 
  * @return - None. 
 ]]
-function BuildingDataManager:LoadBuildings(player: Player, playerPlotOrigin: CFrame)
-	local playerData: table = SessionDataManagerInstance:GetPlayerData(player.UserId)
-	print("entering load buildings. data im working with", playerData)
+function BuildingDataManager:LoadBuildings(Player: Player, PlayerPlotOrigin: CFrame): ()
+	local playerData: table = SessionDataManagerInstance:GetPlayerData(Player.UserId)
 	local playerBuildingData: table = playerData.Base
 	for buildingType, buildingTypeData in pairs(playerBuildingData) do
 		for _, building in ipairs(buildingTypeData) do
-			print("buuliding", building)
 			local buildingMade: boolean = false
 			if building.buildingType == "basePart" then
-				buildingMade = LoadBasePart(player, playerPlotOrigin, buildingType, building)
+				buildingMade = LoadBasePart(Player, PlayerPlotOrigin, buildingType, building)
 			elseif building.buildingType == "model" then
-				buildingMade = LoadModel(player, playerPlotOrigin, buildingType, building)	
+				buildingMade = LoadModel(Player, PlayerPlotOrigin, buildingType, building)
 			else
 				warn("building type not recognised", building.buildingType, "for", building.buildingName)
 			end
-			if not buildingMade then warn("an error occured when attempting to load building", building.buildingName) end
-
+			if not buildingMade then
+				warn("an error occured when attempting to load building", building.buildingName)
+			end
 		end
 	end
 end
 
-
 --Work in progress. DO NOT USE.
-function BuildingDataManager:SaveBuildings(player: Player)
+--[[
+function BuildingDataManager:SaveBuildings(Player: Player)
 	local playerData: table = SessionDataManagerInstance:GetPlayerData(player.UserId)
 	local playerBuildingData: table = playerData.Base
 	-- Check if Users PlayerPlot exists in Workspace
@@ -229,6 +222,6 @@ function BuildingDataManager:SaveBuildings(player: Player)
 		end
 	end
 end
+]]
 
 return BuildingDataManager
-

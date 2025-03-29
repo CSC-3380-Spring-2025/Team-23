@@ -5,34 +5,35 @@ local PlayerDataManager: table = {}
 Object:Supersedes(PlayerDataManager)
 
 --Instance variables
-local PlayerDataManagerBridge = BridgeNet2.ReferenceBridge("PlayerDataManager")
-local playerDataManagerInstance = nil
-local sessionData = nil -- Table to store all players' session data
-local mutexLock = nil
-local player = game.Players.LocalPlayer
+local __PlayerDataManagerBridge = BridgeNet2.ReferenceBridge("PlayerDataManager")
+local PlayerDataManagerInstance = nil
+local __SessionData = nil -- Table to store all players' session data
+local __MutexLock = nil
+local __Player = game.Players.LocalPlayer
 
 --[[
-* new - Singleton constructor for the class.
+* new - Singleton constructor for the class. Uses bridge net to communicate and retrieve the players data table from the session data manager
 *
+* NOTE: should be used on player join
 * @return - Returns the instance of SessionDataManager. If an instance has already been created, calling this constructor again will return the
 * existing instance instead of creating a new one.
 ]]
 function PlayerDataManager.new()
-	if playerDataManagerInstance then
-		return playerDataManagerInstance -- Return existing instance
+	if PlayerDataManagerInstance then
+		return PlayerDataManagerInstance -- Return existing instance
 	end
 	local self = Object.new("PlayerDataManager")
-	PlayerDataManagerBridge:Fire(player, "RequestPlayerData")
-	PlayerDataManagerBridge:Connect(function(player, responseType, playerDataTable)
+	__PlayerDataManagerBridge:Fire(__Player, "RequestPlayerData")
+	__PlayerDataManagerBridge:Connect(function(player, responseType, playerDataTable)
 		if responseType == "PlayerDataResponse" then
-			self.sessionData = playerDataTable
+			self.__SessionData = playerDataTable
 		end
 	end)
-	print("Player data table on clinet side",self.sessionData)
-	self.mutexLock = ClientMutexSeq.new("PlayerDataManagerMutexKey")
+	-- For testing the bridge between client session mamagner and serversession manager scripts print("Player data table on clinet side",self.sessionData)
+	self.__MutexLock = ClientMutexSeq.new("PlayerDataManagerMutexKey")
 	setmetatable(self, PlayerDataManager)
-	if self.sessionData then
-		playerDataManagerInstance = self
+	if self.__SessionData then
+		PlayerDataManagerInstance = self
 	end
 	return self
 end
@@ -46,9 +47,9 @@ end
 * if found, or nil if the player’s data is not found.
 ]]
 function PlayerDataManager:GetPlayerData(): table?
-	self.mutexLock:Lock()
-	local userData: table = self.sessionData
-	self.mutexLock:Unlock()
+	self.__MutexLock:Lock()
+	local userData: table = self.__SessionData
+	self.__MutexLock:Unlock()
 	return userData
 end
 
@@ -62,12 +63,28 @@ end
 ]]
 function PlayerDataManager:SetPlayerData(data: table): boolean
 	if data then
-		self.mutexLock:Lock()
-		self.sessionData = data
-		self.mutexLock:Unlock()
+		self.__MutexLock:Lock()
+		self.__SessionData = data
+		self.__MutexLock:Unlock()
 		return true
 	end
 	return false
 end
+
+--[[
+ * PlayerDataManager:Destroy - Sends the player's current data table from the client to the server 
+ * so that it can be saved. This function should be called on player leave, and MUST be executed 
+ * before the `Data:SavePlayerData` function is called on the server side (inside the script named `DataServices`).
+ * 
+ * The data is sent by firing a remote event (`__PlayerDataManagerBridge`) to the sessionDataManager in the server scripts.
+ * 
+ * @return - nil
+]]
+function PlayerDataManager:Destroy(): ()
+	self.__MutexLock:Lock()
+	__PlayerDataManagerBridge:Fire(__Player, "ReturningPlayerData", self.__SessionData)
+	self.__MutexLock:Unlock()
+end
+
 
 return PlayerDataManager

@@ -13,27 +13,27 @@ Object:Supersedes(Currency)
 Currency.__index = Currency --Currency has lookup.
 
 --Attributes
-local amount: number = 0
+local __Amount: number = 0
 --[[
 Base constructor of all currencies
     @param Name (string) name of instance you are creating
     @param Amount (number) optional amount of the currency
     @return (instance) instance of the object.
 ]]
-function Currency.new(Name: string, amount: number) 
+function Currency.new(Name: string, Amount: number) 
 	local self = Object.new(Name)
 	setmetatable(self, Currency)  
-	self.amount = amount
+	self.__Amount = Amount
 	return self
 end
 
 --[[
  * getAmount - Retrieves the current amount of currency.
  * 
- * @return - (number) - The current value of `self.amount`.
+ * @return - (number) - The current value of `self.__Amount`.
 ]]
 function Currency:GetAmount()
-    return self.amount
+    return self.__Amount
 end
 
 --[[
@@ -44,10 +44,9 @@ end
  *
  * @return - None
 ]]
-function Currency:SetAmount(value)
-
-    if value > 0 then 
-    self.amount = value
+function Currency:SetAmount(Value: number): ()
+    if Value > 0 then 
+	    self.__Amount = Value
     end
 end
 
@@ -61,16 +60,15 @@ end
  * 
  * @return - None 
 ]]
-function Currency:ModAmountBy(value)
-
-    if value > 0 then
-        self.amount = self.amount + value
+function Currency:ModAmountBy(Value: number): ()
+    if Value > 0 then
+        self.__Amount = self.__Amount + Value
     else 
-        if self.amount > value then 
-            self.amount = self.amount - value
+        if self.__Amount > Value then 
+            self.__Amount = self.__Amount - Value
         end
 	end
-	if self.amount < 0 then self.amount=0 end
+	if self.__Amount < 0 then self.__Amount=0 end
 end
 
 return Currency

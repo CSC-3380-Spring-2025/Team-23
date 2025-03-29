@@ -16,12 +16,12 @@ local DataStoreService = game:GetService("DataStoreService")
 --other scripts
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local DefaultPlayerData = require(script.Parent.DefaultPlayerData)
-local SessionDataManager = require(script.Parent.SessionDataManager)
+local SessionDataManager = require(game.ServerScriptService.Server.DataServices.SessionDataManager)
 
 --globals
 local Data = {}
 Object:Supersedes(Data)
-local database = DataStoreService:GetDataStore("data")
+local Database = DataStoreService:GetDataStore("data")
 local SessionDataManagerInstance: table = SessionDataManager.new()
 
 --Constructor that has no parameters apart from instance name
@@ -47,10 +47,8 @@ end
  * @return - boolean - Returns true if data retrieval is successful, otherwise  
  *                     returns false and kicks the player from the game.  
 ]]  
-
-function Data:LoadPlayerData(player: Player): boolean
-
-	local key: string = tostring(player.UserId)
+function Data:LoadPlayerData(Player: Player): boolean
+	local key: string = tostring(Player.UserId)
 	local success: boolean
 	local errorMsg: any = nil
 	local attempt: number = 1
@@ -59,7 +57,7 @@ function Data:LoadPlayerData(player: Player): boolean
 
 	repeat
 		success, errorMsg = pcall(function()
-			playerData = database:GetAsync(key)
+			playerData = Database:GetAsync(key)
 		end)
 		if not success then
 			warn(errorMsg)
@@ -70,16 +68,17 @@ function Data:LoadPlayerData(player: Player): boolean
 
 	--Add fetched data to session data table via session data handler interface
 	if success then
-		print("Connected to database")
+		print("Connected ", Player.Name, " to database")
 		if playerData then
-			SessionDataManagerInstance:SetPlayerData(player.UserId, playerData)
+			
+			SessionDataManagerInstance:SetPlayerData(Player.UserId, playerData)
 		else --if first time joining server
-			SessionDataManagerInstance:SetPlayerData(player.UserId, DefaultPlayerData.data)
+			SessionDataManagerInstance:SetPlayerData(Player.UserId, DefaultPlayerData.data)
 		end
 		return true
 	else
-		warn("Unable to get data for ", player.Name)
-		player:Kick("Unable to load your data. Try again later")
+		warn("Unable to get data for ", Player.Name)
+		Player:Kick("Unable to load your data. Try again later")
 		return false
 	end
 end
@@ -100,11 +99,9 @@ end
  * @return - boolean - Returns true if data is successfully saved, otherwise
  *                     returns false if an error occurs during saving.
 ]]
-function Data:SavePlayerData(player: Player): boolean
-	local key: string = tostring(player.UserId)
-	local data = SessionDataManagerInstance:GetPlayerData(player.UserId)
-	print("data from data",data)
-
+function Data:SavePlayerData(Player: Player): boolean
+	local key: string = tostring(Player.UserId)
+	local data = SessionDataManagerInstance:GetPlayerData(Player.UserId)
 	if data then
 		local success: boolean
 		local errorMsg: any = nil
@@ -112,7 +109,7 @@ function Data:SavePlayerData(player: Player): boolean
 
 		repeat
 			success, errorMsg = pcall(function()
-				database:SetAsync(key, data)
+				Database:SetAsync(key, data)
 			end)
 			if not success then
 				warn(errorMsg)
@@ -122,10 +119,10 @@ function Data:SavePlayerData(player: Player): boolean
 		until success or attempt > 5
 
 		if success then
-			print("Data saved for ", player.Name)
+			print("Data saved for ", Player.Name)
 			return true
 		else
-			warn("Unable to save for", player.Name)
+			warn("Unable to save for", Player.Name)
 			return false
 		end
 	end
