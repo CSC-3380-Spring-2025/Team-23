@@ -46,11 +46,25 @@ function Crop:GetMaxStack() : number
     return self.__ItemStack
  end
 
---[[
-Base constructor of all crops
-    @param Name (string) name of instance you are creating
-    @param EarlyCrop (model) instance of the plot of land that is unsowed
-    @return (instance) instance of the object.
+--[[  
+ * Constructor for creating a new Crop object, initializing the crop's growth stages,
+ * attributes related to item handling, and its appearance in the game.
+
+ *
+ * @Name - A string representing the name of the crop.
+ *
+ * NOTE: Models for early, mid, and finished crop stages should have their PrimaryPart set to "Hitbox".
+ * @EarlyCrop - A Model representing the crop in its early growth stage.
+ * @MidCrop - A Model representing the crop at its mid-growth stage.
+ * @FinishedCrop - A Model representing the fully grown crop, ready for harvest.
+ * @GrowTime - A number representing the time in seconds it takes for the crop to fully grow.
+ *
+ * NOTE: SubclassName,ItemWeight, and ItemStack are to be handled by the subclass constructor
+ * @SubclassName - A string used to categorize the crop item in the backpack system.
+ * @ItemWeight - A number representing the weight of the crop item for backpack handling.
+ * @ItemStack - A number representing the maximum stack size for the crop item in the backpack.
+ *
+ * @return - table - Returns a new Crop object.
 ]]
 function Crop.new(Name: string, EarlyCrop: Model, MidCrop: Model, FinishedCrop: Model, GrowTime: number, SubclassName: string, ItemWeight: number, ItemStack: number): table?
 	local self = Object.new(Name)
