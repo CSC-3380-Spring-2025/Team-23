@@ -1,0 +1,9 @@
+# Project place file
+/Team-23.rbxlx
+
+# Roblox Studio lock files
+/*.rbxlx.lock
+/*.rbxl.lock
+
+#sourcemap
+sourcemap.json
