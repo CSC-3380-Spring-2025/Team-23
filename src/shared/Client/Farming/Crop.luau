@@ -35,13 +35,13 @@ function Crop.new(Name: string, EarlyCrop: Model, MidCrop: Model, FinishedCrop: 
 end
 
 function Crop:Sow(Target: Instance): boolean
-    if Target:HasTag("FarmLand") then
-        local isUnsowed: string = Target:FindFirstChild("Unsowed")
-        if isUnsowed then
+	if Target:HasTag("FarmLand") then
+		if Target:HasTag("Unsowed") then
             if Target:IsA("BasePart") then
                 Target.Material = Enum.Material.Ground
                 Target.BrickColor = BrickColor.new("Reddish brown")
-                --add decal
+				print("changing brick color")
+				--add decal
                 CollectionService:RemoveTag(Target, "Unsowed")
                 CollectionService:AddTag(Target, "Sowed")
                 return true
@@ -52,12 +52,14 @@ function Crop:Sow(Target: Instance): boolean
 end
 
 local function UpdateCropModels(Target: Instance, CropName: string, To: Model): boolean
-    for _, cropModel in pairs(Target:GetDescendants()) do
-        if cropModel.Name == CropName then
-			local fromPosition: Vector3 = cropModel:GetPivot()
+	print("Target:get descendants", Target:GetDescendants())
+	for _, cropModel in pairs(Target:GetDescendants()) do
+		if cropModel.Name == CropName then
+			print("found matching model", cropModel)
+			local fromPosition: Vector3 = cropModel:GetPivot().Position
 			cropModel:Destroy()
 			local replacementModel: Model = To:Clone()
-			replacementModel:PivotTo(fromPosition)
+			replacementModel:PivotTo(CFrame.new(fromPosition))
 			replacementModel.Name = CropName
 			replacementModel.Parent = Target
         end
@@ -66,16 +68,18 @@ end
 
 function Crop:Plant(Target: Instance, CropName: string): boolean
     if Target:HasTag("FarmLand") then
-        local isSowed: string = Target:FindFirstChild("Sowed")
-        if isSowed then
-            local timePassed: number = Target:GetAttribute("TimePassed")
+        if Target:HasTag("Sowed") then
+			local timePassed: number = Target:GetAttribute("TimePassed")
+			print("time passed", timePassed)
             local replacementModel: Model = self.__EarlyCrop:Clone()
-			replacementModel:PivotTo(Target.Posiiton)
+			replacementModel:PivotTo(CFrame.new(Target.Position))
 			replacementModel.Name = CropName
 			replacementModel.Parent = Target
+			print("added early crop to land")
             while (timePassed < self.__GrowTime/2) do
                 task.wait(5)
-                timePassed += 5
+				timePassed += 5
+				print("time passed now", timePassed)
                 Target:SetAttribute("TimePassed", timePassed)
             end
             UpdateCropModels(Target, CropName, self.__MidCropCrop)
@@ -84,7 +88,7 @@ function Crop:Plant(Target: Instance, CropName: string): boolean
                 timePassed += 5
                 Target:SetAttribute("TimePassed", timePassed)
             end
-            UpdateCropModels(Target, CropName, self.__FinishedCrop)
+			UpdateCropModels(Target, CropName, self.__finishCropCrop)
             CollectionService:RemoveTag("Sowed")
             CollectionService:AddTag(Target, "Harvest_Ready")
             return true
