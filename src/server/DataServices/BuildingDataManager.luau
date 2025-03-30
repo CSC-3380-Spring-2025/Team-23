@@ -121,7 +121,7 @@ local function LoadModel(Player: Player, PlayerPlotOrigin: CFrame, BuildingType:
 	end
 
 	-- Clone the model template
-	local newBuilding = buildingTemplate:Clone()
+	local newBuilding: Model = buildingTemplate:Clone()
 
 	-- Ensure the model has a PrimaryPart
 	if not newBuilding.PrimaryPart then
