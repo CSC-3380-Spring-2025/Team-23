@@ -31,7 +31,7 @@ local function ProxPromptHandler(Self: any) : ()
         action:Disconnect()
     end
     --and reassign them to open new menus afterwards
-    local function NewAction()
+    local function NewAction() : ()
         Self.__HomeMenu.Enabled = true
     end
     Self.__ProxPromptAction = proxPrompt.Triggered:Connect(NewAction)
