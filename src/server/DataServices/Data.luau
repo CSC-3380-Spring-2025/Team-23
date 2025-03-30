@@ -1,17 +1,54 @@
+--[[  
+ * Data - Handles saving and loading player data using the Roblox DataStore.  
+ *  
+ * This module is responsible for retrieving a player's data from the DataStore  
+ * when they join and saving it when they leave.
+ * 
+ * This should be the first module script to run when a player joins.  
+ * It interacts with the SessionDataManager module to safely add and remove  
+ * player data from the global session data table, which contains all active players' data.  
+ *  
+ * To view the structure of a player's data, refer to the DefaultPlayerData module.  
+]]  
 --services
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 --other scripts
-local DefaultPlayerData = require(game.ServerScriptService.Server.DataServices.DefaultPlayerData)
+local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
+local DefaultPlayerData = require(script.Parent.DefaultPlayerData)
 local SessionDataManager = require(game.ServerScriptService.Server.DataServices.SessionDataManager)
 
 --globals
-local database = DataStoreService:GetDataStore("data")
 local Data = {}
+Object:Supersedes(Data)
+local Database = DataStoreService:GetDataStore("data")
+local SessionDataManagerInstance: table = SessionDataManager.new()
 
--- Function to load player data
-function Data:loadPlayerData(player: Player): boolean
-	local key: string = tostring(player.UserId)
+--Constructor that has no parameters apart from instance name
+function Data.new(Name) 
+	local self = Object.new(Name)
+	setmetatable(self, Data)  
+	return self
+end
+
+
+
+--[[  
+ * loadPlayerData - Retrieves player data from the Roblox DataStore.  
+ * If data retrieval fails after multiple attempts, the player is kicked.  
+ * Once data is retrieved, it is stored in the global session data table  
+ * via the SessionDataManager module. If the player is new, they are assigned  
+ * a default data table from the DefaultPlayerData module.  
+ *  
+ * This function should only be used when the player joins the game.  
+ *  
+ * @player - The Player instance provided through the PlayerAdded signal.  
+ *  
+ * @return - boolean - Returns true if data retrieval is successful, otherwise  
+ *                     returns false and kicks the player from the game.  
+]]  
+function Data:LoadPlayerData(Player: Player): boolean
+	local key: string = tostring(Player.UserId)
 	local success: boolean
 	local errorMsg: any = nil
 	local attempt: number = 1
@@ -20,7 +57,7 @@ function Data:loadPlayerData(player: Player): boolean
 
 	repeat
 		success, errorMsg = pcall(function()
-			playerData = database:GetAsync(key)
+			playerData = Database:GetAsync(key)
 		end)
 		if not success then
 			warn(errorMsg)
@@ -31,24 +68,40 @@ function Data:loadPlayerData(player: Player): boolean
 
 	--Add fetched data to session data table via session data handler interface
 	if success then
-		print("Connected to database")
+		print("Connected ", Player.Name, " to database")
 		if playerData then
-			SessionDataManager:SetPlayerData(player, playerData)
+			
+			SessionDataManagerInstance:SetPlayerData(Player.UserId, playerData)
 		else --if first time joining server
-			SessionDataManager:SetPlayerData(player, DefaultPlayerData.data)
+			SessionDataManagerInstance:SetPlayerData(Player.UserId, DefaultPlayerData.data)
 		end
 		return true
 	else
-		warn("Unable to get data for ", player.Name)
-		player:Kick("Unable to load your data. Try again later")
+		warn("Unable to get data for ", Player.Name)
+		Player:Kick("Unable to load your data. Try again later")
 		return false
 	end
 end
 
--- Function to save player data
-function Data:savePlayerData(player: Player): boolean
-	local key: string = tostring(player.UserId)
-	local data = SessionDataManager:GetPlayerData(player)
+
+--[[  
+ * savePlayerData - Retrieves the player's data from the global data table using the
+ * SessionDataManager module. The data is then stored in the DataStore.
+ *  
+ * If the save process fails after multiple attempts, a warning is issued,
+ * and the function returns false, meaning the player's progress will be lost.
+ *  
+ * This function should only be called when a player leaves the game or
+ * when the server crashes.
+ *
+ * @player - The Player instance provided through the PlayerRemoving signal.
+ *
+ * @return - boolean - Returns true if data is successfully saved, otherwise
+ *                     returns false if an error occurs during saving.
+]]
+function Data:SavePlayerData(Player: Player): boolean
+	local key: string = tostring(Player.UserId)
+	local data = SessionDataManagerInstance:GetPlayerData(Player.UserId)
 	if data then
 		local success: boolean
 		local errorMsg: any = nil
@@ -56,7 +109,7 @@ function Data:savePlayerData(player: Player): boolean
 
 		repeat
 			success, errorMsg = pcall(function()
-				database:SetAsync(key, data)
+				Database:SetAsync(key, data)
 			end)
 			if not success then
 				warn(errorMsg)
@@ -66,25 +119,14 @@ function Data:savePlayerData(player: Player): boolean
 		until success or attempt > 5
 
 		if success then
-			print("Data saved for ", player.Name)
+			print("Data saved for ", Player.Name)
 			return true
 		else
-			warn("Unable to save for", player.Name)
+			warn("Unable to save for", Player.Name)
 			return false
 		end
 	end
 end
 
---Save all player data on server shutdown
-function Data:ServerShutdown()
-	print("Server shutting down...")
-	for _, player in ipairs(Players:GetPlayers()) do
-		local saved = self.savePlayerData(player)
-		if not saved then
-			warn("Failed to save data for", player.Name, "before shutdown")
-		end
-	end
-	task.wait(3) -- Give time for saving before the server closes
-end
 
 return Data
