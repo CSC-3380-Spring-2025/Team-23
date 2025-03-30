@@ -46,12 +46,12 @@ Constructor of a new NPC Dialogue
 function NPCDialogue.new(Name: string, NPC: string) 
     local self = Object.new(Name)
     setmetatable(self, NPCDialogue) 
-    self.__NPC : string = NPC 
+    self.__NPC = NPC 
     
     --creating other empty and miscellaneous parameters to be modified with other associated functions below
     self.__CurrentMenu = nil
     self.__DialogueVisibleProperty = false
-    self.__Menus : MenuTable = {}
+    self.__Menus = {}
     self.__HomeMenu = nil
     self.__ProxPrompt = Instance.new("ProximityPrompt")
     self.__ProxPrompt.MaxActivationDistance = 10
@@ -113,7 +113,7 @@ Function to insert Option inside a Menu within NPC Dialogue
     @param ActionFunc (function) a user-defined function to be binded with the inserted message
     @param Priority (number) the order in which the inserted message appears in the UI
 --]]
-function NPCDialogue:InsertOption(MenuName: string, OptionMessage: string, ActionFunc: (), Priority: number) : ()
+function NPCDialogue:InsertOption(MenuName: string, OptionMessage: string, ActionFunc, Priority: number) : ()
     
     --look up MenuName in the Menus table and save to UI variable
     local currentMenu: ScreenGui = self.__Menus[MenuName]
@@ -182,6 +182,8 @@ function NPCDialogue:DestroyInstance() : ()
          print("Menu is destroyed.")
     end
 end
+
+
 
 return NPCDialogue
  
