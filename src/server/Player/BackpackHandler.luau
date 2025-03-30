@@ -1,4 +1,6 @@
 --[[  
+ * THIS CLASS INHERITS FROM CLASS: OBJECT
+ * This Class is designed in a nonstandard way and can simply be required and all its functions accessed without calling a constructor.
  * BackpackHandler - Superclass of all item and tool classes.  
  *  
  * This class represents a full backpack interaction system for players, allowing for
@@ -396,6 +398,9 @@ function BackpackHandler:DestroyTool(Player:Player, ToolID : number) : ()
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
 end
 
+--[[
+@Description: This is a placeholder. The toolbar and backpack UI must be implemented before it can be created.
+]]
 function BackpackHandler:MoveItemToToolbar(Player : Player, ItemData, ItemID : string) : ()
 
 end

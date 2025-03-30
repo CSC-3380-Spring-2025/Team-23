@@ -78,7 +78,6 @@ end
 ]]
 function ItemHandler:DecreaseHealthByHit(Amount) : ()
 	self.__Durability -= Amount
-	print("Decreased health by "..Amount)
 	if self.__Durability <= 0 then
 		self:BreakTool()
 	end
