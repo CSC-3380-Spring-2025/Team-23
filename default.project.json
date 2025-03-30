@@ -23,7 +23,7 @@
 
     "ReplicatedFirst": {
       "Scripts": {
-        "$path": "src/sharedFirst"
+        "$path": "src/ReplicatedFirst"
       }
     },
 
