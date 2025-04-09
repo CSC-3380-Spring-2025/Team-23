@@ -41,6 +41,7 @@ function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Sp
 	--Set up NPC body
 	self.__NPC = Rig:Clone()
 	self.__NPC.Parent = workspace
+	self.__Speed = Speed
 	self.__NPC.Humanoid.WalkSpeed = Speed or 16
 	local rootPart = self.__NPC:FindFirstChild("HumanoidRootPart")
 	if rootPart then
@@ -369,7 +370,7 @@ Sets an NPC to follow a given object
     Creating a waypoint will undo a follow command.
     @param Object (BasePart) the object to follow
 --]]
-function NPC:Follow(Object: BasePart): ()
+function NPC:Follow(Object: BasePart) : ()
 	if self.__Waypoints then
 		self:CancelWaypoints() --Cancel any prev tasks.
 	end
@@ -384,6 +385,34 @@ Cancels a Follow command
 --]]
 function NPC:Unfollow(): ()
 	self:CancelWaypoints()
+end
+
+--[[
+Sets the speed of the NPC. Default speed is 16
+	@param Speed (number) the new speed to set the NPC's speed to
+--]]
+function NPC:SetSpeed(Speed) : ()
+	if Speed < 0 then
+		warn("Speed of an NPC may not be negative for NPC \"" .. self.Name .. "\"")
+		return
+	end
+	self.__NPC.Humanoid.WalkSpeed = Speed
+	self.__Speed = Speed
+end
+
+--[[
+Gets the current speed of an NPC
+--]]
+function NPC:GetSpeed() : ()
+	return self.__Speed
+end
+
+--[[
+Destroys the NPC
+--]]
+function NPC:Destroy() : ()
+	self.__NPC:Destroy()
+	self = nil
 end
 
 return NPC

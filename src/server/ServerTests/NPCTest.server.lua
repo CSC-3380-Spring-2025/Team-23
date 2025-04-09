@@ -62,6 +62,7 @@ end
 
 --ResourceNPC tests
 
+--[[
 local ResourceNPC1 = NPC.new("ResourceNPC 1", rigsFolder.DefaultNPC, 100, 0, nil, Vector3.new(0, 10, 0))
 
 local waypoints = Workspace:FindFirstChild("PathfindingTest")
@@ -87,3 +88,68 @@ end
 if success then
     ResourceNPC1:TraverseWaypoints()
 end
+--]]
+
+--Walk speed test
+local NPC1 = NPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 30)
+
+local waypoints = Workspace:FindFirstChild("PathfindingTest")
+local waypoint1 = waypoints:FindFirstChild("Waypoint1")
+local waypoint10 = waypoints:FindFirstChild("Waypoint10")
+local homePoint = waypoints:FindFirstChild("HomePoint")
+
+task.wait(5)
+local success = false
+--local success = NPC1:SetLinkedWaypoint(waypoint10.Position)
+
+NPC1:SetHomePoint(homePoint.Position)
+
+--LinkedWaypoint test
+for i = 1, 12 do
+    local point = waypoints:FindFirstChild("Waypoint" .. i)
+    success = NPC1:SetLinkedWaypoint(point.Position)
+    if not success then
+        break
+    end
+end
+
+if success then
+    NPC1:TraverseWaypoints()
+end
+
+task.wait(10)
+
+NPC1:SetSpeed(6)
+
+print(NPC1:GetSpeed())
+
+--Destroy test
+local NPC1 = NPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 30)
+
+local waypoints = Workspace:FindFirstChild("PathfindingTest")
+local waypoint1 = waypoints:FindFirstChild("Waypoint1")
+local waypoint10 = waypoints:FindFirstChild("Waypoint10")
+local homePoint = waypoints:FindFirstChild("HomePoint")
+
+task.wait(5)
+local success = false
+--local success = NPC1:SetLinkedWaypoint(waypoint10.Position)
+
+NPC1:SetHomePoint(homePoint.Position)
+
+--LinkedWaypoint test
+for i = 1, 12 do
+    local point = waypoints:FindFirstChild("Waypoint" .. i)
+    success = NPC1:SetLinkedWaypoint(point.Position)
+    if not success then
+        break
+    end
+end
+
+if success then
+    NPC1:TraverseWaypoints()
+end
+
+task.wait(10)
+
+NPC1:Destroy()
