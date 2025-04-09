@@ -26,7 +26,7 @@ Constructor for the BackpackNPC class
     .Weight of whole item stack. Backpack is empty if not given.
 --]]
 function BackpackNPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, 
-    Speed: number, MaxWeight: number, MediumWeight: number, HeavyWeight: number, Backpack: {})
+    Speed: number, MaxWeight: number, MediumWeight: number, HeavyWeight: number, Backpack: {}?)
     local self = NPC.new(Name, Rig, Health, SpawnPos, Speed)
     setmetatable(self, BackpackNPC)
     self.__Backpack = Backpack or {}
