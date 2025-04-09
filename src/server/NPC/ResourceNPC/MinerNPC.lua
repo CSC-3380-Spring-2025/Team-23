@@ -41,4 +41,6 @@ function MinerNPC.new(
 	return self
 end
 
+
+
 return MinerNPC

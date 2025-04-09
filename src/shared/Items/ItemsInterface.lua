@@ -8,38 +8,46 @@ local AbstractInterface = require(ReplicatedStorage.Shared.Utilities.Object.Abst
 local ItemsInterface = {}
 Object:Supersedes(ItemsInterface)
 
-function ItemsInterface.new(Name, Weight, MaxStack, ItemType)
+function ItemsInterface.new(Name, Weight, MaxStack, ItemType, ItemName)
     local self = Object.new(Name)
     setmetatable(self, ItemsInterface)
     self.__Weight = Weight or AbstractInterface:AbstractVarError("Weight", "ItemsInterface")
     self.__MaxStack = MaxStack or AbstractInterface:AbstractVarError("MaxStack", "ItemsInterface")
     self.__ItemType = ItemType or AbstractInterface:AbstractVarError("ItemType", "ItemsInterface")
+    self.__ItemName = ItemType or AbstractInterface:AbstractVarError("ItemName", "ItemsInterface")
     return self
 end
 
 --[[
-@Description: Returns the weight of one item of this type.
-@Return Weight (Number): The weight of one item.
+Returns the weight of one item of this type.
+    @Return (number) The weight of one item.
 ]]
 function ItemsInterface:GetWeight() : number
-    AbstractInterface:AbstractError("GetWeight", "ItemsInterface")
-    return -1
+    return self.__Weight
 end
+
 --[[
-@Description: Returns the name of this item.
-@Return ItemName (String): The name of one item.
+Returns the name of this item.
+    @Return (string) The name of one item.
 ]]
 function ItemsInterface:GetName() : string
-    AbstractInterface:AbstractError("GetName", "ItemsInterface")
-    return ""
+    return self.__ItemName
 end
+
 --[[
-@Description: Returns the maximum stack size of this item.
-@Return ItemStack (Number): The maximum amount this item can be stacked.
+Returns the maximum stack size of this item.
+    @Return (number) The maximum amount this item can be stacked.
 ]]
 function ItemsInterface:GetMaxStack() : number
-    AbstractInterface:AbstractError("GetWeight", "ItemsInterface")
-    return -1
- end
+    return self.__MaxStack
+end
+
+--[[
+Returns the type of item
+    @return (string) the name of the type of item
+--]]
+function ItemsInterface:GetItemType() : string
+    return self.__ItemType
+end
 
 return ItemsInterface

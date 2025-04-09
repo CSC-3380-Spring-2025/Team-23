@@ -1,5 +1,8 @@
 --[[
 This abstract class provides the required methods for an NPC that has a backpack
+Before making a subclass or expanding this class you should take great care
+in examining the existing functions and ensure that you follow the same approach 
+in the backpack table layout with its keys and values.
 --]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PathfindingService = game:GetService("PathfindingService")
@@ -191,6 +194,37 @@ function BackpackNPC:CheckEncumberment() : string
     else
         return "Heavy"
     end
+end
+
+--[[
+Gets an items type
+    Item must already be present in NPC's backpack
+    @param ItemName (string) the name of the item to check for
+    @return (string) name of item type on success or nil otherwise
+--]]
+function BackpackNPC:CheckItemType(ItemName: string) : string?
+    for key, value in pairs(self.__Backpack) do
+        if key == ItemName then
+            --item is present in backpack so return count and weight of item
+            return value.ItemType
+        end
+    end
+    return nil
+end
+
+--[[
+Returns the real item of the ItemName if in backpack
+    @param ItemName (string) the name of the item to get from backpack
+    @return (any) the item with the item name on success or nil otherwise
+--]]
+function BackpackNPC:GetItem(ItemName) : any
+    for key, value in pairs(self.__Backpack) do
+        if key == ItemName then
+            --item is present in backpack so return count and weight of item
+            return value.Item
+        end
+    end
+    return nil
 end
 
 return BackpackNPC

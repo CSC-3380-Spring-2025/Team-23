@@ -1,3 +1,5 @@
+script.Enabled = false
+
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 local ServerStorage = game:GetService("ServerStorage")
@@ -127,7 +129,41 @@ print(NPC1:GetSpeed())
 --]]
 
 --Destroy test
+--[[
 local NPC1 = MinerNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 30, 100, 70, 100, nil)
+
+local waypoints = Workspace:FindFirstChild("PathfindingTest")
+local waypoint1 = waypoints:FindFirstChild("Waypoint1")
+local waypoint10 = waypoints:FindFirstChild("Waypoint10")
+local homePoint = waypoints:FindFirstChild("HomePoint")
+
+task.wait(5)
+local success = false
+--local success = NPC1:SetLinkedWaypoint(waypoint10.Position)
+
+NPC1:SetHomePoint(homePoint.Position)
+
+--LinkedWaypoint test
+for i = 1, 12 do
+	local point = waypoints:FindFirstChild("Waypoint" .. i)
+	success = NPC1:SetLinkedWaypoint(point.Position)
+	if not success then
+		break
+	end
+end
+
+if success then
+	NPC1:TraverseWaypoints()
+end
+
+task.wait(10)
+
+NPC1:Destroy()
+--]]
+
+--ToolNPC test
+local ToolNPC = require(ServerScriptService.Server.NPC.BackpackNPC)
+local NPC1 = ToolNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 30, 100, 70, 100, nil)
 
 local waypoints = Workspace:FindFirstChild("PathfindingTest")
 local waypoint1 = waypoints:FindFirstChild("Waypoint1")
