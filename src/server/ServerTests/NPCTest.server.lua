@@ -127,7 +127,7 @@ print(NPC1:GetSpeed())
 --]]
 
 --Destroy test
-local NPC1 = ResourceNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 30, 100, 70, 100, nil)
+local NPC1 = MinerNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 30, 100, 70, 100, nil)
 
 local waypoints = Workspace:FindFirstChild("PathfindingTest")
 local waypoint1 = waypoints:FindFirstChild("Waypoint1")

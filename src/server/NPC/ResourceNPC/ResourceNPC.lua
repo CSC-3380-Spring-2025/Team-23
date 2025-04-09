@@ -36,7 +36,7 @@ function ResourceNPC.new(
 	HeavyWeight: number,
 	Backpack: {}?
 )
-	local self = ResourceNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxWeight, MediumWeight, HeavyWeight, Backpack)
+	local self = BackpackNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxWeight, MediumWeight, HeavyWeight)
 	setmetatable(self, ResourceNPC)
 	return self
 end

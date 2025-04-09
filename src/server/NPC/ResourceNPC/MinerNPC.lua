@@ -8,7 +8,7 @@ local Runservice = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ResourceNPC = require(ServerScriptService.Server.NPC.ResourceNPC.ResourceNPC)
 local MinerNPC = {}
-ResourceNPC:Supersedes(ResourceNPC)
+ResourceNPC:Supersedes(MinerNPC)
 
 
 --[[
