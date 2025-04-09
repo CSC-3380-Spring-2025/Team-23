@@ -32,16 +32,16 @@ Constructor that creates an NPC
     @param Name (string) name of the NPC
     @param Rig (rig) rig to make an NPC (the body)
     @param Health (number) health value to set NPC at
-    @param RewardValue (number) the amount of gold dropped for a player when NPC dies.
-    @param Tools (undetermined)
     @param SpawnPos (Vector3) position to spawn NPC at
+	@param Speed (number) the walk speed of a NPC. Default of 16
 --]]
-function NPC.new(Name: string, Rig: Model, Health: number, RewardValue: number, Tools: Tool, SpawnPos: Vector3)
+function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Speed: number)
 	local self = Object.new(Name)
 	setmetatable(self, NPC)
 	--Set up NPC body
 	self.__NPC = Rig:Clone()
 	self.__NPC.Parent = workspace
+	self.__NPC.Humanoid.WalkSpeed = Speed or 16
 	local rootPart = self.__NPC:FindFirstChild("HumanoidRootPart")
 	if rootPart then
 		rootPart.CFrame = CFrame.new(SpawnPos)
@@ -50,10 +50,6 @@ function NPC.new(Name: string, Rig: Model, Health: number, RewardValue: number, 
 	self.__Humanoid = self.__NPC:FindFirstChild("Humanoid")
 	self.__NPC.Name = Name
 	self.__Health = Health
-	if RewardValue < 0 then
-		error("RewardValue may not be less than 0")
-	end
-	self.__RewardValue = RewardValue or 0
 	--Add tools to npc here eventually
 	--Spawn NPC here eventually at SpawnPos
 	local waypoints: {Path} = {}
@@ -389,16 +385,5 @@ Cancels a Follow command
 function NPC:Unfollow(): ()
 	self:CancelWaypoints()
 end
-
---WORK IN PROGRESS START:
---[[
-Drops the reward amount in a money bag when an NPC is killed
---]]
-function NPC:DropReward()
-	--May NOT take ANY parameters. Must use instance variables by using self.__RewardValue
-	error("Must Implement DropReward!") --Remove this to start
-end
-
---WORK IN PROGRESS END
 
 return NPC
