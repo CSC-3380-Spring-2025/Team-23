@@ -225,7 +225,7 @@ animTrack:Play()
 --]]
 
 --BackNPC collection test
-local NPC1 = BackpackNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 100, 70, 100, {"Coal"}, nil)
+local NPC1 = BackpackNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 100, 70, 100, {"Coal", "Iron"}, nil)
 
 local success = false
 --local success = NPC1:SetLinkedWaypoint(waypoint10.Position)
@@ -250,4 +250,5 @@ end
 
 task.wait(5)
 NPC1:CollectItem("Coal", 10)
-NPC1:DropItem("Coal", 5)
+NPC1:CollectItem("Iron", 20)
+NPC1:Kill()

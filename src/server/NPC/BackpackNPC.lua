@@ -422,7 +422,9 @@ end
 Drops all items in a NPC's backpack
 --]]
 function BackpackNPC:DropAllItems(): ()
-	AbstractInterface:AbstractError("DropAllItems", "BackpackNPC")
+	for itemName, item in pairs(self.__Backpack) do
+        self:DropItem(itemName, item.Count)
+	end
 end
 
 --[[
@@ -596,6 +598,14 @@ function BackpackNPC:CheckItemWhitelist(ItemName: string): boolean
 	else
 		return false --Not in whitelist
 	end
+end
+
+--[[
+Kills the NPC and drops all items in its backpack and destroys the NPC
+--]]
+function BackpackNPC:Kill()
+    self:DropAllItems()
+    self:Destroy()
 end
 
 return BackpackNPC
