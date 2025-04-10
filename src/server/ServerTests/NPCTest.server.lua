@@ -163,7 +163,7 @@ NPC1:Destroy()
 --]]
 
 --ToolNPC tests
---[[
+----[[
 local ToolNPC = require(ServerScriptService.Server.NPC.ToolNPC)
 local NPC1 = ToolNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 30, 100, 70, 100, nil)
 
@@ -197,7 +197,7 @@ NPC1:Destroy()
 --]]
 
 --ToolNPC tools test
---[[
+----[[
 local tools = ReplicatedStorage.Tools
 local pickaxe = tools.Resource.Pickaxes.Pickaxe
 NPC1:AddTool(pickaxe, 1)
@@ -209,6 +209,7 @@ NPC1:UnequipTool()
 --]]
 
 --Animation test
+--[[
 local NPC1 = NPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16)
 local animation = Instance.new("Animation")
 animation.AnimationId = "rbxassetid://86591655675033"
@@ -221,3 +222,4 @@ NPC1:RemoveAnimation(animTrack)
 task.wait(2)
 print("Playing but should error")
 animTrack:Play()
+--]]
