@@ -9,6 +9,8 @@ local PathfindingService = game:GetService("PathfindingService")
 local Workspace = game:GetService("Workspace")
 local Runservice = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
+local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local AbstractInterface = require(ReplicatedStorage.Shared.Utilities.Object.AbstractInterface)
 local NPC = require(ServerScriptService.Server.NPC.NPC)
 local BackpackNPC = {}
@@ -29,6 +31,9 @@ Constructor for the BackpackNPC class
     @param Backpack ({[ItemName]}) where [ItemName] has a .Count of item and 
     .Weight of whole item stack. Backpack is empty if not given.
     @param WhiteList ({string}) table of item names that may be added
+    @param EncumbranceSpeed ({[Light, Medium, Heavy] = number}) a table of keys defined
+    as Light, Medium, Heavy that have a value pair indicating the speed to go at each Encumbrance level
+    if not provided then Light = -1/3speed, Heavy = -2/3 speed
 --]]
 function BackpackNPC.new(
 	Name: string,
@@ -41,17 +46,54 @@ function BackpackNPC.new(
 	MediumWeight: number,
 	HeavyWeight: number,
 	WhiteList: { string },
-	Backpack: {}?
+	Backpack: {}?,
+	EncumbranceSpeed: {}?
 )
 	local self = NPC.new(Name, Rig, Health, SpawnPos, Speed)
 	setmetatable(self, BackpackNPC)
+	self.__OriginalSpeed = Speed
 	self.__Backpack = Backpack or {}
 	self.__MaxWeight = MaxWeight or 100
 	self.__MediumWeight = MediumWeight or 70 --Weight at wich below you are light, but above you are medium
 	self.__HeavyWeight = HeavyWeight or 100 --weight at wich you become heavy
 	self.__WhiteList = WhiteList or {}
 	self.__MaxStack = MaxStack
+	if EncumbranceSpeed then
+		self.__EncumbranceSpeed = EncumbranceSpeed
+	else
+		self.__EncumbranceSpeed = {
+			Light = Speed,
+			Medium = (2 / 3) * Speed,
+			Heavy = (1 / 3) * Speed,
+		}
+	end
 	return self
+end
+
+local function ManageEncumbrance(Self)
+	local encumbrance = Self:CheckEncumberment()
+	if encumbrance == "Light" then
+		local speed = Self.__EncumbranceSpeed["Light"]
+		if speed == Self:GetSpeed() then
+			return
+		end
+		Self:SetSpeed(Self.__EncumbranceSpeed["Light"])
+		Self.__Speed = speed
+	elseif encumbrance == "Medium" then
+		local speed = Self.__EncumbranceSpeed["Medium"]
+		if speed == Self:GetSpeed() then
+			return
+		end
+		Self:SetSpeed(speed)
+		Self.__Speed = speed
+	elseif encumbrance == "Heavy" then
+		local speed = Self.__EncumbranceSpeed["Heavy"]
+		if speed == Self:GetSpeed() then
+			return
+		end
+		Self:SetSpeed(speed)
+		Self.__Speed = speed
+	end
 end
 
 --[[
@@ -102,7 +144,7 @@ Returns the space left without allocating a new stack for a given item
     @return (number) space left for given item on success or -1 otherwise
 --]]
 function BackpackNPC:StackSpace(ItemName)
-	local item = table.find(self.__Backpack, ItemName)
+	local item = self.__Backpack[ItemName]
 	if not item then
 		warn('Item "' .. ItemName .. '" does not exist within NPC "' .. self.Name .. '"')
 		return -1
@@ -119,7 +161,7 @@ Handles the stack when adding a new item
 --]]
 local function ManageStacksAdd(Item, Amount, Self, ItemInfo): boolean
 	local spaceLeft = 0
-	if table.find(Self.__Backpack, ItemInfo.ItemName) then
+	if Self.__Backpack[ItemInfo.ItemName] then
 		--Is already in backpack so can get stackspace
 		spaceLeft = Self:StackSpace(ItemInfo.ItemName)
 		--else spaceLeft is 0 because no stack made yet
@@ -144,13 +186,49 @@ local function ManageStacksAdd(Item, Amount, Self, ItemInfo): boolean
 end
 
 --[[
+Checks the stack when adding a new item to see if valid
+--]]
+local function CheckStacksAdd(Item, Amount, Self, ItemInfo): boolean
+	local spaceLeft = 0
+	if Self.__Backpack[ItemInfo.ItemName] then
+		--Is already in backpack so can get stackspace
+		spaceLeft = Self:StackSpace(ItemInfo.ItemName)
+		--else spaceLeft is 0 because no stack made yet
+	end
+	local spaceAfter = spaceLeft - Amount
+
+	if spaceAfter >= 0 then
+		--Current stack can accomodate no need to add new stack
+		return true
+	else
+		--Attempt to add new stack or stacks
+		local neededStacks = math.ceil(math.abs(spaceAfter) / ItemInfo.ItemStack)
+		if (Self:StackSlotsLeft() - neededStacks) < 0 then
+			--NPC out of slots to add more
+			return false
+		end
+
+		--Stacks are availible to add
+		return true
+	end
+end
+
+--[[
 Puts a given item and its amount in the NPC's backpack
     @param ItemName (string) the name of the item
     @param Amount (number) the number of the item to add to the player
 --]]
 function BackpackNPC:CollectItem(ItemName: string, Amount: number): boolean
+	--Check whitelist
+	if not self:CheckItemWhitelist(ItemName) then
+		warn('Item "' .. ItemName .. '" not in whitelist of NPC "' .. self.Name .. '" when trying to collect item')
+		return false --Not in whitelist
+	end
 	local itemInfo = self:GetItemInfo(ItemName)
-	local item = table.find(self.__Backpack, ItemName)
+	if not itemInfo then
+		return false
+	end
+	local item = self.__Backpack[ItemName]
 	local firstAdd = false
 	if not item then
 		--Not added yet needs set up
@@ -158,7 +236,8 @@ function BackpackNPC:CollectItem(ItemName: string, Amount: number): boolean
 		item.Weight = 0
 		item.Count = 0
 		item.StackCount = 0
-        item.ItemType = itemInfo.ItemType
+		item.ItemType = itemInfo.ItemType
+		item.DropItem = itemInfo.DropItem
 		firstAdd = true
 	end
 	--Check weight
@@ -181,6 +260,7 @@ function BackpackNPC:CollectItem(ItemName: string, Amount: number): boolean
 	if firstAdd then
 		self.__Backpack[ItemName] = item
 	end
+	ManageEncumbrance(self)
 	return true
 end
 
@@ -189,18 +269,153 @@ Checks if a given item is valid to be added to the NPC
     @param ItemName (string) the name of the item to check for
     @return (boolean) true on valid or false otherwise
 --]]
-function BackpackNPC:ValidItemCollection(ItemName: string): boolean
-	AbstractInterface:AbstractError("ValidItemCollection", "BackpackNPC")
-	return false
+function BackpackNPC:ValidItemCollection(ItemName: string, Amount): boolean
+	--Check whitelist
+	if not self:CheckItemWhitelist(ItemName) then
+		return false --Not in whitelist
+	end
+
+	local itemInfo = self:GetItemInfo(ItemName)
+	if not itemInfo then
+		--Info module missing from items folder
+		return false
+	end
+
+	local item = self.__Backpack[ItemName]
+	local itemCopy = {}
+	if item then
+		itemCopy.Weight = item.Weight
+		itemCopy.Count = item.Count
+		itemCopy.StackCount = item.StackCount
+		itemCopy.ItemType = itemInfo.ItemType
+	else
+		itemCopy.Weight = 0
+		itemCopy.Count = 0
+		itemCopy.StackCount = 0
+		itemCopy.ItemType = itemInfo.ItemType
+	end
+
+	--Check weight
+	local addedWeight = (Amount * itemInfo.ItemWeight)
+	if (self:CheckNPCWeight() + addedWeight) > self.__MaxWeight then
+		return false
+	end
+	local stackSuccess = CheckStacksAdd(itemCopy, Amount, self, itemInfo)
+	if stackSuccess then
+		return true
+	else
+		return false
+	end
+end
+
+local function CopyItem(Item: any) : any
+    local itemClone = Item:Clone()
+    --Copy tags
+    for _, tag in pairs(CollectionService:GetTags(Item)) do
+        CollectionService:AddTag(itemClone, tag)
+    end
+    --Copy attributes
+    for key, value in pairs(Item:GetAttributes()) do
+        itemClone:SetAttribute(key, value)
+    end
+    return itemClone
 end
 
 --[[
-Drops a given item given its amount
+Drops the physical item of the item on to the ground of the NPC
+    @param ItemTemplate (any) any item to be put on the ground
+    @param NPCCharacter that NPC's Character
+--]]
+local function SpawnDrop(ItemTemplate, NPCCharacter, Count)
+    local item = CopyItem(ItemTemplate)
+    item:SetAttribute("Count", Count)
+	local rootPart = NPCCharacter:FindFirstChild("HumanoidRootPart")
+	local front = rootPart.CFrame.LookVector
+	local dropDistance = 0 --Distance from NPC to drop
+    local dropPosition = rootPart.Position + dropDistance * front
+	--Handle proper placement through raycasting
+	-- Create the ray origin and direction
+	local rayOrigin = dropPosition + Vector3.new(0, 5, 0) -- Start ray above the intended position
+	local rayDirection = Vector3.new(0, -1, 0) * 1e6 -- Extend downward with a very large value
+
+	-- Create RaycastParams
+	local params = RaycastParams.new()
+
+	-- Gather all player characters and the NPC to exclude them
+	local filterInstances = {}
+
+	for _, player in pairs(Players:GetPlayers()) do
+		if player.Character then
+			table.insert(filterInstances, player.Character)
+		end
+	end
+    table.insert(filterInstances, NPCCharacter)
+
+	params.FilterDescendantsInstances = filterInstances -- Ignore all player and the NPC's characters
+	params.FilterType = Enum.RaycastFilterType.Exclude -- Set to blacklist mode
+
+	-- Perform the raycast
+	local result = Workspace:Raycast(rayOrigin, rayDirection, params)
+	if result then
+		if item:IsA("Model") then
+			-- Get the extents size of the model
+			local extentsSize = item:GetExtentsSize()
+
+			-- Get the height (Y-axis size)
+			local height = extentsSize.Y
+			local position = Vector3.new(dropPosition.X, result.Position.Y + height / 2, dropPosition.Z)
+			local CFrame = CFrame.new(position, position + front) -- Face the same direction as the player
+			item:PivotTo(CFrame)
+		else
+			item.Position = Vector3.new(dropPosition.X, result.Position.Y + item.Size.Y / 2, dropPosition.Z)
+			item.CFrame = CFrame.new(item.Position, item.Position + front) -- Face the same direction as the player
+		end
+		item.Parent = Workspace
+	else
+		--Notify client that there was a failure
+		item:Destroy() --Remove item sense the process failed
+	end
+end
+
+--[[
+Drops a given item given its amount to drop
+    setting the Amount to remove greater than the present items is NOT
+    considerd an error and will generate no warnings
+    instead all items in that case will be droped
     @param ItemName (string) the name of the item to remove
     @param Amount (number) the amount of item to remove
 --]]
 function BackpackNPC:DropItem(ItemName: string, Amount: number): ()
-	AbstractInterface:AbstractError("DropItem", "BackpackNPC")
+	local item = self.__Backpack[ItemName]
+	if not item then
+		warn('Attempted to drop Item "' .. ItemName .. '" from NPC "' .. self.Name .. '" but item was not in backpack')
+		return
+	end
+
+	local dropItem = item.DropItem
+	if not dropItem then
+		warn(
+			'Attempted to drop Item "'
+				.. ItemName
+				.. '" from NPC "'
+				.. self.Name
+				.. '" but item does not have a DropItem saved in Items info'
+		)
+	end
+
+	--Drop the amount equal to or less than current amount
+	local currentAmount = item.Count
+	if (currentAmount - Amount) < 0 then
+		--Drop current amount
+        SpawnDrop(item.DropItem, self.__NPC, currentAmount)
+		--Remove from backpack
+		self:RemoveItem(ItemName, currentAmount)
+	else
+		--Drop Amount
+        SpawnDrop(item.DropItem, self.__NPC, Amount)
+		--Remove from backpack
+		self:RemoveItem(ItemName, Amount)
+	end
 end
 
 --[[
@@ -243,6 +458,7 @@ function BackpackNPC:RemoveItem(ItemName: string, Amount: number): ()
 		--Remove item from backpack because 0 or less
 		self.__Backpack[ItemName] = nil
 	end
+	ManageEncumbrance(self)
 end
 
 --[[
@@ -250,6 +466,7 @@ Deletes all items from a NPC's backpack
 --]]
 function BackpackNPC:RemoveAllItems(): ()
 	self.__Backpack = {} --Empty backpack table
+	ManageEncumbrance(self)
 end
 
 --[[
@@ -301,9 +518,11 @@ function BackpackNPC:GetItemCount(ItemName: string): number
 	if item then
 		--item is present in backpack so return count and weight of item
 		return item.Count
-    else
-        warn('"' .. ItemName .. '" not found in backpack of NPC "' .. self.Name .. '" when attempting to get item count')
-        return -1 --item not found in backpack
+	else
+		warn(
+			'"' .. ItemName .. '" not found in backpack of NPC "' .. self.Name .. '" when attempting to get item count'
+		)
+		return -1 --item not found in backpack
 	end
 end
 
@@ -313,13 +532,15 @@ Checks for a given item and returns the count of that item
 @return (number) count of item if found or -1 otherwise
 --]]
 function BackpackNPC:GetItemWeight(ItemName: string): number
-    local item = self.__Backpack[ItemName]
+	local item = self.__Backpack[ItemName]
 	if item then
 		--item is present in backpack so return count and weight of item
 		return item.Weight
-    else
-        warn('"' .. ItemName .. '" not found in backpack of NPC "' .. self.Name .. '" when attempting to get item weight')
-        return -1 --item not found in backpack
+	else
+		warn(
+			'"' .. ItemName .. '" not found in backpack of NPC "' .. self.Name .. '" when attempting to get item weight'
+		)
+		return -1 --item not found in backpack
 	end
 end
 
@@ -341,9 +562,9 @@ Checks the NPC encumberment based on its weight
 --]]
 function BackpackNPC:CheckEncumberment(): string
 	local weight = self:CheckNPCWeight()
-	if weight < self.__Medium then
+	if weight < self.__MediumWeight then
 		return "Light"
-	elseif weight >= self.__Medium and weight < self.__Heavy then
+	elseif weight >= self.__MediumWeight and weight < self.__HeavyWeight then
 		return "Medium"
 	else
 		return "Heavy"
@@ -357,13 +578,13 @@ Gets an items type
     @return (string) name of item type on success or nil otherwise
 --]]
 function BackpackNPC:CheckItemType(ItemName: string): string?
-    local item = self.__Backpack[ItemName]
-    if item then
-        return item.ItemType
-    else
-        warn('"' .. ItemName .. '" not found in backpack of NPC "' .. self.Name .. '" when attempting to get item type')
-        return nil
-    end
+	local item = self.__Backpack[ItemName]
+	if item then
+		return item.ItemType
+	else
+		warn('"' .. ItemName .. '" not found in backpack of NPC "' .. self.Name .. '" when attempting to get item type')
+		return nil
+	end
 end
 
 --[[

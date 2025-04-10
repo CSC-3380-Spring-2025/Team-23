@@ -225,10 +225,29 @@ animTrack:Play()
 --]]
 
 --BackNPC collection test
-local NPC1 = BackpackNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 30, 1, 100, 70, 100, {"Pickaxe"}, nil)
-NPC1:CollectItem("Coal", 10)
-NPC1:RemoveItem("Coal", 5)
-print(NPC1:GetItemCount("Coal"))
-NPC1:RemoveItem("Coal", 5)
-print(NPC1:GetItemCount("Coal"))
+local NPC1 = BackpackNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 100, 70, 100, {"Coal"}, nil)
 
+local success = false
+--local success = NPC1:SetLinkedWaypoint(waypoint10.Position)
+local waypoints = Workspace:FindFirstChild("PathfindingTest")
+local waypoint1 = waypoints:FindFirstChild("Waypoint1")
+local waypoint10 = waypoints:FindFirstChild("Waypoint10")
+local homePoint = waypoints:FindFirstChild("HomePoint")
+NPC1:SetHomePoint(homePoint.Position)
+
+--LinkedWaypoint test
+for i = 1, 12 do
+	local point = waypoints:FindFirstChild("Waypoint" .. i)
+	success = NPC1:SetLinkedWaypoint(point.Position)
+	if not success then
+		break
+	end
+end
+
+if success then
+	--NPC1:TraverseWaypoints()
+end
+
+task.wait(5)
+NPC1:CollectItem("Coal", 10)
+NPC1:DropItem("Coal", 5)
