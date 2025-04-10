@@ -23,10 +23,9 @@ Constructor for the ResourceNPC class
     @param MediumWeight (number) Weight at wich below you are light, 
     but above you are medium
     @param HeavyWeight (number) weight at wich you become heavy
+	@param WhiteList ({string}) table of item names that may be added
     @param Backpack ({[ItemName]}) where [ItemName] has a .Count of item and 
     .Weight of whole item stack. Backpack is empty if not given.
-    @param ToolBlackList ({string}) a table of tool names to blacklist 
-    when attempting to add a tool
 --]]
 function ToolNPC.new(
 	Name: string,
@@ -37,13 +36,12 @@ function ToolNPC.new(
 	MaxWeight: number,
 	MediumWeight: number,
 	HeavyWeight: number,
-	Backpack: {}?,
-	ToolBlackList: { string }?
+	WhiteList: {string},
+	Backpack: {}?
 )
-	local self = BackpackNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxWeight, MediumWeight, HeavyWeight, Backpack)
+	local self = BackpackNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxWeight, MediumWeight, HeavyWeight, WhiteList, Backpack)
 	setmetatable(self, ToolNPC)
 	self.__EquippedTool = nil --The tool equipped by the NPC
-	self.__ToolBlackList = ToolBlackList or {}
 	return self
 end
 
@@ -217,7 +215,7 @@ Determines if the tool is valid to add to the backpack or not
 --]]
 function ToolNPC:ValidToolAdd(Tool: Tool, Amount: number)
 	--Check blacklist for tool name
-	if table.find(self.__ToolBlackList, Tool.Name) then
+	if not table.find(self.__WhiteList, Tool.Name) then
 		return false
 	end
 	--Check weight

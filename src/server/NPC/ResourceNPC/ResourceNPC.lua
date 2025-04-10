@@ -6,9 +6,9 @@ local PathfindingService = game:GetService("PathfindingService")
 local Workspace = game:GetService("Workspace")
 local Runservice = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
-local BackpackNPC = require(ServerScriptService.Server.NPC.BackpackNPC)
+local ToolNPC = require(ServerScriptService.Server.NPC.ToolNPC)
 local ResourceNPC = {}
-BackpackNPC:Supersedes(ResourceNPC)
+ToolNPC:Supersedes(ResourceNPC)
 
 
 --[[
@@ -36,7 +36,7 @@ function ResourceNPC.new(
 	HeavyWeight: number,
 	Backpack: {}?
 )
-	local self = BackpackNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxWeight, MediumWeight, HeavyWeight)
+	local self = ToolNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxWeight, MediumWeight, HeavyWeight)
 	setmetatable(self, ResourceNPC)
 	return self
 end
