@@ -45,19 +45,67 @@ function ToolNPC.new(
 end
 
 --[[
+Returns the real tool in the players backpack
+    @param ToolName (string) the name of the tool to find in backpack
+    @param Self (any) the instance of the class
+--]]
+local function FindPhysTool(ToolName: string, Self: any) : Tool?
+    for key, value in pairs(Self.__Backpack) do
+        if key == ToolName then
+            --item is present in backpack so return count and weight of item
+            return value.Item
+        end
+    end
+    return nil
+end
+
+--[[
 Equips a tool for the NPC and unequips any tools currently open
     Tool must already be present in NPC's backpack
     @param ToolName (string) the name of the tool to Equip
 --]]
-function ToolNPC:EquipTool(ToolName: string) : ()
-    
+function ToolNPC:EquipTool(ToolName: string) : boolean
+    local tool = FindPhysTool(ToolName, self)
+    if not tool then
+        warn("Tool \"" .. ToolName .. "\" missing from backpack of NPC \"" .. self.Name .. ".\" Unable to equip")
+        return false
+    end
+    tool.Parent = self.__NPC--Parent to NPC to make visible
+    self.__EquippedTool = tool
+    return true
 end
 
 --[[
 Unequips the current tool held by the NPC
 --]]
 function ToolNPC:UnequipTool() : ()
-    
+    self.__EquippedTool.Parent = nil
+    self.__EquippedTool = nil
+end
+
+
+local function PrepToolMotor6d(Tool: Tool, Self: any) : boolean
+    local animations = Tool:FindFirstChild("Animations")
+    if animations == nil then
+        warn("Tool \"" .. Tool.Name .. "\" missing Animations folder")
+        return false
+    end
+    local motor6d = animations:FindFirstChild("Motor6d")
+    if motor6d == nil then
+        warn("Tool \"" .. Tool.Name .. "\" missing Motor6d in Animations folder")
+        return false
+    end
+    local motorParent1 = Tool:FindFirstChild("MotorParent1", true)
+    if motorParent1 == nil then
+        warn("Tool \"" .. Tool.Name .. "\" found no tool part with name MotorParent1 for Motor6d")
+        return false
+    end
+    local rightHand = Self.__NPC:FindFirstChild("RightHand")
+
+    motor6d.Part1 = motorParent1
+    motor6d.Part0 = rightHand
+
+    return true --Success
 end
 
 --[[
@@ -103,6 +151,12 @@ function ToolNPC:AddTool(Tool: Tool, Amount: number) : boolean
     --Check for if allowed to add to backpack here at somepoint
 
     local toolClone = CloneTool(Tool)
+    local success6d = PrepToolMotor6d(toolClone, self)--Prep motor6d for animations
+    if not success6d then
+        toolClone:Destroy()
+        return false
+    end
+
     toolClone:SetAttribute("Count", Amount)
 
     self.__Backpack[Tool.Name] = {
@@ -111,6 +165,7 @@ function ToolNPC:AddTool(Tool: Tool, Amount: number) : boolean
         Weight = weight,
         Item = toolClone,
     }
+    toolClone.Parent = nil --Not equipped
     return true --Success
 end
 
