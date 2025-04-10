@@ -212,19 +212,4 @@ function BackpackNPC:CheckItemType(ItemName: string) : string?
     return nil
 end
 
---[[
-Returns the real item of the ItemName if in backpack
-    @param ItemName (string) the name of the item to get from backpack
-    @return (any) the item with the item name on success or nil otherwise
---]]
-function BackpackNPC:GetItem(ItemName) : any
-    for key, value in pairs(self.__Backpack) do
-        if key == ItemName then
-            --item is present in backpack so return count and weight of item
-            return value.Item
-        end
-    end
-    return nil
-end
-
 return BackpackNPC
