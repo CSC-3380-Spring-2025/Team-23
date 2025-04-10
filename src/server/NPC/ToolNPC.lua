@@ -13,19 +13,23 @@ local ToolNPC = {}
 BackpackNPC:Supersedes(ToolNPC)
 
 --[[
-Constructor for the ResourceNPC class
+Constructor for the ToolNPC class
     @param Name (string) name of the NPC
     @param Rig (rig) rig to make an NPC (the body)
     @param Health (number) health value to set NPC at
     @param SpawnPos (Vector3) position to spawn NPC at
     @param Speed (number) the walk speed of a NPC. Default of 16
+    @param MaxStack (number) the number of stacks allowed for the backpack
     @param MaxWeight (number) max weight of an NPC
     @param MediumWeight (number) Weight at wich below you are light, 
     but above you are medium
     @param HeavyWeight (number) weight at wich you become heavy
-	@param WhiteList ({string}) table of item names that may be added
     @param Backpack ({[ItemName]}) where [ItemName] has a .Count of item and 
     .Weight of whole item stack. Backpack is empty if not given.
+    @param WhiteList ({string}) table of item names that may be added
+    @param EncumbranceSpeed ({[Light, Medium, Heavy] = number}) a table of keys defined
+    as Light, Medium, Heavy that have a value pair indicating the speed to go at each Encumbrance level
+    if not provided then Light = -1/3speed, Heavy = -2/3 speed
 --]]
 function ToolNPC.new(
 	Name: string,
@@ -33,13 +37,15 @@ function ToolNPC.new(
 	Health: number,
 	SpawnPos: Vector3,
 	Speed: number,
+	MaxStack: number,
 	MaxWeight: number,
 	MediumWeight: number,
 	HeavyWeight: number,
-	WhiteList: {string},
-	Backpack: {}?
+	WhiteList: { string },
+	Backpack: {}?,
+	EncumbranceSpeed: {}?
 )
-	local self = BackpackNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxWeight, MediumWeight, HeavyWeight, WhiteList, Backpack)
+	local self = BackpackNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxStack, MaxWeight, MediumWeight, HeavyWeight, WhiteList, Backpack, EncumbranceSpeed)
 	setmetatable(self, ToolNPC)
 	self.__EquippedTool = nil --The tool equipped by the NPC
 	return self
@@ -51,11 +57,9 @@ Returns the real tool in the players backpack
     @param Self (any) the instance of the class
 --]]
 local function FindPhysTool(ToolName: string, Self: any): Tool?
-	for key, value in pairs(Self.__Backpack) do
-		if key == ToolName then
-			--item is present in backpack so return count and weight of item
-			return value.Item
-		end
+	local tool = Self.__Backpack[ToolName]
+	if tool then
+		return tool.DropItem
 	end
 	return nil
 end
@@ -139,42 +143,24 @@ Adds a given tool to an NPC.
     @return (booleam) true on success or false otherwise
 --]]
 function ToolNPC:AddTool(Tool: Tool, Amount: number): boolean
-	--Check for valid tool and amount
-	if not self:ValidToolAdd(Tool, Amount) then
-		warn(
-			'Attempted to add tool "' .. Tool.Name .. '" to NPC "' .. self.Name .. '" but Tool or weight was not valid'
-		)
-		return false
+	--Collect tool item to preserve base class functions
+	local collectSuccess = self:CollectItem(Tool.Name, Amount)
+	if not collectSuccess then
+		return false --Collection failed
 	end
+	local toolItem = self.__Backpack[Tool.Name]
 
-	if Amount <= 0 then
-		warn('Attempted to add Amount of 0 or less for tool "' .. Tool.Name .. '"')
-		return false
-	end
-	local weight = Tool:GetAttribute("Weight")
-	if weight == nil then
-		warn('Weight not set for tool "' .. Tool.Name .. '"')
-		return false
-	elseif weight < 0 then
-		warn('Weight may not be negative for tool "' .. Tool.Name .. '"')
-		return false
-	end
+	--Add tool specific behaivore
 
 	local toolClone = CloneTool(Tool)
 	local success6d = PrepToolMotor6d(toolClone, self) --Prep motor6d for animations
 	if not success6d then
 		toolClone:Destroy()
+		self.__Backpack[Tool.Name] = nil --Remove from backpack
 		return false
 	end
 
-	toolClone:SetAttribute("Count", Amount)
-
-	self.__Backpack[Tool.Name] = {
-		ItemType = "Tool",
-		Count = Amount,
-		Weight = weight,
-		Item = toolClone,
-	}
+	toolItem.DropItem = toolClone
 	toolClone.Parent = nil --Not equipped
 	return true --Success
 end
@@ -184,12 +170,13 @@ Removes a given tool by its name
     @param ToolName (string) the name of the tool to remove
 --]]
 function ToolNPC:RemoveTool(ToolName): ()
-	local tool = self:GetItem(ToolName)
+	local tool = self.__Backpack[ToolName]
 	if tool == nil then
 		warn('Attempted to remove tool "' .. ToolName .. '" from NPC "' .. self.Name .. '" but tool is not in backpack')
 		return
 	end
-	tool:Destroy()
+	local realTool = FindPhysTool(ToolName, self)
+	realTool:Destroy()
 	self.__Backpack[ToolName] = nil --Sets to nil to remove from backack
 end
 
@@ -205,26 +192,6 @@ function ToolNPC:GetTools(): { string }
 		end
 	end
 	return tools
-end
-
---[[
-Determines if the tool is valid to add to the backpack or not
-    @param Tool (Tool) the tool to check for
-    @param Amount (number) the amount of the tool to add
-    @return (boolean) true on valid or false otherwise
---]]
-function ToolNPC:ValidToolAdd(Tool: Tool, Amount: number)
-	--Check blacklist for tool name
-	if not table.find(self.__WhiteList, Tool.Name) then
-		return false
-	end
-	--Check weight
-	local toolWeight = Tool:GetAttribute("Weight")
-	if ((toolWeight * Amount) + self:CheckNPCWeight()) > self.__MaxWeight then
-		return false
-	else
-		return true
-	end
 end
 
 return ToolNPC

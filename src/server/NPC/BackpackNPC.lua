@@ -224,6 +224,13 @@ function BackpackNPC:CollectItem(ItemName: string, Amount: number): boolean
 		warn('Item "' .. ItemName .. '" not in whitelist of NPC "' .. self.Name .. '" when trying to collect item')
 		return false --Not in whitelist
 	end
+
+	--Check amount for negative or 0
+	if Amount <= 0 then
+		warn('Attempted to add Item "' .. ItemName .. '" to NPC "' .. self.Name .. '" with amount of 0 or less')
+		return false
+	end
+
 	local itemInfo = self:GetItemInfo(ItemName)
 	if not itemInfo then
 		return false
@@ -273,6 +280,11 @@ function BackpackNPC:ValidItemCollection(ItemName: string, Amount): boolean
 	--Check whitelist
 	if not self:CheckItemWhitelist(ItemName) then
 		return false --Not in whitelist
+	end
+
+	if Amount <= 0 then
+		--Amount may not be 0 or negative
+		return false
 	end
 
 	local itemInfo = self:GetItemInfo(ItemName)

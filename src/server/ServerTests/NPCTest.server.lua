@@ -163,9 +163,9 @@ NPC1:Destroy()
 --]]
 
 --ToolNPC tests
---[[
+----[[
 local ToolNPC = require(ServerScriptService.Server.NPC.ToolNPC)
-local NPC1 = ToolNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 30, 100, 70, 100, {"Pickaxe"})
+local NPC1 = ToolNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 100, 70, 100, {"Coal", "Iron", "Pickaxe"}, nil)
 
 local waypoints = Workspace:FindFirstChild("PathfindingTest")
 local waypoint1 = waypoints:FindFirstChild("Waypoint1")
@@ -197,7 +197,7 @@ NPC1:Destroy()
 --]]
 
 --ToolNPC tools test
---[[
+----[[
 local tools = ReplicatedStorage.Tools
 local pickaxe = tools.Resource.Pickaxes.Pickaxe
 NPC1:AddTool(pickaxe, 1)
@@ -225,6 +225,7 @@ animTrack:Play()
 --]]
 
 --BackNPC collection test
+--[[
 local NPC1 = BackpackNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 100, 70, 100, {"Coal", "Iron"}, nil)
 
 local success = false
@@ -252,3 +253,4 @@ task.wait(5)
 NPC1:CollectItem("Coal", 10)
 NPC1:CollectItem("Iron", 20)
 NPC1:Kill()
+--]]
