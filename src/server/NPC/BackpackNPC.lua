@@ -119,6 +119,15 @@ function BackpackNPC:GetItemInfo(ItemName: string): { any }?
 end
 
 --[[
+Checks if a given item is a drop item that can be picked up
+	@param Object (any) any object
+	@return (boolean) true if DropItem or false otherwise
+--]]
+function BackpackNPC:IsDropItem(Object)
+	return CollectionService:HasTag(Object, "DropItem")
+end
+
+--[[
 Returns the current amount of stacks filled in the NPC's backpack
     @return (number) the amount of stacks filled in NPC's backpack
 --]]
@@ -269,6 +278,105 @@ function BackpackNPC:CollectItem(ItemName: string, Amount: number): boolean
 	end
 	ManageEncumbrance(self)
 	return true
+end
+
+--[[
+Determines the max amount of an item type possible given NPCs backpack state
+	by stack
+--]]
+local function CheckMaxByStack(ItemInfo, Self)
+	local spaceLeft = 0
+	if Self.__Backpack[ItemInfo.ItemName] then
+		--Is already in backpack so can get stackspace
+		spaceLeft = Self:StackSpace(ItemInfo.ItemName)
+		--else spaceLeft is 0 because no stack made yet
+	end
+
+	local stacksLeft = Self:StackSlotsLeft()
+	local maxCount = (stacksLeft * ItemInfo.ItemStack) + spaceLeft
+	return maxCount
+end
+
+--[[
+Determines the max amount of an item type possible given NPCs backpack state
+	by weight
+--]]
+local function CheckMaxByWeight(ItemInfo, Self)
+	local currentWeight = Self:CheckNPCWeight()
+	local itemWeight = ItemInfo.ItemWeight
+	local remainingWeight = Self.__MaxWeight - currentWeight
+	local maxCount = math.floor(remainingWeight / itemWeight)
+	return maxCount
+end
+
+--[[
+Determines the max amount of the item type that can be picked up
+	given the NPC's current backpack
+--]]
+function BackpackNPC:GetMaxCollect(ItemName) : number
+	local itemInfo = self:GetItemInfo(ItemName)
+	if not itemInfo then
+		return -1
+	end
+	--Determine what factor provides the least amount of the item and return that value
+	local maxByStack = CheckMaxByStack(itemInfo, self)
+	local maxByWeight = CheckMaxByWeight(itemInfo, self)
+
+	if maxByWeight <= maxByStack then
+		return maxByWeight
+	else
+		return maxByStack
+	end
+end
+
+--[[
+Helper functiont that handles the count attribute of an item during pick up
+	@return (number) the count attributes remaining number of the item
+	returns -1 on error
+--]]
+local function HandleCount(Item, Self) : number
+	local count = Item:GetAttribute("Count")
+	if not count then
+		warn('NPC "' .. Self.Name .. '" Attempted to pick up object that lacks a Count attribute')
+		return -1
+	end
+	local maxCount = Self:GetMaxCollect(Item.Name)
+	if count <= maxCount then
+		--Safe to put full amount in backpack
+		Self:CollectItem(Item.Name, count)
+		Item:SetAttribute("Count", 0)
+		return 0
+	else
+		--Not enough space to put full thing in backpack
+		Self:CollectItem(Item.Name, maxCount)
+		local remainingCount = count - maxCount
+		Item:SetAttribute("Count", remainingCount)
+		return remainingCount
+	end
+end
+
+--[[
+Picks up an item physicaly in the workspace
+	attempts to pick up as much "count" of the item as possible
+	@param Item (any) any item considerd a DropItem
+	@return (number) the remaining count of the item left not picked up
+	due to not being able to add to NPC inventory
+	returns -1 on error
+--]]
+function BackpackNPC:PickUp(Item) : number
+	if not self:IsDropItem(Item) then
+		warn('Attempted to pick up Item "' .. Item.Name .. '" for NPC "' .. self.Name .. '" but item was not a DropItem')
+		return -1
+	end
+	local itemCount = HandleCount(Item, self)
+	if itemCount == 0 then
+		--item out of count so can destroy
+		Item:Destroy()
+		return itemCount
+	else
+		--Return amount of item still on ground or -1 if count error
+		return itemCount
+	end
 end
 
 --[[
