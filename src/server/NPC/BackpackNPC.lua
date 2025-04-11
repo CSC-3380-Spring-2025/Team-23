@@ -13,6 +13,8 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local AbstractInterface = require(ReplicatedStorage.Shared.Utilities.Object.AbstractInterface)
 local NPC = require(ServerScriptService.Server.NPC.NPC)
+local NPCUtils = require(ServerScriptService.Server.NPC.NPCUtils)
+local BackpackNPCUtils = NPCUtils.new("BackpackNPCUtils")
 local BackpackNPC = {}
 NPC:Supersedes(BackpackNPC)
 
@@ -428,72 +430,18 @@ function BackpackNPC:ValidItemCollection(ItemName: string, Amount): boolean
 	end
 end
 
-local function CopyItem(Item: any) : any
-    local itemClone = Item:Clone()
-    --Copy tags
-    for _, tag in pairs(CollectionService:GetTags(Item)) do
-        CollectionService:AddTag(itemClone, tag)
-    end
-    --Copy attributes
-    for key, value in pairs(Item:GetAttributes()) do
-        itemClone:SetAttribute(key, value)
-    end
-    return itemClone
-end
-
 --[[
 Drops the physical item of the item on to the ground of the NPC
     @param ItemTemplate (any) any item to be put on the ground
     @param NPCCharacter that NPC's Character
 --]]
-local function SpawnDrop(ItemTemplate, NPCCharacter, Count)
-    local item = CopyItem(ItemTemplate)
+local function SpawnDrop(ItemTemplate: any, NPCCharacter: Model, Count: number) : ()
+    local item = BackpackNPCUtils:CopyItem(ItemTemplate)
     item:SetAttribute("Count", Count)
-	local rootPart = NPCCharacter:FindFirstChild("HumanoidRootPart")
-	local front = rootPart.CFrame.LookVector
-	local dropDistance = 0 --Distance from NPC to drop
-    local dropPosition = rootPart.Position + dropDistance * front
-	--Handle proper placement through raycasting
-	-- Create the ray origin and direction
-	local rayOrigin = dropPosition + Vector3.new(0, 5, 0) -- Start ray above the intended position
-	local rayDirection = Vector3.new(0, -1, 0) * 1e6 -- Extend downward with a very large value
-
-	-- Create RaycastParams
-	local params = RaycastParams.new()
-
-	-- Gather all player characters and the NPC to exclude them
-	local filterInstances = {}
-
-	for _, player in pairs(Players:GetPlayers()) do
-		if player.Character then
-			table.insert(filterInstances, player.Character)
-		end
-	end
-    table.insert(filterInstances, NPCCharacter)
-
-	params.FilterDescendantsInstances = filterInstances -- Ignore all player and the NPC's characters
-	params.FilterType = Enum.RaycastFilterType.Exclude -- Set to blacklist mode
-
-	-- Perform the raycast
-	local result = Workspace:Raycast(rayOrigin, rayDirection, params)
-	if result then
-		if item:IsA("Model") then
-			-- Get the extents size of the model
-			local extentsSize = item:GetExtentsSize()
-
-			-- Get the height (Y-axis size)
-			local height = extentsSize.Y
-			local position = Vector3.new(dropPosition.X, result.Position.Y + height / 2, dropPosition.Z)
-			local CFrame = CFrame.new(position, position + front) -- Face the same direction as the player
-			item:PivotTo(CFrame)
-		else
-			item.Position = Vector3.new(dropPosition.X, result.Position.Y + item.Size.Y / 2, dropPosition.Z)
-			item.CFrame = CFrame.new(item.Position, item.Position + front) -- Face the same direction as the player
-		end
-		item.Parent = Workspace
-	else
-		--Notify client that there was a failure
-		item:Destroy() --Remove item sense the process failed
+	local spawnSuccess = BackpackNPCUtils:DropItem(item, NPCCharacter)
+	if not spawnSuccess then
+		--Consider at somepoint adding fallback
+		item:Destroy()
 	end
 end
 

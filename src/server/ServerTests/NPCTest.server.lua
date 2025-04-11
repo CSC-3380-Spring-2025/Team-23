@@ -163,7 +163,7 @@ NPC1:Destroy()
 --]]
 
 --ToolNPC tests
-----[[
+--[[
 local ToolNPC = require(ServerScriptService.Server.NPC.ToolNPC)
 local NPC1 = ToolNPC.new("NPC 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 100, 70, 100, {"Coal", "Iron", "Pickaxe"}, nil)
 
@@ -197,7 +197,7 @@ NPC1:Destroy()
 --]]
 
 --ToolNPC tools test
-----[[
+--[[
 local tools = ReplicatedStorage.Tools
 local pickaxe = tools.Resource.Pickaxes.Pickaxe
 NPC1:AddTool(pickaxe, 1)
@@ -205,7 +205,8 @@ NPC1:AddTool(pickaxe, 1)
 task.wait(5)
 NPC1:EquipTool(pickaxe.Name)
 task.wait(5)
-NPC1:UnequipTool()
+--NPC1:UnequipTool()
+NPC1:Kill()
 --]]
 
 --Animation test
@@ -254,3 +255,16 @@ NPC1:CollectItem("Coal", 10)
 NPC1:CollectItem("Iron", 20)
 NPC1:Kill()
 --]]
+
+--MinerNPC test
+local NPC1 = MinerNPC.new("Miner 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 100, 70, 100, {"Coal", "Iron", "Pickaxe"}, nil)
+local tools = ReplicatedStorage.Tools
+local pickaxe = tools.Resource.Pickaxes.Pickaxe
+NPC1:AddTool(pickaxe, 1)
+
+task.wait(5)
+NPC1:EquipTool(pickaxe.Name)
+task.wait(5)
+NPC1:HarvestResource(pickaxe)
+--NPC1:UnequipTool()
+NPC1:Kill()
