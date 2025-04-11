@@ -257,14 +257,10 @@ NPC1:Kill()
 --]]
 
 --MinerNPC test
-local NPC1 = MinerNPC.new("Miner 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 100, 70, 100, {"Coal", "Iron", "Pickaxe"}, nil)
 local tools = ReplicatedStorage.Tools
 local pickaxe = tools.Resource.Pickaxes.Pickaxe
-NPC1:AddTool(pickaxe, 1)
-
-task.wait(5)
-NPC1:EquipTool(pickaxe.Name)
-task.wait(5)
-NPC1:HarvestResource(pickaxe)
+local NPC1 = MinerNPC.new("Miner 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 1000, 70, 100, {"Coal", "Iron", "Pickaxe"}, nil, nil, pickaxe)
+local coal = workspace:FindFirstChild("OreModelDemo"):FindFirstChild("Coal")
+NPC1:HarvestResource(coal)
 --NPC1:UnequipTool()
-NPC1:Kill()
+--NPC1:Kill()
