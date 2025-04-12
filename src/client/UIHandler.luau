@@ -1,3 +1,11 @@
+--[[  
+ * THIS CLASS INHERITS FROM CLASS: OBJECT
+ * This class represents a full set of functions to control the Player's UI
+ * without having to directly interact with it. This includes adjusting display bars,
+ * Displaying the inventory, and equipping/unequipping tools.
+]]
+
+
 -- Services
 local Players : Players = game:GetService("Players")
 local TS: TweenService = game:GetService("TweenService")
