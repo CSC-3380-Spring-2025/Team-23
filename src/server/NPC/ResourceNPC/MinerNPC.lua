@@ -46,16 +46,15 @@ function MinerNPC.new(
 	WhiteList: { string },
 	Backpack: {}?,
 	EncumbranceSpeed: {}?,
-	Pickaxe: Tool
+	ResourceWhiteList: {string}?
 )
-	local self = ResourceNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxStack, MaxWeight, MediumWeight, HeavyWeight, WhiteList, Backpack, EncumbranceSpeed)
-	setmetatable(self, ResourceNPC)
-	self.__Pickaxe = Pickaxe or nil
+	local self = ResourceNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxStack, MaxWeight, MediumWeight, HeavyWeight, WhiteList, Backpack, EncumbranceSpeed, ResourceWhiteList)
+	setmetatable(self, MinerNPC)
 	return self
 end
 
 --Vars
-local harvestRadious = 8 --studs within NPC is allowed to harvest
+local harvestRadious: number = 5 --studs within NPC is allowed to harvest
 
 --[[
 Checks if a given resource object is an Ore
@@ -70,13 +69,16 @@ end
 Helper function that plays a given animation for pickaxe use
 	@param Animation (Animaiton) animation to play for player
 	@param Target (BasePart) the ore target the player is mining to turn to.
-	@return (AnimationTrack) the track set up and played
+	@param NPCCharacter (Model) the NPC's character
+	@param Self (any) instance of the class
+	@return (AnimationTrack?) the track set up and played
 --]]
 local function PlayAnimation(Animation: Animation, Target: BasePart, NPCCharacter: Model, Self) : AnimationTrack?
 	--Turn player to target
 	local rootPart: any = NPCCharacter:FindFirstChild("HumanoidRootPart")
 	if rootPart then
-		local endFrame: CFrame = CFrame.lookAt(rootPart.Position, Target.Position)
+		local direction = Vector3.new(Target.Position.X, rootPart.Position.Y, Target.Position.Z)
+		local endFrame: CFrame = CFrame.lookAt(rootPart.Position, direction)
 		local tweenInfo: TweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		local tween: Tween = TweenService:Create(rootPart, tweenInfo, { CFrame = endFrame })
 		tween:Play()
@@ -93,6 +95,7 @@ end
 Checks if NPC is within Radius of object
 	@param Target (BasePart) ore part to check for within distance
 	@param MaxDistance (number) max distance to check for
+	@param NPCCharacter (Model) the NPC's character
 	@return (boolean) true on within distance or false otherwise
 --]]
 local function WithinDistance(Target: BasePart, MaxDistance: number, NPCCharacter: Model) : boolean
@@ -111,15 +114,16 @@ end
 Decreases integrity and gives reward on last strike
 	@param Target (BasePart) ore part that player hits
 	@param Effectiveness (number) the pickaxes Effectiveness
-	@return (boolean) true on last strike fals eotherwise
+	@param OreCollectedSoundID (number) the id number of the core collection sound
+	@return (boolean) true on last strike false otherwise
 --]]
 local function HandleIntegrity(Target: BasePart, Effectiveness: number, OreCollectedSoundID: number) : boolean
-	local integrity: number = Target:GetAttribute("Integrity")
+	local integrity: number = Target:GetAttribute("Integrity") :: number
 	local newIntegrity: number = integrity - Effectiveness
 	if newIntegrity <= 0 then
 		--Give Coal if last strike
         --Hide ore while sound then destroy to prevent audio issues
-		Target.Transparency = 1
+		--Target.Transparency = 1
 		local sound: Sound = Instance.new("Sound")
 		sound.SoundId = "rbxassetid://" .. OreCollectedSoundID
 		sound.Parent = Target
@@ -154,53 +158,21 @@ local function StrikeSound(SoundId: number, Target: BasePart) : ()
 	end)
 end
 
-
---[[
-Helper function that determiens behaivor of iron
-	@param Target (BasePart) the ore part being hit
-	@param Positon (Vector3) position of target
-	@param Effectiveness (number) damage done to target
-	@return (boolean) true if finished false otherwise
---]]
-local function Iron(Target: BasePart, Position: Vector3, Effectiveness: number) : boolean
-	StrikeSound(7650220708, Target)
-	local finished: boolean = HandleIntegrity(Target, Effectiveness, 3908308607)
-	if finished then
-		
-		return true
-	end
-	return false --Not finished off
-end
-
---[[
-Helper function that determiens behaivor of Coal
-	@param Target (BasePart) the ore part being hit
-	@param Positon (Vector3) position of target
-	@param Effectiveness (number) damage done to target
-	@return (boolean) true if finished false otherwise
---]]
-local function Coal(Target: BasePart, Position: Vector3, Effectiveness: number) : boolean
-	StrikeSound(7650220708, Target)
-	local finished: boolean = HandleIntegrity(Target, Effectiveness, 3908308607)
-	if finished then
-		return true
-	end
-	return false
-end
-
 --[[
 Helper functiont that handles the count attribute of an item during pick up
 	and also spawns the item on the ground if not able to fill backpack with it
+	@param Item (any) any item to check for
+	@param Self (any) the instance fo the class
 	@return (number) the count attributes remaining number of the item
 	returns -1 on error
 --]]
-local function HandleCount(Item, Self) : ()
-	local count = Item:GetAttribute("Count")
+local function HandleCount(Item: any, Self: any) : number
+	local count: number = Item:GetAttribute("Count")
 	if not count then
 		warn('NPC "' .. Self.Name .. '" Attempted to harvest an object that lacks a Count attribute')
 		return -1
 	end
-	local maxCount = Self:GetMaxCollect(Item.Name)
+	local maxCount: number = Self:GetMaxCollect(Item.Name)
 	if count <= maxCount then
 		--Safe to put full amount in backpack
 		Self:CollectItem(Item.Name, count)
@@ -209,7 +181,7 @@ local function HandleCount(Item, Self) : ()
 	else
 		--Not enough space to put full thing in backpack
 		Self:CollectItem(Item.Name, maxCount)
-		local remainingCount = count - maxCount
+		local remainingCount: number = count - maxCount
 		Item:SetAttribute("Count", remainingCount)
 		--Drop item on ground since collected but full
 		--Add DropItem tag
@@ -220,12 +192,14 @@ local function HandleCount(Item, Self) : ()
 end
 
 --[[
-Determiens what happens when a ore is "ripe" and ready to be harvested
+Determines what happens when a ore is "ripe" and ready to be harvested
 	used on last strike of the ore
+	@param ResourceObject (any) any object thats a resource
+	@param Self (any) any instance of the class
 --]]
-local function Harvest(ResourceObject, Self) : ()
+local function Harvest(ResourceObject: any, Self: any) : ()
 	--Give NPC the ore
-	local resourceName = ResourceObject.Name
+	local resourceName: string = ResourceObject.Name
 	if not Self:CheckItemWhitelist(resourceName) then
 		--not whitelisted resource item
 		warn('NPC "'.. Self.Name '" Attempted to harvest object that is not whitelisted')
@@ -234,12 +208,35 @@ local function Harvest(ResourceObject, Self) : ()
 	HandleCount(ResourceObject, Self)
 end
 
-local function TraverseToResource(Self, Resource)
-	local success = Self:SetWaypoint(Resource.Position)
+--[[
+Helper function that traverses the NPC to the given resource
+	@param Self (any) the instance of the class
+	@param Resource (any) any resource object
+	@return (boolean) true on success or false otherwise
+--]]
+local function TraverseToResource(Self: any, Resource: any) : boolean
+	local success: boolean = Self:SetWaypoint(Resource.Position)
 	if success then
 		Self:TraverseWaypoints()
+		--Wait for traverse
+		while Self:IsTraversing() do
+			task.wait(1)
+		end
 	end
 	return success
+end
+
+--[[
+Handles any given resource 
+	@param Target (any) any given target
+	@param Tool (Tool) the tool being used
+	@param Self (any) an instance of the object
+--]]
+local function HandleResource(Target: any, Tool: Tool, Self: any) : boolean
+	local oreInfo: ModuleScript = Self:GetItemInfo(Target:GetAttribute("Resource"))
+	StrikeSound(oreInfo.Sounds.Strike, Target)
+	local finished: boolean = HandleIntegrity(Target, Tool:GetAttribute("Effectiveness") :: number, oreInfo.Sounds.Collect)
+	return finished
 end
 
 --[[
@@ -249,7 +246,7 @@ Used to harvest a ore item target in workspace
 --]]
 function MinerNPC:HarvestResource(ResourceObject: any) : boolean
 	if not self:IsResource(ResourceObject) then
-		warn( 'NPC "'.. self.Name '" Attempted to harvest object that is not a resource')
+		warn( 'NPC "'.. self.Name .. '" Attempted to harvest object that is not a resource')
 		return false
 	end
 	if not self:IsOre(ResourceObject) then
@@ -264,9 +261,29 @@ function MinerNPC:HarvestResource(ResourceObject: any) : boolean
 		warn('Miner NPC "' .. self.Name .. "Attempted to harvest a resource but has no pickaxe")
 		return false
 	end
+	if not ResourceObject:GetAttribute("Integrity") then
+		warn('Miner NPC "' .. self.Name .. "Attempted to harvest a resource that has no integrity set")
+		return false
+	end
 
-	local target = ResourceObject
-	local position: Vector3 = ResourceObject.Position
+	local target: any = ResourceObject
+
+	--Equip tool
+	local tool: Tool = self.__Pickaxe.DropItem
+	local animations: Folder? = tool:FindFirstChild("Animations") :: Folder?
+	if not animations then
+		warn('Tool "' .. tool.Name .. '" missing Animations Folder')
+		return false
+	end
+	local swingAnimation: Animation? = animations:FindFirstChild("Activate") :: Animation?
+	if not swingAnimation then
+		warn('Tool "' .. tool.Name .. '" missing Activate animation')
+		return false
+	end
+	if not tool:GetAttribute("Effectiveness") then
+		warn('Miner NPC "' .. self.Name .. "Attempted to use pickaxe with no attribute Effectiveness")
+		return false
+	end
 
 	--Check NPC distance
 	if not WithinDistance(target, harvestRadious, self.__NPC) then
@@ -276,19 +293,6 @@ function MinerNPC:HarvestResource(ResourceObject: any) : boolean
 		end
 	end
 
-	--Equip tool
-	local tool = self.__Pickaxe.DropItem
-	local animations = tool:FindFirstChild("Animations")
-	if not animations then
-		warn('Tool "' .. tool.Name .. '" missing Animations Folder')
-		return false
-	end
-	local swingAnimation = animations:FindFirstChild("Activate")
-	if not swingAnimation then
-		warn('Tool "' .. tool.Name .. '" missing Activate animation')
-		return false
-	end
-
 	self:EquipTool(tool.Name) --Unequip after use
 	local animTrack: AnimationTrack? = PlayAnimation(swingAnimation, target, self.__NPC, self)
 	if not animTrack then
@@ -296,16 +300,14 @@ function MinerNPC:HarvestResource(ResourceObject: any) : boolean
 	end
 
 	--Keep calling the animation
-	local finished = false
+	local finished: boolean = false
 	animTrack.Stopped:Connect(function()
 		--Determine behaivore by ore type
-		if CollectionService:HasTag(target, "Iron") then --Iron
-			Iron(target, position, self.__Effectiveness)
-		elseif CollectionService:HasTag(target, "Coal") then --Coal
-			Coal(target, position, self.__Effectiveness)
-		end
+		finished = HandleResource(target, tool, self)
 		if not finished then
 			animTrack:Play() --Repeat animation because not finished
+		else
+			return --Exit loop
 		end
 	end)
 
@@ -321,11 +323,21 @@ function MinerNPC:HarvestResource(ResourceObject: any) : boolean
 	return true
 end
 
-function MinerNPC:AddPickaxe(Tool, Amount)
+
+--[[
+Adds a given pickaxe tool to the Miner NPC
+	@param Tool (Tool) the tool to add for the NPC
+	@param Amount (number) the number of the pickaxe to add to the miner NPC
+--]]
+function MinerNPC:AddPickaxe(Tool, Amount) : ()
 	self:AddTool(Tool, 1)
 	self.__Pickaxe = self.__Backpack[Tool.Name]
 end
 
+--[[
+Checks if a Miner NPC has a pickaxe
+	@return (boolean) true if it has one or false otherwise
+--]]
 function MinerNPC:HasPickaxe() : boolean
 	if not self.__Pickaxe then
 		return false

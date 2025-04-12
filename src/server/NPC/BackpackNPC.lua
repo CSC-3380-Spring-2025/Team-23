@@ -72,24 +72,28 @@ function BackpackNPC.new(
 	return self
 end
 
+--[[
+Helper function that manages the encumbrance
+	@param Self (any) instance of the class
+--]]
 local function ManageEncumbrance(Self)
-	local encumbrance = Self:CheckEncumberment()
+	local encumbrance: string = Self:CheckEncumberment()
 	if encumbrance == "Light" then
-		local speed = Self.__EncumbranceSpeed["Light"]
+		local speed: number = Self.__EncumbranceSpeed["Light"]
 		if speed == Self:GetSpeed() then
 			return
 		end
 		Self:SetSpeed(Self.__EncumbranceSpeed["Light"])
 		Self.__Speed = speed
 	elseif encumbrance == "Medium" then
-		local speed = Self.__EncumbranceSpeed["Medium"]
+		local speed: number = Self.__EncumbranceSpeed["Medium"]
 		if speed == Self:GetSpeed() then
 			return
 		end
 		Self:SetSpeed(speed)
 		Self.__Speed = speed
 	elseif encumbrance == "Heavy" then
-		local speed = Self.__EncumbranceSpeed["Heavy"]
+		local speed: number = Self.__EncumbranceSpeed["Heavy"]
 		if speed == Self:GetSpeed() then
 			return
 		end
@@ -104,9 +108,9 @@ Used to retrieve the info of any item within the Item Directory in
     @param ItemName (string) name of item to get info of
     @return ({any}) table of info related to the item
 --]]
-function BackpackNPC:GetItemInfo(ItemName: string): { any }?
-	local items = ReplicatedStorage.Shared.Items
-	local itemMod = items:FindFirstChild(ItemName, true)
+function BackpackNPC:GetItemInfo(ItemName: string): ModuleScript?
+	local items: Folder = ReplicatedStorage.Shared.Items
+	local itemMod: any? = items:FindFirstChild(ItemName, true)
 	if not itemMod then
 		warn('Item "' .. ItemName .. '" does not exist within Item directory')
 		return nil
@@ -116,7 +120,7 @@ function BackpackNPC:GetItemInfo(ItemName: string): { any }?
 		return nil
 	end
 
-	local itemInfo = require(itemMod)
+	local itemInfo: ModuleScript = require(itemMod)
 	return itemInfo
 end
 
@@ -125,7 +129,7 @@ Checks if a given item is a drop item that can be picked up
 	@param Object (any) any object
 	@return (boolean) true if DropItem or false otherwise
 --]]
-function BackpackNPC:IsDropItem(Object)
+function BackpackNPC:IsDropItem(Object: any) : boolean
 	return CollectionService:HasTag(Object, "DropItem")
 end
 
@@ -133,8 +137,8 @@ end
 Returns the current amount of stacks filled in the NPC's backpack
     @return (number) the amount of stacks filled in NPC's backpack
 --]]
-function BackpackNPC:GetStackAmount()
-	local stackCount = 0
+function BackpackNPC:GetStackAmount() : number
+	local stackCount: number = 0
 	for _, item in pairs(self.__Backpack) do
 		stackCount = stackCount + item.StackCount
 	end
@@ -145,7 +149,7 @@ end
 Returns the amount of stack slots left into an NPC's inventory
     @return (number) the amount of slots left
 --]]
-function BackpackNPC:StackSlotsLeft()
+function BackpackNPC:StackSlotsLeft() : number
 	return self.__MaxStack - self:GetStackAmount()
 end
 
@@ -154,37 +158,42 @@ Returns the space left without allocating a new stack for a given item
     @param ItemName (string) name of the item in the NPC's backpack
     @return (number) space left for given item on success or -1 otherwise
 --]]
-function BackpackNPC:StackSpace(ItemName)
-	local item = self.__Backpack[ItemName]
+function BackpackNPC:StackSpace(ItemName: string) : number
+	local item: any = self.__Backpack[ItemName]
 	if not item then
 		warn('Item "' .. ItemName .. '" does not exist within NPC "' .. self.Name .. '"')
 		return -1
 	end
 
-	local itemInfo = self:GetItemInfo(ItemName)
-	local stackSpaceCap = item.StackCount * itemInfo.ItemStack
-	local spaceLeft = stackSpaceCap - item.Count
+	local itemInfo: ModuleScript = self:GetItemInfo(ItemName)
+	local stackSpaceCap: number = item.StackCount * itemInfo.ItemStack
+	local spaceLeft: number = stackSpaceCap - item.Count
 	return spaceLeft
 end
 
 --[[
 Handles the stack when adding a new item
+	@param Item (any) a refrence to the item element of the backpack table
+	@param Amount (number) to amount of the item being added (not amoutn of stacks)
+	@param Self (any) instance of the class
+	@param ItemInfo (ModuleScript) the module script of the items info
+	@return (boolean) true on success or false otherwise
 --]]
-local function ManageStacksAdd(Item, Amount, Self, ItemInfo): boolean
-	local spaceLeft = 0
+local function ManageStacksAdd(Item: any, Amount: number, Self: any, ItemInfo: ModuleScript): boolean
+	local spaceLeft: number = 0
 	if Self.__Backpack[ItemInfo.ItemName] then
 		--Is already in backpack so can get stackspace
 		spaceLeft = Self:StackSpace(ItemInfo.ItemName)
 		--else spaceLeft is 0 because no stack made yet
 	end
-	local spaceAfter = spaceLeft - Amount
+	local spaceAfter: number = spaceLeft - Amount
 
 	if spaceAfter >= 0 then
 		--Current stack can accomodate no need to add new stack
 		return true
 	else
 		--Attempt to add new stack or stacks
-		local neededStacks = math.ceil(math.abs(spaceAfter) / ItemInfo.ItemStack)
+		local neededStacks: number = math.ceil(math.abs(spaceAfter) / ItemInfo.ItemStack)
 		if (Self:StackSlotsLeft() - neededStacks) < 0 then
 			--NPC out of slots to add more
 			return false
@@ -198,22 +207,27 @@ end
 
 --[[
 Checks the stack when adding a new item to see if valid
+	@param Item (any) a refrence to the item element of the backpack table
+	@param Amount (number) to amount of the item being added (not amoutn of stacks)
+	@param Self (any) instance of the class
+	@param ItemInfo (ModuleScript) the module script of the items info
+	@return (boolean) true on success or false otherwise
 --]]
-local function CheckStacksAdd(Item, Amount, Self, ItemInfo): boolean
-	local spaceLeft = 0
+local function CheckStacksAdd(Item: any, Amount: number, Self: any, ItemInfo: ModuleScript): boolean
+	local spaceLeft: number = 0
 	if Self.__Backpack[ItemInfo.ItemName] then
 		--Is already in backpack so can get stackspace
 		spaceLeft = Self:StackSpace(ItemInfo.ItemName)
 		--else spaceLeft is 0 because no stack made yet
 	end
-	local spaceAfter = spaceLeft - Amount
+	local spaceAfter: number = spaceLeft - Amount
 
 	if spaceAfter >= 0 then
 		--Current stack can accomodate no need to add new stack
 		return true
 	else
 		--Attempt to add new stack or stacks
-		local neededStacks = math.ceil(math.abs(spaceAfter) / ItemInfo.ItemStack)
+		local neededStacks: number = math.ceil(math.abs(spaceAfter) / ItemInfo.ItemStack)
 		if (Self:StackSlotsLeft() - neededStacks) < 0 then
 			--NPC out of slots to add more
 			return false
@@ -228,6 +242,7 @@ end
 Puts a given item and its amount in the NPC's backpack
     @param ItemName (string) the name of the item
     @param Amount (number) the number of the item to add to the player
+	@return (boolean) true on success or false on error
 --]]
 function BackpackNPC:CollectItem(ItemName: string, Amount: number): boolean
 	--Check whitelist
@@ -242,12 +257,12 @@ function BackpackNPC:CollectItem(ItemName: string, Amount: number): boolean
 		return false
 	end
 
-	local itemInfo = self:GetItemInfo(ItemName)
+	local itemInfo: ModuleScript = self:GetItemInfo(ItemName)
 	if not itemInfo then
 		return false
 	end
-	local item = self.__Backpack[ItemName]
-	local firstAdd = false
+	local item: any = self.__Backpack[ItemName]
+	local firstAdd: boolean = false
 	if not item then
 		--Not added yet needs set up
 		item = {} --Init item
@@ -259,12 +274,12 @@ function BackpackNPC:CollectItem(ItemName: string, Amount: number): boolean
 		firstAdd = true
 	end
 	--Check weight
-	local addedWeight = (Amount * itemInfo.ItemWeight)
+	local addedWeight: number = (Amount * itemInfo.ItemWeight)
 	if (self:CheckNPCWeight() + addedWeight) > self.__MaxWeight then
 		warn('Attempted to add Item "' .. ItemName .. '" to NPC "' .. self.Name .. '" but amount exceeded MaxWeight')
 		return false
 	end
-	local stackSuccess = ManageStacksAdd(item, Amount, self, itemInfo)
+	local stackSuccess: boolean = ManageStacksAdd(item, Amount, self, itemInfo)
 	if stackSuccess then
 		--Add amount to count and weight
 		item.Count = item.Count + Amount
@@ -285,44 +300,55 @@ end
 --[[
 Determines the max amount of an item type possible given NPCs backpack state
 	by stack
+	@param ItemInfo (ModuleScript) the module script holding the items info
+	@param Self (any) any instance of the class
+	@return (number) the max amount of the item that can be added to the backpack 
+	considering the stacks
 --]]
-local function CheckMaxByStack(ItemInfo, Self)
-	local spaceLeft = 0
+local function CheckMaxByStack(ItemInfo: ModuleScript, Self: any) : number
+	local spaceLeft: number = 0
 	if Self.__Backpack[ItemInfo.ItemName] then
 		--Is already in backpack so can get stackspace
 		spaceLeft = Self:StackSpace(ItemInfo.ItemName)
 		--else spaceLeft is 0 because no stack made yet
 	end
 
-	local stacksLeft = Self:StackSlotsLeft()
-	local maxCount = (stacksLeft * ItemInfo.ItemStack) + spaceLeft
+	local stacksLeft: number = Self:StackSlotsLeft()
+	local maxCount: number = (stacksLeft * ItemInfo.ItemStack) + spaceLeft
 	return maxCount
 end
 
 --[[
 Determines the max amount of an item type possible given NPCs backpack state
 	by weight
+	@param ItemInfo (ModuleScript) the module script holding the items info
+	@param Self (any) any instance of the class
+	@return (number) the max amount of the item that can be added to the backpack 
+	considering the weight
 --]]
-local function CheckMaxByWeight(ItemInfo, Self)
-	local currentWeight = Self:CheckNPCWeight()
-	local itemWeight = ItemInfo.ItemWeight
-	local remainingWeight = Self.__MaxWeight - currentWeight
-	local maxCount = math.floor(remainingWeight / itemWeight)
+local function CheckMaxByWeight(ItemInfo: ModuleScript, Self: any) : number
+	local currentWeight: number = Self:CheckNPCWeight()
+	local itemWeight: number = ItemInfo.ItemWeight
+	local remainingWeight: number = Self.__MaxWeight - currentWeight
+	local maxCount: number = math.floor(remainingWeight / itemWeight)
 	return maxCount
 end
 
 --[[
 Determines the max amount of the item type that can be picked up
 	given the NPC's current backpack
+	@param ItemName (string) name of the item
+	does not need to be in backpack but must have an info mod script
+	@return (number) max amount possible to be put into the NPC
 --]]
-function BackpackNPC:GetMaxCollect(ItemName) : number
-	local itemInfo = self:GetItemInfo(ItemName)
+function BackpackNPC:GetMaxCollect(ItemName: string) : number
+	local itemInfo: ModuleScript = self:GetItemInfo(ItemName)
 	if not itemInfo then
 		return -1
 	end
 	--Determine what factor provides the least amount of the item and return that value
-	local maxByStack = CheckMaxByStack(itemInfo, self)
-	local maxByWeight = CheckMaxByWeight(itemInfo, self)
+	local maxByStack: number = CheckMaxByStack(itemInfo, self)
+	local maxByWeight: number = CheckMaxByWeight(itemInfo, self)
 
 	if maxByWeight <= maxByStack then
 		return maxByWeight
@@ -333,16 +359,18 @@ end
 
 --[[
 Helper functiont that handles the count attribute of an item during pick up
+	@param Item (any) any item witch a count attribute
+	@param Self (any) instance of the class
 	@return (number) the count attributes remaining number of the item
 	returns -1 on error
 --]]
-local function HandleCount(Item, Self) : number
-	local count = Item:GetAttribute("Count")
+local function HandleCount(Item: any, Self: any) : number
+	local count: number = Item:GetAttribute("Count")
 	if not count then
 		warn('NPC "' .. Self.Name .. '" Attempted to pick up object that lacks a Count attribute')
 		return -1
 	end
-	local maxCount = Self:GetMaxCollect(Item.Name)
+	local maxCount: number = Self:GetMaxCollect(Item.Name)
 	if count <= maxCount then
 		--Safe to put full amount in backpack
 		Self:CollectItem(Item.Name, count)
@@ -351,7 +379,7 @@ local function HandleCount(Item, Self) : number
 	else
 		--Not enough space to put full thing in backpack
 		Self:CollectItem(Item.Name, maxCount)
-		local remainingCount = count - maxCount
+		local remainingCount: number = count - maxCount
 		Item:SetAttribute("Count", remainingCount)
 		return remainingCount
 	end
@@ -365,12 +393,12 @@ Picks up an item physicaly in the workspace
 	due to not being able to add to NPC inventory
 	returns -1 on error
 --]]
-function BackpackNPC:PickUp(Item) : number
+function BackpackNPC:PickUp(Item: any) : number
 	if not self:IsDropItem(Item) then
 		warn('Attempted to pick up Item "' .. Item.Name .. '" for NPC "' .. self.Name .. '" but item was not a DropItem')
 		return -1
 	end
-	local itemCount = HandleCount(Item, self)
+	local itemCount: number = HandleCount(Item, self)
 	if itemCount == 0 then
 		--item out of count so can destroy
 		Item:Destroy()
@@ -384,6 +412,7 @@ end
 --[[
 Checks if a given item is valid to be added to the NPC
     @param ItemName (string) the name of the item to check for
+	@param Amount (number) the amount of the item checking to be added for
     @return (boolean) true on valid or false otherwise
 --]]
 function BackpackNPC:ValidItemCollection(ItemName: string, Amount): boolean
@@ -397,14 +426,14 @@ function BackpackNPC:ValidItemCollection(ItemName: string, Amount): boolean
 		return false
 	end
 
-	local itemInfo = self:GetItemInfo(ItemName)
+	local itemInfo: ModuleScript = self:GetItemInfo(ItemName)
 	if not itemInfo then
 		--Info module missing from items folder
 		return false
 	end
 
-	local item = self.__Backpack[ItemName]
-	local itemCopy = {}
+	local item: any = self.__Backpack[ItemName]
+	local itemCopy: {any} = {}
 	if item then
 		itemCopy.Weight = item.Weight
 		itemCopy.Count = item.Count
@@ -418,7 +447,7 @@ function BackpackNPC:ValidItemCollection(ItemName: string, Amount): boolean
 	end
 
 	--Check weight
-	local addedWeight = (Amount * itemInfo.ItemWeight)
+	local addedWeight: number = (Amount * itemInfo.ItemWeight)
 	if (self:CheckNPCWeight() + addedWeight) > self.__MaxWeight then
 		return false
 	end
@@ -433,12 +462,13 @@ end
 --[[
 Drops the physical item of the item on to the ground of the NPC
     @param ItemTemplate (any) any item to be put on the ground
-    @param NPCCharacter that NPC's Character
+	@param NPCCharacter (Model) the model of the NPC
+	@param Count (number) the number of the item to drop
 --]]
 local function SpawnDrop(ItemTemplate: any, NPCCharacter: Model, Count: number) : ()
-    local item = BackpackNPCUtils:CopyItem(ItemTemplate)
+    local item: any = BackpackNPCUtils:CopyItem(ItemTemplate)
     item:SetAttribute("Count", Count)
-	local spawnSuccess = BackpackNPCUtils:DropItem(item, NPCCharacter)
+	local spawnSuccess: boolean = BackpackNPCUtils:DropItem(item, NPCCharacter)
 	if not spawnSuccess then
 		--Consider at somepoint adding fallback
 		item:Destroy()
@@ -454,13 +484,13 @@ Drops a given item given its amount to drop
     @param Amount (number) the amount of item to remove
 --]]
 function BackpackNPC:DropItem(ItemName: string, Amount: number): ()
-	local item = self.__Backpack[ItemName]
+	local item: any = self.__Backpack[ItemName]
 	if not item then
 		warn('Attempted to drop Item "' .. ItemName .. '" from NPC "' .. self.Name .. '" but item was not in backpack')
 		return
 	end
 
-	local dropItem = item.DropItem
+	local dropItem: any = item.DropItem
 	if not dropItem then
 		warn(
 			'Attempted to drop Item "'
@@ -472,7 +502,7 @@ function BackpackNPC:DropItem(ItemName: string, Amount: number): ()
 	end
 
 	--Drop the amount equal to or less than current amount
-	local currentAmount = item.Count
+	local currentAmount: number = item.Count
 	if (currentAmount - Amount) < 0 then
 		--Drop current amount
         SpawnDrop(item.DropItem, self.__NPC, currentAmount)
@@ -497,9 +527,13 @@ end
 
 --[[
 Handles the stack when removing an item
+	@param Item (any) any item to manage the stack for thats in the backpack
+	@param Amount (number) amount of item being removed
+	@param Self (any) an instance of the class
+	@param ItemInfo (ModuleScript) the module script containing the items info
 --]]
-local function ManageStacksRemove(Item, Amount, Self, ItemInfo): ()
-	local amountItemAfter = Item.Count - Amount
+local function ManageStacksRemove(Item: any, Amount: number, Self: any, ItemInfo: ModuleScript): ()
+	local amountItemAfter: number = Item.Count - Amount
 	if amountItemAfter <= 0 then
 		--Stack count will be empty because removing more or same amount of exisitng items that exist
 		Item.StackCount = 0
@@ -515,13 +549,13 @@ Deletes an item in an NPC's inventory for a given amount
     @param Amount the amount of that item to delete
 --]]
 function BackpackNPC:RemoveItem(ItemName: string, Amount: number): ()
-	local item = self.__Backpack[ItemName]
+	local item: any = self.__Backpack[ItemName]
 	if not item then
 		warn('"' .. ItemName .. '" not found in backpack of NPC "' .. self.Name .. '" when attempting to remove item')
 		return
 	end
 	--Handle stack during remove
-	local itemInfo = self:GetItemInfo(ItemName)
+	local itemInfo: ModuleScript = self:GetItemInfo(ItemName)
 	ManageStacksRemove(item, Amount, self, itemInfo)
 	item.Count = item.Count - Amount
 	if item.Count < 0 or item.Count == 0 then
@@ -565,11 +599,11 @@ end
 
 --[[
 Checks for a given item in a NPC's backpack
-@param ItemName (string) the name of the item to check for
-@return (boolean) true if in backpack or false otherwise
+	@param ItemName (string) the name of the item to check for
+	@return (boolean) true if in backpack or false otherwise
 --]]
 function BackpackNPC:CheckForItem(ItemName: string): boolean
-	local item = self.__Backpack[ItemName]
+	local item: any = self.__Backpack[ItemName]
 	if item then
 		--item is present in backpack
 		return true
@@ -580,11 +614,11 @@ end
 
 --[[
 Checks for a given item and returns the count of that item
-@param ItemName (string) the name of the item to check for
-@return (number) count of item if found or -1 otherwise
+	@param ItemName (string) the name of the item to check for
+	@return (number) count of item if found or -1 otherwise
 --]]
 function BackpackNPC:GetItemCount(ItemName: string): number
-	local item = self.__Backpack[ItemName]
+	local item: any = self.__Backpack[ItemName]
 	if item then
 		--item is present in backpack so return count and weight of item
 		return item.Count
@@ -598,11 +632,11 @@ end
 
 --[[
 Checks for a given item and returns the count of that item
-@param ItemName (string) the name of the item to check for
-@return (number) count of item if found or -1 otherwise
+	@param ItemName (string) the name of the item to check for
+	@return (number) count of item if found or -1 otherwise
 --]]
 function BackpackNPC:GetItemWeight(ItemName: string): number
-	local item = self.__Backpack[ItemName]
+	local item: any = self.__Backpack[ItemName]
 	if item then
 		--item is present in backpack so return count and weight of item
 		return item.Weight
@@ -616,10 +650,10 @@ end
 
 --[[
 Checks the numerical value of the weight of the NPC
-@return (number) the NPC's current weight
+	@return (number) the NPC's current weight
 --]]
 function BackpackNPC:CheckNPCWeight(): number
-	local weight = 0
+	local weight: number = 0
 	for _, value in pairs(self.__Backpack) do
 		weight = weight + value.Weight
 	end
@@ -631,7 +665,7 @@ Checks the NPC encumberment based on its weight
 @return (string) "Light", "Medium", or "Heavy" based on respective encumberment
 --]]
 function BackpackNPC:CheckEncumberment(): string
-	local weight = self:CheckNPCWeight()
+	local weight: number = self:CheckNPCWeight()
 	if weight < self.__MediumWeight then
 		return "Light"
 	elseif weight >= self.__MediumWeight and weight < self.__HeavyWeight then
@@ -648,7 +682,7 @@ Gets an items type
     @return (string) name of item type on success or nil otherwise
 --]]
 function BackpackNPC:CheckItemType(ItemName: string): string?
-	local item = self.__Backpack[ItemName]
+	local item: any = self.__Backpack[ItemName]
 	if item then
 		return item.ItemType
 	else
@@ -659,6 +693,7 @@ end
 
 --[[
 Checks if an item is included in an NPC's whitelist
+	@param ItemName (string) the name of the item to check for
 --]]
 function BackpackNPC:CheckItemWhitelist(ItemName: string): boolean
 	if table.find(self.__WhiteList, ItemName) then

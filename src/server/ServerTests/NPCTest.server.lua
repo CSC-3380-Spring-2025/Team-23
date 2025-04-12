@@ -1,5 +1,4 @@
-script.Enabled = false
-
+--[[
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -9,7 +8,7 @@ local NPC = require(ServerScriptService.Server.NPC.NPC)
 local BackpackNPC = require(ServerScriptService.Server.NPC.BackpackNPC)
 local ResourceNPC = require(ServerScriptService.Server.NPC.ResourceNPC.ResourceNPC)
 local MinerNPC = require(ServerScriptService.Server.NPC.ResourceNPC.MinerNPC)
-
+--]]
 --[[
 local NPC1 = NPC.new("NPC 1", rigsFolder.DefaultNPC, 100, 0, nil, Vector3.new(0, 10, 0))
 
@@ -257,10 +256,16 @@ NPC1:Kill()
 --]]
 
 --MinerNPC test
+
+--[[
 local tools = ReplicatedStorage.Tools
 local pickaxe = tools.Resource.Pickaxes.Pickaxe
-local NPC1 = MinerNPC.new("Miner 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 1000, 70, 100, {"Coal", "Iron", "Pickaxe"}, nil, nil, pickaxe)
+local NPC1 = MinerNPC.new("Miner 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 100, 70, 100, {"Coal", "Iron", "Pickaxe"}, nil, nil, {"Coal"})
 local coal = workspace:FindFirstChild("OreModelDemo"):FindFirstChild("Coal")
+print(NPC1:IsOre(coal))
+NPC1:AddPickaxe(pickaxe, 1)
 NPC1:HarvestResource(coal)
+print(NPC1:GetItemCount("Coal"))
 --NPC1:UnequipTool()
 --NPC1:Kill()
+--]]

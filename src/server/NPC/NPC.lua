@@ -273,7 +273,11 @@ function NPC:TraverseWaypoints(): ()
 	end)
 end
 
-function NPC:IsTraversing(): boolean
+--[[
+Determines if a NPC is still traversing
+	@return (boolean) true if traversing or false otherwise
+--]]
+function NPC:IsTraversing() : boolean
 	if self.__PathFindingTask then
 		return true
 	else
@@ -284,7 +288,7 @@ end
 --[[
 Cancels waypoints of any type
 --]]
-function NPC:CancelWaypoints(): ()
+function NPC:CancelWaypoints() : ()
 	if self.__PathFindingTask then
 		task.cancel(self.__PathFindingTask)
 		self.__PathFindingTask = nil --Reset pathfindingtask to indicate no pathfinding
@@ -410,15 +414,17 @@ end
 Loads a given animation for the NPC and returns the track
 	User is responsible for playing the track etc.
 	If done with track it should be removed via RemoveAnimation()
+	@param Animation (Animation) an Animation instance (not its id)
+	@return (AnimationTrack) the track of the animation
 --]]
 function NPC:LoadAnimation(Animation: Animation): AnimationTrack
-	local animator = self.__Humanoid:FindFirstChild("animator")
+	local animator: Animator? = self.__Humanoid:FindFirstChild("animator")
 	if not animator then
 		--animator missing so load new one
 		animator = Instance.new("Animator")
 		animator.Parent = self.__Humanoid
 	end
-	local track = animator:LoadAnimation(Animation)
+	local track: AnimationTrack = animator:LoadAnimation(Animation)
 	table.insert(self.__Animations, track)
 	return track
 end
@@ -440,7 +446,7 @@ function NPC:RemoveAnimation(NPCTrack: AnimationTrack) : ()
 		return
 	end
 
-	local trackIndex = 0
+	local trackIndex: number = 0
 	for index, track in ipairs(self.__Animations) do
 		if track == NPCTrack then
 			trackIndex = index

@@ -55,9 +55,10 @@ end
 Returns the real tool in the players backpack
     @param ToolName (string) the name of the tool to find in backpack
     @param Self (any) the instance of the class
+	@return (Tool?) the tool if found or nil otherwise
 --]]
 local function FindPhysTool(ToolName: string, Self: any): Tool?
-	local tool = Self.__Backpack[ToolName]
+	local tool: any = Self.__Backpack[ToolName]
 	if tool then
 		return tool.DropItem
 	end
@@ -68,9 +69,10 @@ end
 Equips a tool for the NPC and unequips any tools currently open
     Tool must already be present in NPC's backpack
     @param ToolName (string) the name of the tool to Equip
+	@return (boolean) true on success or false otherwise
 --]]
 function ToolNPC:EquipTool(ToolName: string): boolean
-	local tool = FindPhysTool(ToolName, self)
+	local tool: Tool? = FindPhysTool(ToolName, self)
 	if not tool then
 		warn('Tool "' .. ToolName .. '" missing from backpack of NPC "' .. self.Name .. '." Unable to equip')
 		return false
@@ -92,23 +94,29 @@ function ToolNPC:UnequipTool(): ()
 	self.__EquippedTool = nil
 end
 
+--[[
+Prepares the Motor6d of the tool for the NPC
+	@param Tool (Tool) the tool of the Motor6d
+	@param Self (any) an instance of the class
+	@return (boolean) true on success or false otherwise
+--]]
 local function PrepToolMotor6d(Tool: Tool, Self: any): boolean
-	local animations = Tool:FindFirstChild("Animations")
+	local animations: Folder? = Tool:FindFirstChild("Animations") :: Folder?
 	if animations == nil then
 		warn('Tool "' .. Tool.Name .. '" missing Animations folder')
 		return false
 	end
-	local motor6d = animations:FindFirstChild("Motor6d")
+	local motor6d: Motor6D? = animations:FindFirstChild("Motor6d") :: Motor6D?
 	if motor6d == nil then
 		warn('Tool "' .. Tool.Name .. '" missing Motor6d in Animations folder')
 		return false
 	end
-	local motorParent1 = Tool:FindFirstChild("MotorParent1", true)
+	local motorParent1: any? = Tool:FindFirstChild("MotorParent1", true)
 	if motorParent1 == nil then
 		warn('Tool "' .. Tool.Name .. '" found no tool part with name MotorParent1 for Motor6d')
 		return false
 	end
-	local rightHand = Self.__NPC:FindFirstChild("RightHand")
+	local rightHand: BasePart? = Self.__NPC:FindFirstChild("RightHand")
 
 	motor6d.Part1 = motorParent1
 	motor6d.Part0 = rightHand
@@ -121,8 +129,8 @@ Returns a clone of a tool
     @param Tool (Tool) the tool to copy
     @return (Tool) a tool clone
 --]]
-local function CloneTool(Tool)
-	local toolClone = Tool:Clone()
+local function CloneTool(Tool: Tool)
+	local toolClone: Tool = Tool:Clone()
 	--Copy attributes over
 	for atrName, value in pairs(Tool:GetAttributes()) do
 		toolClone:SetAttribute(atrName, value)
@@ -140,20 +148,20 @@ Adds a given tool to an NPC.
     The given tool is copied, not transfered.
     @param Tool (Tool) any given tool to be added to the NPC
     @param Amount (number) the amount of the tool to add
-    @return (booleam) true on success or false otherwise
+    @return (boolean) true on success or false otherwise
 --]]
 function ToolNPC:AddTool(Tool: Tool, Amount: number): boolean
 	--Collect tool item to preserve base class functions
-	local collectSuccess = self:CollectItem(Tool.Name, Amount)
+	local collectSuccess: boolean = self:CollectItem(Tool.Name, Amount)
 	if not collectSuccess then
 		return false --Collection failed
 	end
-	local toolItem = self.__Backpack[Tool.Name]
+	local toolItem: any = self.__Backpack[Tool.Name]
 
 	--Add tool specific behaivore
 
-	local toolClone = CloneTool(Tool)
-	local success6d = PrepToolMotor6d(toolClone, self) --Prep motor6d for animations
+	local toolClone: Tool = CloneTool(Tool)
+	local success6d: boolean = PrepToolMotor6d(toolClone, self) --Prep motor6d for animations
 	if not success6d then
 		toolClone:Destroy()
 		self.__Backpack[Tool.Name] = nil --Remove from backpack
@@ -169,8 +177,8 @@ end
 Removes a given tool by its name
     @param ToolName (string) the name of the tool to remove
 --]]
-function ToolNPC:RemoveTool(ToolName): ()
-	local tool = self.__Backpack[ToolName]
+function ToolNPC:RemoveTool(ToolName: string): ()
+	local tool: any = self.__Backpack[ToolName]
 	if tool == nil then
 		warn('Attempted to remove tool "' .. ToolName .. '" from NPC "' .. self.Name .. '" but tool is not in backpack')
 		return
