@@ -10,7 +10,6 @@ local UIHandler = {}
 local Player : Player = Players.LocalPlayer
 local UI : PlayerGui = Player.PlayerGui:WaitForChild("PlayerUI")
 local Character : Model = Player.Character or Player.CharacterAdded:Wait()
-local Controls : table = require(Player.PlayerScripts.PlayerModule):GetControls()
 --local BridgeNet2 : table = require(game.ReplicatedStorage.BridgeNet2)
 local Object : table = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 Object:Supersedes(UIHandler)
@@ -31,7 +30,7 @@ local UIColors = {
 }
 -- Functions
 
-function UIHandler.new(Data : table) : {}
+function UIHandler.new(Data : table) : ()
 	local self = Object.new("PlayerUI")
 	setmetatable(self, UIHandler)
 	self.__DeathConnection = Character.Humanoid.Died:Connect(function()
@@ -49,7 +48,13 @@ function UIHandler.new(Data : table) : {}
 	return self
 end
 
-function UIHandler:AdjustBarUI(UIName : string, Percentage : number, SkipTween : boolean) : {}
+--[[
+@Description: Adjusts one of three bar UIs (Health, Hunger, Thirst) based on a provided decimal within the range of 0-1.
+@Param UIName (String): The name of the UI bar to be changed. This is not its actual name in the GUI, but what it represents (Health, Hunger, Thirst)
+@Param Percentage (Number): A number between or equal to 0-1 that represents how far the bar will be shrunk/expanded based on its minimum/maximum size.
+@Param SkipTween (Boolean): If true, no graphical "tween" effect will play, the bar will simply snap to its new size.
+]]
+function UIHandler:AdjustBarUI(UIName : string, Percentage : number, SkipTween : boolean) : ()
 	if not UIValues[UIName] then warn("UI name is incorrect, check the list!") return end
 	local UI : Frame = UIValues[UIName]
 	Percentage = math.clamp(Percentage, 0, 1)
@@ -67,7 +72,11 @@ function UIHandler:AdjustBarUI(UIName : string, Percentage : number, SkipTween :
 	end
 end
 
-function UIHandler:AdjustMoney(Amount : number) : {}
+--[[
+@Description: Adjusts the player's money display in the GUI via tweening it to the new value supplied.
+@Param Amount (Number): The amount of money that should be displayed.
+]]
+function UIHandler:AdjustMoney(Amount : number) : ()
 	local NumberValue : NumberValue = Instance.new("NumberValue")
 	local Tween : Tween = TS:Create(NumberValue, TweenInfo.new(0.4), {Value = Amount})
 
@@ -78,8 +87,10 @@ function UIHandler:AdjustMoney(Amount : number) : {}
 	task.wait(0.4)
 	NumberValue:Destroy()
 end
-
-function UIHandler:Test() : {}
+--[[
+@Description: A quick testing function that will run random commands on the UI to ensure that all bars and displays move as intended.
+]]
+function UIHandler:Test() : ()
 	for i = 1, 5 do
 		task.wait(2)
 		self:AdjustMoney(math.random(1,1000))
@@ -97,4 +108,5 @@ function UIHandler:Test() : {}
 	self:AdjustBarUI("Water", 1)
 	self:AdjustMoney(0)
 end
+
 return UIHandler
