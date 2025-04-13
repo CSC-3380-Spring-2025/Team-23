@@ -398,6 +398,31 @@ function BackpackHandler:DestroyTool(Player:Player, ToolID : number) : ()
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
 end
 
+function BackpackHandler:DestroyItem(Player:Player, ItemName : string, DestroyAmount : number) : ()
+    if not Backpacks[Player] then
+        warn("How you gon drop something when you don't even have a backpack?")
+        return
+    end
+    local TargetBackpack : array = Backpacks[Player]
+    for c,v in pairs(TargetBackpack["Contents"]) do
+        if v.Amount >= DestroyAmount then
+            v.Amount -= DestroyAmount
+            TargetBackpack["Weight"] -= ItemStatistics[v:GetName()]["Weight"] * v.Amount
+            TargetBackpack["TotalItems"] -= DestroyAmount
+            print("Removed ".. v:GetName().. " for " .. DestroyAmount .. " with weight ".. v.Weight)
+            v.Weight = ItemStatistics[v:GetName()]["Weight"] * v.Amount
+            DestroyAmount -= v.Amount
+            if v.Amount <= 0 then
+                table.remove(TargetBackpack["Contents"], c)
+            end
+        end
+        if DestroyAmount <= 0 then
+            break
+        end
+    end
+    BackpackHandler:CalculateCurrentWeight(Player, 0)
+end
+
 --[[
 @Description: This is a placeholder. The toolbar and backpack UI must be implemented before it can be created.
 ]]
