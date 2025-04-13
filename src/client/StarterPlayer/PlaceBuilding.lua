@@ -1,8 +1,8 @@
 --[[
 Module to handle the process of placing a building model on a player's designated plot in the game world.
 This includes mouse-based placement, keyboard/touchscreen controls, and raycasting.
+--NOTE: this must be called from the client in order to work
 ]]
-
 
 --module scripts
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
@@ -34,9 +34,8 @@ end
 ]]
 local function IsPartAtPosition(Position: Vector3, PlacingOn: Instance, Placing: BasePart | Model): boolean
 	local overlapParams = OverlapParams.new()
-	local spawnLocation = workspace:FindFirstChild("SpawnLocation")  -- Retrieve SpawnLocation
-	local basePlate = workspace:FindFirstChild("Baseplate")  -- Retrieve Baseplate
-
+	local spawnLocation = workspace:FindFirstChild("SpawnLocation") -- Retrieve SpawnLocation
+	local basePlate = workspace:FindFirstChild("Baseplate") -- Retrieve Baseplate
 
 	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
 	overlapParams.FilterDescendantsInstances = { PlacingOn.Parent, Placing, spawnLocation, basePlate }
@@ -44,7 +43,6 @@ local function IsPartAtPosition(Position: Vector3, PlacingOn: Instance, Placing:
 	local parts = workspace:GetPartBoundsInBox(CFrame.new(Position), Vector3.one * 0.2, overlapParams)
 	return #parts > 0
 end
-
 
 --[[
  * FindValidSpawnHeight - Casts a downward ray from a high y position at the given X and Z coordinates. 
@@ -70,12 +68,11 @@ local function FindValidSpawnHeight(X: number, Z: number, PlacingOn: Instance, P
 		local spawnLocation: Vector3 = ray.Position
 		--if item exists at spawn location, regenerate new spawn location
 		if not IsPartAtPosition(spawnLocation, PlacingOn, Placing) then
-			return ray.Position 
+			return ray.Position
 		end
 	end
 	return nil
 end
-
 
 --[[
 helper function to handle the placement of a model (building) on a player's plot, allowing continuous tracking of the mouse position and building controls via keyboard and mouse.
@@ -87,31 +84,34 @@ helper function to handle the placement of a model (building) on a player's plot
 returns boolean - Returns true if the building was successfully placed. Returns false if the placement was canceled or failed due to errors.
 --]]
 local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): boolean
-    --clone building and set up ray for contant model tracking
-    local buildingToPlace: Model = Placing:Clone()
-    buildingToPlace.Parent = workspace[Player.Name].PlayerPlots.PlayerPlot
-	
+	--clone building and set up ray for contant model tracking
+	local buildingToPlace: Model = Placing:Clone()
+	buildingToPlace.Parent = workspace[Player.Name].PlayerPlots.PlayerPlot
+
 	for _, child in ipairs(buildingToPlace:GetDescendants()) do
-        if child:IsA("BasePart") then
+		if child:IsA("BasePart") then
 			child.Transparency = 0.35
 			child.CanCollide = false
-        end
-    end
+		end
+	end
 
-    local ContextActionService = game:GetService("ContextActionService")
-    local mouse = Player:GetMouse()
-    local runService = game:GetService("RunService")
+	local ContextActionService = game:GetService("ContextActionService")
+	local mouse = Player:GetMouse()
+	local runService = game:GetService("RunService")
 	local buildingPlaced: boolean = false
 	local endLoop: boolean = false
 	local x: number, y: number, z: number = buildingToPlace:GetPrimaryPartCFrame():ToEulerAnglesXYZ()
 	local buildingOrientation: Vector3 = Vector3.new(x, y, z)
-	
+
 	local moveBuildingWithMouse = runService.RenderStepped:Connect(function()
 		mouse.TargetFilter = buildingToPlace
 		local placementPosition: Vector3 = mouse.Hit.Position
-		buildingToPlace:SetPrimaryPartCFrame(CFrame.new(placementPosition) * (CFrame.fromEulerAnglesXYZ(buildingOrientation.X, buildingOrientation.Y, buildingOrientation.Z)))
+		buildingToPlace:SetPrimaryPartCFrame(
+			CFrame.new(placementPosition)
+				* (CFrame.fromEulerAnglesXYZ(buildingOrientation.X, buildingOrientation.Y, buildingOrientation.Z))
+		)
 	end)
-	   
+
 	--[[
 	nested helper function to handle the confirmation of building placement when the mouse is clicked.
 	Checks if the building is within the bounds of the player plot and if there are no other buildings at the location.
@@ -120,30 +120,35 @@ local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): 
 	@param - no significance. action name set in context acction service binding 
 
 	returns void - This function does not return anything but modifies flags related to placement success and completion.
-	--]]  
+	--]]
 	local function ConfirmPlace(acitonName: string, inputState: Enum)
 		if acitonName == "PlaceBuilding" and inputState == Enum.UserInputState.Begin then
 			local modelCFrame: Vector3, modelSize: number = buildingToPlace:GetBoundingBox()
 			--check if all model corners in x-z plane are within the bounds of the player plot
-			local corners: {Vector3} = {}
-			table.insert(corners, Vector3.new((modelCFrame.X + modelSize.X/2),0,(modelCFrame.Z + modelSize.Z/2)))
-			table.insert(corners, Vector3.new((modelCFrame.X + modelSize.X/2),0,(modelCFrame.Z - modelSize.Z/2)))
-			table.insert(corners, Vector3.new((modelCFrame.X - modelSize.X/2),0,(modelCFrame.Z + modelSize.Z/2)))
-			table.insert(corners, Vector3.new((modelCFrame.X - modelSize.X/2),0,(modelCFrame.Z - modelSize.Z/2)))
+			local corners: { Vector3 } = {}
+			table.insert(corners, Vector3.new((modelCFrame.X + modelSize.X / 2), 0, (modelCFrame.Z + modelSize.Z / 2)))
+			table.insert(corners, Vector3.new((modelCFrame.X + modelSize.X / 2), 0, (modelCFrame.Z - modelSize.Z / 2)))
+			table.insert(corners, Vector3.new((modelCFrame.X - modelSize.X / 2), 0, (modelCFrame.Z + modelSize.Z / 2)))
+			table.insert(corners, Vector3.new((modelCFrame.X - modelSize.X / 2), 0, (modelCFrame.Z - modelSize.Z / 2)))
 			for _, corner in ipairs(corners) do
-				if (corner.X > PlacingOn.Position.X + PlacingOn.Size.X/2) or (corner.X < PlacingOn.Position.X - PlacingOn.Size.X/2) or (corner.Z > PlacingOn.Position.Z + PlacingOn.Size.Z/2) or (corner.Z < PlacingOn.Position.Z - PlacingOn.Size.Z/2) then
+				if
+					(corner.X > PlacingOn.Position.X + PlacingOn.Size.X / 2)
+					or (corner.X < PlacingOn.Position.X - PlacingOn.Size.X / 2)
+					or (corner.Z > PlacingOn.Position.Z + PlacingOn.Size.Z / 2)
+					or (corner.Z < PlacingOn.Position.Z - PlacingOn.Size.Z / 2)
+				then
 					return
 				end
 			end
 			--check if other buildings exist at location as well as the height to place the building
-			local buildingPosition: Vector3 = FindValidSpawnHeight(modelCFrame.X, modelCFrame.Z, PlacingOn, buildingToPlace) 
+			local buildingPosition: Vector3 =
+				FindValidSpawnHeight(modelCFrame.X, modelCFrame.Z, PlacingOn, buildingToPlace)
 			if buildingPosition then
 				--Spanw model in location
 				for _, child in ipairs(buildingToPlace:GetDescendants()) do
 					if child:IsA("BasePart") then
 						child.Transparency = 0
 						child.CanCollide = true
-
 					end
 				end
 				buildingToPlace:SetPrimaryPartCFrame(CFrame.new(buildingPosition))
@@ -152,7 +157,7 @@ local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): 
 			end
 		end
 	end
-	
+
 	--[[
 	nested helper function to handle the cancellation of building placement when the Cancel key is pressed.
 	Sets the buildingPlaced flag to false and ends the placement process.
@@ -160,15 +165,14 @@ local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): 
 	@param - no significance. action name set in context acction service binding 
 
 	returns void - This function does not return anything but modifies flags to stop the building placement process.
-	--]]	
+	--]]
 	local function CancelPlace(acitonName: string, inputState: Enum)
 		if acitonName == "CancelPlacement" and inputState == Enum.UserInputState.Begin then
 			buildingPlaced = false
 			endLoop = true
-			end
+		end
 	end
-	
-	
+
 	--[[
 	function to handle the rotation of the building when the Rotate key is pressed by Rotating the building by 90 degrees around the Y-axis.
 
@@ -181,20 +185,20 @@ local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): 
 			buildingOrientation = buildingOrientation + Vector3.new(0, math.pi * 0.5, 0)
 		end
 	end
-	
+
 	ContextActionService:BindAction("PlaceBuilding", ConfirmPlace, true, Enum.UserInputType.MouseButton1)
 	ContextActionService:SetTitle("PlaceBuilding", "Place")
 	ContextActionService:SetPosition("PlaceBuilding", UDim2.new(-0.85, 0, -1, 0))
-	
+
 	ContextActionService:BindAction("CancelPlacement", CancelPlace, true, Enum.KeyCode.C)
 	ContextActionService:SetTitle("CancelPlacement", "Cancel")
 	ContextActionService:SetPosition("CancelPlacement", UDim2.new(-0.65, 0, -1, 0))
-	
+
 	ContextActionService:BindAction("RotateBuilding", RotateBuilding, true, Enum.KeyCode.R)
 	ContextActionService:SetTitle("RotateBuilding", "Rotate")
 	ContextActionService:SetPosition("RotateBuilding", UDim2.new(-1, 0, -1, 0))
-	while not endLoop do 
-		task.wait() 
+	while not endLoop do
+		task.wait()
 	end
 	ContextActionService:UnbindAction("PlaceBuilding")
 	ContextActionService:UnbindAction("CancelPlacement")
@@ -202,11 +206,11 @@ local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): 
 	if not buildingPlaced then
 		buildingToPlace:Destroy()
 	end
-	if moveBuildingWithMouse then 
-		moveBuildingWithMouse:Disconnect() 
+	if moveBuildingWithMouse then
+		moveBuildingWithMouse:Disconnect()
 		print("ended mouse follow")
 	end
-	
+
 	return buildingPlaced
 end
 
@@ -218,7 +222,7 @@ local function PlaceBasePart(PlacingOn: BasePart, Placing: BasePart, Player: Pla
 
 	buildingToPlace.Transparency = 0.35
 	buildingToPlace.CanCollide = false
-	
+
 	local ContextActionService = game:GetService("ContextActionService")
 	local mouse = Player:GetMouse()
 	local runService = game:GetService("RunService")
@@ -230,29 +234,64 @@ local function PlaceBasePart(PlacingOn: BasePart, Placing: BasePart, Player: Pla
 	local moveBuildingWithMouse = runService.RenderStepped:Connect(function()
 		mouse.TargetFilter = buildingToPlace
 		local placementPosition: Vector3 = mouse.Hit.Position
-		buildingToPlace.CFrame = CFrame.new(placementPosition) * (CFrame.fromEulerAnglesXYZ(buildingOrientation.X, buildingOrientation.Y, buildingOrientation.Z))
+		buildingToPlace.CFrame = CFrame.new(placementPosition)
+			* (CFrame.fromEulerAnglesXYZ(buildingOrientation.X, buildingOrientation.Y, buildingOrientation.Z))
 	end)
 
 	local function ConfirmPlace(acitonName: string, inputState: Enum)
 		if acitonName == "PlaceBuilding" and inputState == Enum.UserInputState.Begin then
 			--check if all model corners in x-z plane are within the bounds of the player plot
-			local corners: {Vector3} = {}
-			table.insert(corners, Vector3.new((buildingToPlace.Position.X + buildingToPlace.Size.X/2),0,(buildingToPlace.Position.Z + buildingToPlace.Size.Z/2)))
-			table.insert(corners, Vector3.new((buildingToPlace.Position.X + buildingToPlace.Size.X/2),0,(buildingToPlace.Position.Z - buildingToPlace.Size.Z/2)))
-			table.insert(corners, Vector3.new((buildingToPlace.Position.X - buildingToPlace.Size.X/2),0,(buildingToPlace.Position.Z + buildingToPlace.Size.Z/2)))
-			table.insert(corners, Vector3.new((buildingToPlace.Position.X - buildingToPlace.Size.X/2),0,(buildingToPlace.Position.Z - buildingToPlace.Size.Z/2)))
+			local corners: { Vector3 } = {}
+			table.insert(
+				corners,
+				Vector3.new(
+					(buildingToPlace.Position.X + buildingToPlace.Size.X / 2),
+					0,
+					(buildingToPlace.Position.Z + buildingToPlace.Size.Z / 2)
+				)
+			)
+			table.insert(
+				corners,
+				Vector3.new(
+					(buildingToPlace.Position.X + buildingToPlace.Size.X / 2),
+					0,
+					(buildingToPlace.Position.Z - buildingToPlace.Size.Z / 2)
+				)
+			)
+			table.insert(
+				corners,
+				Vector3.new(
+					(buildingToPlace.Position.X - buildingToPlace.Size.X / 2),
+					0,
+					(buildingToPlace.Position.Z + buildingToPlace.Size.Z / 2)
+				)
+			)
+			table.insert(
+				corners,
+				Vector3.new(
+					(buildingToPlace.Position.X - buildingToPlace.Size.X / 2),
+					0,
+					(buildingToPlace.Position.Z - buildingToPlace.Size.Z / 2)
+				)
+			)
 			for _, corner in ipairs(corners) do
-				if (corner.X > PlacingOn.Position.X + PlacingOn.Size.X/2) or (corner.X < PlacingOn.Position.X - PlacingOn.Size.X/2) or (corner.Z > PlacingOn.Position.Z + PlacingOn.Size.Z/2) or (corner.Z < PlacingOn.Position.Z - PlacingOn.Size.Z/2) then
+				if
+					(corner.X > PlacingOn.Position.X + PlacingOn.Size.X / 2)
+					or (corner.X < PlacingOn.Position.X - PlacingOn.Size.X / 2)
+					or (corner.Z > PlacingOn.Position.Z + PlacingOn.Size.Z / 2)
+					or (corner.Z < PlacingOn.Position.Z - PlacingOn.Size.Z / 2)
+				then
 					return
 				end
 			end
 			--check if other buildings exist at location as well as the height to place the building
-		local buildingPosition: Vector3 = FindValidSpawnHeight(buildingToPlace.Position.X, buildingToPlace.Position.Z, PlacingOn, buildingToPlace) 
+			local buildingPosition: Vector3 =
+				FindValidSpawnHeight(buildingToPlace.Position.X, buildingToPlace.Position.Z, PlacingOn, buildingToPlace)
 			if buildingPosition then
 				--Spanw model in location
 				buildingToPlace.Transparency = 0
 				buildingToPlace.CanCollide = true
-				
+
 				buildingToPlace.CFrame = CFrame.new(buildingPosition)
 				buildingPlaced = true
 				endLoop = true
@@ -284,8 +323,8 @@ local function PlaceBasePart(PlacingOn: BasePart, Placing: BasePart, Player: Pla
 	ContextActionService:BindAction("RotateBuilding", RotateBuilding, true, Enum.KeyCode.R)
 	ContextActionService:SetTitle("RotateBuilding", "Rotate")
 	ContextActionService:SetPosition("RotateBuilding", UDim2.new(-1, 0, -1, 0))
-	while not endLoop do 
-		task.wait() 
+	while not endLoop do
+		task.wait()
 	end
 	ContextActionService:UnbindAction("PlaceBuilding")
 	ContextActionService:UnbindAction("CancelPlacement")
@@ -293,8 +332,8 @@ local function PlaceBasePart(PlacingOn: BasePart, Placing: BasePart, Player: Pla
 	if not buildingPlaced then
 		buildingToPlace:Destroy()
 	end
-	if moveBuildingWithMouse then 
-		moveBuildingWithMouse:Disconnect() 
+	if moveBuildingWithMouse then
+		moveBuildingWithMouse:Disconnect()
 	end
 
 	return buildingPlaced
