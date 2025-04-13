@@ -2,13 +2,12 @@
 # Members
 Project Manager: Clayton Houser (@claytakiler)
 
-Communications Lead: Justin Russell (@justinat0r)
+Communications Lead: Khánh Giang "Gerald" Lê (@g34rmeister)
 
 Git Master: Mujtaba Malik (@m-malik622)
 
-Design Lead: Kauai Cooper (yet to be added)
+Design Lead: Justin Russell (@justinat0r)
 
-Quality Assurance Tester: Khánh Giang "Gerald" Lê (@g34rmeister)
 
 # About Our Software
 
