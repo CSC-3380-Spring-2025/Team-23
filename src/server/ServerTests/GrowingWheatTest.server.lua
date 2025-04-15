@@ -1,6 +1,6 @@
 --[[
-local Wheat = require(game.ServerScriptService.Server.Items.Wheat)
-local replicatedStorage = game:GetService("ReplicatedStorage")
+	local Wheat = require(game.ReplicatedStorage.Shared.Farming.Wheat)
+	local replicatedStorage = game:GetService("ReplicatedStorage")
 local Farming = replicatedStorage:FindFirstChild("Farming")
 local Crops = Farming:FindFirstChild("Crops")
 local WheatCrop = Crops:FindFirstChild("Wheat")
@@ -22,5 +22,4 @@ for _,player in pairs(game:GetService("Players"):GetChildren()) do
 	WheatInstance:Reap(Target, player)
 end
 
-
-]]
+	]]
