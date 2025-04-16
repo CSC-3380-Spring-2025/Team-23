@@ -282,11 +282,13 @@ local NPC1 = MinerNPC.new(
 	100,
 	70,
 	100,
-	{ "Coal", "Iron", "Pickaxe" },
+	{ "Coal", "Iron", "Pickaxe", "Bread"},
 	nil,
 	nil,
 	{ "Coal" },
     true
 )
+
+NPC1:CollectItem("Bread", 10)
 
 print("Checking NPC1 name: " .. NPC1.Name)

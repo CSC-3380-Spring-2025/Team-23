@@ -21,10 +21,87 @@ NPC:Supersedes(BackpackNPC)
 
 local statsEnabled = true --Indicates if the stats system is activated.
 
+--[[
+Returns the optomial amount of food to eat at a time given a food item in the NPC's backpack
+	@param HungerRegen (number) the amount of hunger that a single item of this tiem will regen
+	@param Stats ({}) the Stats of the NPC
+	@param MaxHunger (number) the max hunger of the NPC
+	@param ItemStats ({}) the table of the item in the backpack
+--]]
+local function MaxFoodConsume(HungerRegen: number, Stats: {}, MaxHunger: number, ItemStats: {}): number
+	local deficit: number = MaxHunger - Stats.Food
+	local foodMax: number = math.floor(deficit / HungerRegen)
+	local itemCount: number = ItemStats.Count
+	if foodMax <= itemCount then
+		return foodMax
+	else
+		return itemCount
+	end
+end
+
+local function CancelStarve(Tasks)
+	local stvThread = Tasks.StvTask
+	Tasks.StvTask = nil
+	task.cancel(stvThread)
+end
+
+--Handles when an NPC consumes food
+local function ConsumeFood(Self, StatsConfig, Stats, Tasks)
+	--Check for food
+	local backpack = Self.__Backpack
+	local maxHunger = StatsConfig.MaxFood
+	--Loop through backpack and find anything of type food
+	--If food is wasted attempt to search for another food
+	local leastWasteFood: string? = nil
+	local leastWasteRegen: number = 0
+	for itemName, item in pairs(backpack) do
+		if item.ItemType == "Food" then
+			--Check for if food is wasted an dif not add
+			local itemInfo = Self:GetItemInfo(itemName)
+			local hungerRegen = itemInfo.HungerRegen
+			local canEat = MaxFoodConsume(hungerRegen, Stats, maxHunger, item)
+			if canEat > 0 then
+				--Found edible food that doesnt waste
+				Self:RemoveItem(itemName, canEat)
+				Stats.Food = Stats.Food + (canEat * hungerRegen) --Update stat
+				--Cancel starve task
+				if Tasks.StvTask then
+					CancelStarve(Tasks)
+				end
+				return
+			end
+			--Could not consume without waste so check for if leastWaste
+			if (-1 * hungerRegen) < leastWasteRegen then
+				--least waste so far
+				leastWasteFood = itemInfo.Name
+				leastWasteRegen = -1 * hungerRegen
+			end
+		end
+	end
+	--Could not consume without waste. If starving eat food of least waste
+	if leastWasteFood and Tasks.StvTask then
+		--There was food and NPC is starving so eat out of desperation
+		Self:RemoveItem(leastWasteFood, 1)
+		local newFoodStat = Stats.Food + math.abs(leastWasteRegen)
+		if newFoodStat <= maxHunger then
+			--Within max hunger
+			Stats.Food = newFoodStat
+		else
+			--Set to max stat since greater than allowed stat
+			Stats.Food = maxHunger
+		end
+		--Cancel starve task
+		CancelStarve(Tasks)
+	elseif Tasks.StvTask then
+		print("No Food found! Cant eat and starving!")
+	end
+end
+
 local function Starve(Self, StatsConfig, Stats, Tasks)
 	Tasks.StvTask = task.spawn(function()
 		--Damage NPC
 		while true do
+			ConsumeFood(Self, StatsConfig, Stats, Tasks) --Try to consume food first
 			print("Taking starve damage!")
 			Self.__Humanoid:TakeDamage(StatsConfig.StarveDmg)
 			task.wait(StatsConfig.StarveDmgRate)
