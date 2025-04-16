@@ -58,6 +58,7 @@ function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Sp
 	self.__HomePoint = nil
 	self.__Animations = {} --Loaded animations track
 	--Detect when an NPC dies for object clean up
+	self.__Tasks = {}
 	if DeathHandler then
 		self.__Humanoid.Died:Once(function()
 			print("Normal NPC died!")

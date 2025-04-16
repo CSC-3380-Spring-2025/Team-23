@@ -21,8 +21,8 @@ NPC:Supersedes(BackpackNPC)
 
 local statsEnabled = true --Indicates if the stats system is activated.
 
-local function Starve(Self, StatsConfig, Stats)
-	Stats.StvTask = task.spawn(function()
+local function Starve(Self, StatsConfig, Stats, Tasks)
+	Tasks.StvTask = task.spawn(function()
 		--Damage NPC
 		while true do
 			print("Taking starve damage!")
@@ -32,7 +32,7 @@ local function Starve(Self, StatsConfig, Stats)
 	end)
 end
 
-local function HandleFoodStat(Self, StatsConfig, Stats)
+local function HandleFoodStat(Self, StatsConfig, Stats, Tasks)
 	--For each loop if hungry then consume food until out
 	--If out of food then need to cancel starveTsk when given food
 	--local starveTsk = nil --The task for when a player is starving
@@ -46,10 +46,10 @@ local function HandleFoodStat(Self, StatsConfig, Stats)
 		print("Decrementing food. Food is now: " .. newStat)
 		Stats.Food = newStat
 		--Check if starved
-		if newStat <= 0 and not Stats.StvTask then
+		if newStat <= 0 and not Tasks.StvTask then
 			--Start damaging player and store task to cancel when given food
 			print(Self.Name .. "Is starving")
-			Starve(Self, StatsConfig, Stats)
+			Starve(Self, StatsConfig, Stats, Tasks)
 		end
 	end
 end
@@ -66,10 +66,24 @@ local function HandleStats(Self)
 	local stats = Self.__Stats
 	local tasks = Self.__Tasks
 	--Handle food stats
-	task.spawn(function()
-		HandleFoodStat(Self, statsConfig, stats)
+	tasks.FoodStat = task.spawn(function()
+		HandleFoodStat(Self, statsConfig, stats, tasks)
 	end)
 	print("Finished seting up food stats handler")
+end
+
+local function HandleDeath(Self)
+	Self.__Humanoid.Died:Once(function()
+		print("Backpack NPC died!")
+		--End tasks
+		for _, thread in pairs(Self.__Tasks) do
+			if task then
+				task.cancel(thread)
+			end
+		end
+		task.wait(5)
+		Self:Destroy()
+	end)
 end
 
 --[[
@@ -147,22 +161,14 @@ function BackpackNPC.new(
 		StvTask = nil, --Task that dmgs player during starve
 		ThirstTask = nil, --Task that dmgs player during thirst
 	}
+	self.__Tasks.StvTask = nil
+	self.__Tasks.ThirstTask = nil
 	HandleStats(self)
 	--Handle death
 	print("Checking for humanoid")
 	print(self.__Humanoid)
 	if DeathHandler then
-		print("Set up death handler")
-		self.__Humanoid.Died:Once(function()
-			print("Backpack NPC died!")
-			--End tasks
-			if self.__Stats.StvTask then
-				print("Canceling StvTask!")
-				task.cancel(self.__Stats.StvTask)
-			end
-			task.wait(5)
-			self:Destroy()
-		end)
+		HandleDeath(self)
 	end
 	return self
 end
