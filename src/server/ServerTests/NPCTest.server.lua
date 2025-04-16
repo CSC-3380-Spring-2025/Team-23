@@ -1,5 +1,5 @@
---[[
---[[
+----[[
+----[[
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -270,3 +270,23 @@ print(NPC1:GetItemCount("Coal"))
 --NPC1:UnequipTool()
 --NPC1:Kill()
 --]]
+
+--Stats test
+local NPC1 = MinerNPC.new(
+	"Miner 1",
+	rigsFolder.DefaultNPC,
+	100,
+	Vector3.new(0, 10, 0),
+	16,
+	1000,
+	100,
+	70,
+	100,
+	{ "Coal", "Iron", "Pickaxe" },
+	nil,
+	nil,
+	{ "Coal" },
+    true
+)
+
+print("Checking NPC1 name: " .. NPC1.Name)

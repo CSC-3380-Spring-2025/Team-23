@@ -9,7 +9,6 @@ local AbstractInterface = require(ReplicatedStorage.Shared.Utilities.Object.Abst
 local ResourceNPC = {}
 ToolNPC:Supersedes(ResourceNPC)
 
-
 --[[
 Constructor for the ResourceNPC class
     @param Name (string) name of the NPC
@@ -42,9 +41,24 @@ function ResourceNPC.new(
 	WhiteList: { string },
 	Backpack: {}?,
 	EncumbranceSpeed: {}?,
-	ResourceWhiteList: {string}?
+	ResourceWhiteList: { string }?,
+	DeathHandler: any
 )
-	local self = ToolNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxStack, MaxWeight, MediumWeight, HeavyWeight, WhiteList, Backpack, EncumbranceSpeed)
+	local self = ToolNPC.new(
+		Name,
+		Rig,
+		Health,
+		SpawnPos,
+		Speed,
+		MaxStack,
+		MaxWeight,
+		MediumWeight,
+		HeavyWeight,
+		WhiteList,
+		Backpack,
+		EncumbranceSpeed,
+		DeathHandler
+	)
 	setmetatable(self, ResourceNPC)
 	self.__ResourceWhiteList = ResourceWhiteList or {}
 	return self
@@ -55,7 +69,7 @@ Used to harvest a resource item target in workspace
 	@param ResourceItem (any) any item in workspace that may be considerd a resource
 	@return (boolean) true on success or false otherwise
 --]]
-function ResourceNPC:HarvestResource(ResourceItem: any) : boolean
+function ResourceNPC:HarvestResource(ResourceItem: any): boolean
 	AbstractInterface:AbstractError("HarvestResource", "ResourceNPC")
 	return false
 end
@@ -66,7 +80,7 @@ Used to determine if an item is considerd a resource
 	@param Object (any) any object
 	@return (boolean) true if resource or false otherwise
 --]]
-function ResourceNPC:IsResource(Object: any) : boolean
+function ResourceNPC:IsResource(Object: any): boolean
 	return CollectionService:HasTag(Object, "Resource")
 end
 
@@ -75,7 +89,7 @@ Determines if a resource is whitelisted by name
 	@param ResourceName (string) the name of resource type to check for
 	@return (boolean) true on Whitelisted or false otherwise
 --]]
-function ResourceNPC:WhitelistedResource(ResourceName: string) : boolean
+function ResourceNPC:WhitelistedResource(ResourceName: string): boolean
 	if table.find(self.__ResourceWhiteList, ResourceName) then
 		return true
 	else

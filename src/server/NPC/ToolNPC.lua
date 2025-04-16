@@ -43,9 +43,24 @@ function ToolNPC.new(
 	HeavyWeight: number,
 	WhiteList: { string },
 	Backpack: {}?,
-	EncumbranceSpeed: {}?
+	EncumbranceSpeed: {}?,
+	DeathHandler: any
 )
-	local self = BackpackNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxStack, MaxWeight, MediumWeight, HeavyWeight, WhiteList, Backpack, EncumbranceSpeed)
+	local self = BackpackNPC.new(
+		Name,
+		Rig,
+		Health,
+		SpawnPos,
+		Speed,
+		MaxStack,
+		MaxWeight,
+		MediumWeight,
+		HeavyWeight,
+		WhiteList,
+		Backpack,
+		EncumbranceSpeed,
+		DeathHandler
+	)
 	setmetatable(self, ToolNPC)
 	self.__EquippedTool = nil --The tool equipped by the NPC
 	return self
