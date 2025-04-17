@@ -46,7 +46,7 @@ local function CancelStarve(Tasks)
 end
 
 --Handles when an NPC consumes food
-local function ConsumeFood(Self, StatsConfig, Stats, Tasks)
+local function ConsumeFood(Self, StatsConfig, Stats, Tasks) : boolean
 	--Check for food
 	local backpack = Self.__Backpack
 	local maxHunger = StatsConfig.MaxFood
@@ -64,11 +64,7 @@ local function ConsumeFood(Self, StatsConfig, Stats, Tasks)
 				--Found edible food that doesnt waste
 				Self:RemoveItem(itemName, canEat)
 				Stats.Food = Stats.Food + (canEat * hungerRegen) --Update stat
-				--Cancel starve task
-				if Tasks.StvTask then
-					CancelStarve(Tasks)
-				end
-				return
+				return true --Ate
 			end
 			--Could not consume without waste so check for if leastWaste
 			if (-1 * hungerRegen) < leastWasteRegen then
@@ -90,18 +86,22 @@ local function ConsumeFood(Self, StatsConfig, Stats, Tasks)
 			--Set to max stat since greater than allowed stat
 			Stats.Food = maxHunger
 		end
-		--Cancel starve task
-		CancelStarve(Tasks)
+		return true --Ate
 	elseif Tasks.StvTask then
 		print("No Food found! Cant eat and starving!")
 	end
+	return false --Could not eat
 end
 
 local function Starve(Self, StatsConfig, Stats, Tasks)
 	Tasks.StvTask = task.spawn(function()
 		--Damage NPC
 		while true do
-			ConsumeFood(Self, StatsConfig, Stats, Tasks) --Try to consume food first
+			local didConsume: boolean = ConsumeFood(Self, StatsConfig, Stats, Tasks) --Try to consume food first
+			if didConsume or Stats.Food > 0 then
+				Tasks.StvTask = nil
+				return--No longer starving
+			end
 			print("Taking starve damage!")
 			Self.__Humanoid:TakeDamage(StatsConfig.StarveDmg)
 			task.wait(StatsConfig.StarveDmgRate)
@@ -126,6 +126,11 @@ local function HandleFoodStat(Self, StatsConfig, Stats, Tasks)
 		if newStat <= 0 and not Tasks.StvTask then
 			--Start damaging player and store task to cancel when given food
 			print(Self.Name .. "Is starving")
+			--Attempt to consume food first
+			local didEat: boolean = ConsumeFood(Self, StatsConfig, Stats, Tasks)
+			if didEat then
+				continue--Skip to next loop
+			end
 			Starve(Self, StatsConfig, Stats, Tasks)
 		end
 	end
