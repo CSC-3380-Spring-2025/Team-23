@@ -71,7 +71,7 @@ local function ConsumeFood(Self, StatsConfig, Stats, Tasks)
 				return
 			end
 			--Could not consume without waste so check for if leastWaste
-			if (-1 * hungerRegen) < leastWasteRegen then
+			if ((-1 * hungerRegen) > leastWasteRegen) or not leastWasteFood then
 				--least waste so far
 				leastWasteFood = itemInfo.Name
 				leastWasteRegen = -1 * hungerRegen
@@ -110,11 +110,9 @@ local function Starve(Self, StatsConfig, Stats, Tasks)
 end
 
 local function HandleFoodStat(Self, StatsConfig, Stats, Tasks)
-	--For each loop if hungry then consume food until out
-	--If out of food then need to cancel starveTsk when given food
-	--local starveTsk = nil --The task for when a player is starving
 	print("Handling food")
 	while true do
+		ConsumeFood(Self, StatsConfig, Stats, Tasks)
 		task.wait(StatsConfig.FdDeteriorationRate) --Wait between decrements
 		local newStat = Stats.Food - StatsConfig.FdDecrement
 		if newStat < 0 then
@@ -127,6 +125,115 @@ local function HandleFoodStat(Self, StatsConfig, Stats, Tasks)
 			--Start damaging player and store task to cancel when given food
 			print(Self.Name .. "Is starving")
 			Starve(Self, StatsConfig, Stats, Tasks)
+		end
+	end
+end
+
+local function CancelThirst(Tasks)
+	local thirstThread = Tasks.ThirstTask
+	Tasks.ThirstTask = nil
+	task.cancel(thirstThread)
+end
+
+--[[
+Returns the optomial amount of food to eat at a time given a food item in the NPC's backpack
+	@param HydrationRegen (number) the amount of hydration that a single item of this item will regen
+	@param Stats ({}) the Stats of the NPC
+	@param MaxHydration (number) the max hydration of the NPC
+	@param ItemStats ({}) the table of the item in the backpack
+--]]
+local function MaxDrinkConsume(HydrationRegen: number, Stats: {}, MaxHydration: number, ItemStats: {}): number
+	local deficit: number = MaxHydration - Stats.Hydration
+	local drinkMax: number = math.floor(deficit / HydrationRegen)
+	local itemCount: number = ItemStats.Count
+	if drinkMax <= itemCount then
+		return drinkMax
+	else
+		return itemCount
+	end
+end
+
+local function ConsumeDrink(Self, StatsConfig, Stats, Tasks)
+	--Check for drink
+	local backpack: {} = Self.__Backpack
+	local maxHydration: number = StatsConfig.MaxHydration
+	--Loop through backpack and find anything of type Drink
+	--If drink is wasted attempt to search for another drink
+	local leastWasteDrink: string? = nil
+	local leastWasteRegen: number = 0
+	for itemName, item in pairs(backpack) do
+		if item.ItemType == "Drink" then
+			--Check for if drink is wasted and if not add
+			local itemInfo = Self:GetItemInfo(itemName)
+			local thirstRegen = itemInfo.ThirstRegen
+			local canDrink = MaxDrinkConsume(thirstRegen, Stats, maxHydration, item)
+			if canDrink > 0 then
+				--Found drink that doesnt waste
+				Self:RemoveItem(itemName, canDrink)
+				Stats.Hydration = Stats.Hydration + (canDrink * thirstRegen) --Update stat
+				--Cancel thirst task
+				if Tasks.ThirstTask then
+					CancelThirst(Tasks)
+				end
+				return
+			end
+			--Could not consume without waste so check for if leastWaste
+			if ((-1 * thirstRegen) > leastWasteRegen) or not leastWasteDrink then
+				--least waste so far
+				leastWasteDrink = itemInfo.Name
+				leastWasteRegen = -1 * thirstRegen
+			end
+		end
+	end
+	--Could not consume without waste. If thirsting drink of least waste
+	if leastWasteDrink and Tasks.ThirstTask then
+		--There was drink and NPC is thirsting so drink out of desperation
+		Self:RemoveItem(leastWasteDrink, 1)
+		local newHydrationStat = Stats.Hydration + math.abs(leastWasteRegen)
+		if newHydrationStat <= maxHydration then
+			--Within max hydration
+			Stats.Hydration = newHydrationStat
+		else
+			--Set to max stat since greater than allowed stat
+			Stats.Hydration = maxHydration
+		end
+		--Cancel thirst task
+		CancelThirst(Tasks)
+	elseif Tasks.StvTask then
+		print("No Food found! Cant eat and starving!")
+	end
+end
+
+local function Thirst(Self, StatsConfig, Stats, Tasks)
+	Tasks.ThirstTask = task.spawn(function()
+		--Damage NPC
+		while true do
+			ConsumeDrink(Self, StatsConfig, Stats, Tasks) --Try to consume drink first
+			print("Taking thirst damage!")
+			Self.__Humanoid:TakeDamage(StatsConfig.ThirstDmg)
+			task.wait(StatsConfig.ThirstDmgRate)
+		end
+	end)
+end
+
+local function HandleHydrationStats(Self, StatsConfig, Stats, Tasks)
+	--For each loop if thirst then consume food until out
+	--If out of food then need to cancel starveTsk when given food
+	--local starveTsk = nil --The task for when a player is starving
+	print("Handling drinks")
+	while true do
+		task.wait(StatsConfig.HydDeteriorationRate) --Wait between decrements
+		local newStat = Stats.Hydration - StatsConfig.HydDecrement
+		if newStat < 0 then
+			newStat = 0 --Prevent negative stat
+		end
+		print("Decrementing drink. Drink is now: " .. newStat)
+		Stats.Hydration = newStat
+		--Check if starved
+		if newStat <= 0 and not Tasks.ThirstTask then
+			--Start damaging player and store task to cancel when given food
+			print(Self.Name .. "Is thirsting")
+			Thirst(Self, StatsConfig, Stats, Tasks)
 		end
 	end
 end
