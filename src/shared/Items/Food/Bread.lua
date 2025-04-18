@@ -5,4 +5,5 @@ Bread.ItemStack = 50 -- Max stack of items possible
 Bread.ItemType = "Food"
 Bread.DropItem = nil
 Bread.HungerRegen = 5
+Bread.SellValue = 5
 return Bread
