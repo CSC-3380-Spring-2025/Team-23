@@ -1,5 +1,5 @@
 ----[[
-----[[
+--[[
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -271,7 +271,9 @@ print(NPC1:GetItemCount("Coal"))
 --NPC1:Kill()
 --]]
 
+
 --Stats test
+--[[
 local NPC1 = MinerNPC.new(
 	"Miner 1",
 	rigsFolder.DefaultNPC,
@@ -293,3 +295,4 @@ NPC1:CollectItem("Bread", 30)
 NPC1:CollectItem("Water", 10)
 
 print("Checking NPC1 name: " .. NPC1.Name)
+--]]
