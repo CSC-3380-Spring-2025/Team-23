@@ -341,6 +341,38 @@ function BackpackHandler:DropItem(Player:Player, ItemName : string, DropAmount :
 	end
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
 end
+
+--[[
+@Description: Destroys an item from the player's backpack.
+@Param Player (Player): The player who will have the item destroyed.
+@Param ItemName (String): The name of the item that should be destroyed from the backpack.
+@Param DestroyAmount (Number): How many items should be destroyed from the stack.
+]]
+function BackpackHandler:DestroyItem(Player:Player, ItemName : string, DestroyAmount : number) : ()
+	if not Backpacks[Player] then
+		warn("How you gon drop something when you don't even have a backpack?")
+		return
+	end
+	local TargetBackpack : array = Backpacks[Player]
+	for c,v in pairs(TargetBackpack["Contents"]) do
+		if v.Amount >= DestroyAmount then
+			v.Amount -= DestroyAmount
+			TargetBackpack["Weight"] -= ItemStatistics[v:GetName()]["Weight"] * v.Amount
+			TargetBackpack["TotalItems"] -= DestroyAmount
+			print("Removed ".. v:GetName().. " for " .. DestroyAmount .. " with weight ".. v.Weight)
+			v.Weight = ItemStatistics[v:GetName()]["Weight"] * v.Amount
+			DestroyAmount -= v.Amount
+			if v.Amount <= 0 then
+				table.remove(TargetBackpack["Contents"], c)
+			end
+		end
+		if DestroyAmount <= 0 then
+			break
+		end
+	end
+	BackpackHandler:CalculateCurrentWeight(Player, 0)
+end
+
 --[[
 @Description: Drops a tool from the player's backpack.
 @Param Player (Player): The player who will have the tool dropped.

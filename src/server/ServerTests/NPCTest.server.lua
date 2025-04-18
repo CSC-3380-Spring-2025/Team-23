@@ -1,4 +1,5 @@
 --[[
+--[[
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -38,6 +39,7 @@ end
 
 task.wait(10)
 
+]]
 --[[
 success = NPC1:SetWaypoint(waypoint1.Position)
 if success then
@@ -57,7 +59,6 @@ success = NPC1:SetLinkedWaypoint(waypoint10.Position)
 if success then
     NPC1:TraverseWaypoints() 
 end
---]]
 
 --print("Am I sitll going?")
 --]]
