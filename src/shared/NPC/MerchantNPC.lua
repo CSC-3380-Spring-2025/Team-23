@@ -45,9 +45,40 @@ end
 function MerchantNPC.new(Name, NPC)
     local self = NPCDialogue.new(Name, NPC)
     setmetatable(self, MerchantNPC) 
-    
+    self:InsertMenu("SellMenu", "Choose something to sell")
+    self.__SellOptions = {} --table of string that says what items the vendors are allowed to sell
     return self
 end
+
+local function DisplaySellItems(Self)
+    local sellMenu: ScreenGui = Self.__Menus["SellMenu"]
+    local optionButtonCopy: ImageButton = optionButtonReferencer:Clone()
+    local scrollingFrame: ScrollingFrame = sellMenu.Frame.OptionFrame.ScrollingFrame
+    
+    --look up Backpack Item list
+    local backpackItems = getBackpackContents:InvokeServer()
+    
+    --if backpackItem is a whitelisted item in selloptions
+    --then displayitem with amount and sell value per unit
+    --action func = local function to pass in, sells one unit if left click, sell 10 if ctrl + left click
+    --ctrl + shift = 100
+    --if less then sell all
+    --remove items from backpack and add money
+    
+
+    for _, backpackItem in pairs(backpackItems) do
+        
+        local obrText: TextLabel = optionButtonCopy.TextLabel
+		obrText.Text = backpackItem.__Name
+        --print(obrText.Text)
+        optionButtonCopy.MouseButton1Down:Connect(Self.ItemRemoval(obrText.Text)) 
+        optionButtonCopy.Parent = scrollingFrame
+	end
+end
+
+--local function ClearLastItems()
+    
+--end
 
 function MerchantNPC:SetHomeMenu(MenuName)
     print("This is home menu!")
@@ -59,23 +90,11 @@ function MerchantNPC:SetHomeMenu(MenuName)
     end
     
     local function SellMenu()
-        self:InsertMenu("SellMenu", "Choose something to sell")
-        --adding sell option
-        self:InsertOption("SellMenu", "Sell", self.ItemRemoval, 9)
-        local backpackItems = getBackpackContents:InvokeServer()
-        
-        print("Invoked!")
-        for _, backpackItem in pairs(backpackItems) do
-            print(backpackItem)
-        end
-        
+        --ClearLastItems()
+        DisplaySellItems(self)
         self:TransitionDialogue("SellMenu")
-
     end
-    
-    self:InsertOption(MenuName, "Sell", SellMenu, 9)
-    print("Inserted Sell Option")
-    
+    self:InsertOption(MenuName, "Sell", SellMenu, -1)
     self.__HomeMenu = foundMenu
     --call helper function to reset Proximity Prompt
     ProxPromptHandler(self)
@@ -84,37 +103,21 @@ end
 
 
 
-function MerchantNPC:InsertSellOption(MenuName, OptionMessage, ActionFunc, Priority)
-    
-    local currentMenu: ScreenGui = self.__Menus[MenuName]
-    local optionButtonCopy: ImageButton = optionButtonReferencer:Clone()
-    optionButtonCopy.LayoutOrder = Priority
-    local scrollingFrame: ScrollingFrame = currentMenu.Frame.OptionFrame.ScrollingFrame
-  	
-
-
-	
-    --look up Backpack Item list
-    local backpackItems = getBackpackContents:InvokeServer()
+function MerchantNPC:InsertSellOption(ItemName, Priority)
     
     
-    for _, backpackItem in pairs(backpackItems) do
-        
-        local obrText: TextLabel = optionButtonCopy.TextLabel
-		obrText.Text = backpackItem.__Name
-        optionButtonCopy.MouseButton1Down:Connect(self.ItemRemoval(obrText.Text))
-        optionButtonCopy.Parent = scrollingFrame
-	end
+    
+    
+    
 	
 	
 end
 
-function MerchantNPC.ItemRemoval(item)
-	local itemRemoved = item
-	local ServerScriptService = game:GetService("ServerScriptService")
-	local BackpackHandler = ServerScriptService.Server.Player.BackpackHandler
-	BackpackHandler:DestroyTools(player, item, 1)
+function MerchantNPC:InsertMultiSellOptions(ItemList: {}, Priority)
+    
 end
+
+
 
 function MerchantNPC:Test()
 	task.wait(5)
