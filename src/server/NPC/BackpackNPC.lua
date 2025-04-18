@@ -39,11 +39,18 @@ local function MaxFoodConsume(HungerRegen: number, Stats: {}, MaxHunger: number,
 	end
 end
 
---Handles when an NPC consumes food
-local function ConsumeFood(Self, StatsConfig, Stats, Tasks) : boolean
+--[[
+Handles when an NPC consumes food.
+	@param Self (any) instance of this class
+	@param StatsConfig ({}) the table of stats config 
+	@param Stats ({}) the table of the current stats
+	@param Tasks ({thread}) the table of active tasks
+	@return (boolean) true on success eating or false otherwise
+--]]
+local function ConsumeFood(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : boolean
 	--Check for food
-	local backpack = Self.__Backpack
-	local maxHunger = StatsConfig.MaxFood
+	local backpack: {} = Self.__Backpack
+	local maxHunger: number = StatsConfig.MaxFood
 	--Loop through backpack and find anything of type food
 	--If food is wasted attempt to search for another food
 	local leastWasteFood: string? = nil
@@ -51,9 +58,9 @@ local function ConsumeFood(Self, StatsConfig, Stats, Tasks) : boolean
 	for itemName, item in pairs(backpack) do
 		if item.ItemType == "Food" then
 			--Check for if food is wasted an dif not add
-			local itemInfo = Self:GetItemInfo(itemName)
-			local hungerRegen = itemInfo.HungerRegen
-			local canEat = MaxFoodConsume(hungerRegen, Stats, maxHunger, item)
+			local itemInfo: {} = Self:GetItemInfo(itemName)
+			local hungerRegen: number = itemInfo.HungerRegen
+			local canEat: number = MaxFoodConsume(hungerRegen, Stats, maxHunger, item)
 			if canEat > 0 then
 				--Found edible food that doesnt waste
 				Self:RemoveItem(itemName, canEat)
@@ -72,7 +79,7 @@ local function ConsumeFood(Self, StatsConfig, Stats, Tasks) : boolean
 	if leastWasteFood and Tasks.StvTask then
 		--There was food and NPC is starving so eat out of desperation
 		Self:RemoveItem(leastWasteFood, 1)
-		local newFoodStat = Stats.Food + math.abs(leastWasteRegen)
+		local newFoodStat: number = Stats.Food + math.abs(leastWasteRegen)
 		if newFoodStat <= maxHunger then
 			--Within max hunger
 			Stats.Food = newFoodStat
@@ -87,7 +94,14 @@ local function ConsumeFood(Self, StatsConfig, Stats, Tasks) : boolean
 	return false --Could not eat
 end
 
-local function Starve(Self, StatsConfig, Stats, Tasks)
+--[[
+Starves a given NPC until it is given food
+	@param Self (any) any instance fo this class
+	@param StatsConfig ({}) table of stat configs
+	@param Stats ({}) table of stats
+	@param Tasks ({thread}) table of the current tasks
+--]]
+local function Starve(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : ()
 	Tasks.StvTask = task.spawn(function()
 		--Damage NPC
 		while true do
@@ -103,14 +117,21 @@ local function Starve(Self, StatsConfig, Stats, Tasks)
 	end)
 end
 
-local function HandleFoodStat(Self, StatsConfig, Stats, Tasks)
+--[[
+Handles the food stat
+	@param Self (any) any instance fo this class
+	@param StatsConfig ({}) table of stat configs
+	@param Stats ({}) table of stats
+	@param Tasks ({thread}) table of the current tasks
+--]]
+local function HandleFoodStat(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : ()
 	--For each loop if hungry then consume food until out
 	--If out of food then need to cancel starveTsk when given food
 	--local starveTsk = nil --The task for when a player is starving
 	--print("Handling food")
 	while true do
 		task.wait(StatsConfig.FdDeteriorationRate) --Wait between decrements
-		local newStat = Stats.Food - StatsConfig.FdDecrement
+		local newStat: number = Stats.Food - StatsConfig.FdDecrement
 		if newStat < 0 then
 			newStat = 0 --Prevent negative stat
 		end
@@ -148,11 +169,18 @@ local function MaxDrinkConsume(HydrationRegen: number, Stats: {}, MaxHydration: 
 	end
 end
 
---Handles when an NPC consumes drinks
-local function ConsumeDrink(Self, StatsConfig, Stats, Tasks) : boolean
+--[[
+Handles when an NPC consumes drinks
+	@param Self (any) any instance fo this class
+	@param StatsConfig ({}) table of stat configs
+	@param Stats ({}) table of stats
+	@param Tasks ({thread}) table of the current tasks
+	@return (boolean) true on drank or false otherwise
+--]]
+local function ConsumeDrink(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : boolean
 	--Check for drink
-	local backpack = Self.__Backpack
-	local maxDrink = StatsConfig.MaxHydration
+	local backpack: {} = Self.__Backpack
+	local maxDrink: number = StatsConfig.MaxHydration
 	--Loop through backpack and find anything of type Drink
 	--If drink is wasted attempt to search for another drink
 	local leastWastedDrink: string? = nil
@@ -160,9 +188,9 @@ local function ConsumeDrink(Self, StatsConfig, Stats, Tasks) : boolean
 	for itemName, item in pairs(backpack) do
 		if item.ItemType == "Drink" then
 			--Check for if drink is wasted and if not add
-			local itemInfo = Self:GetItemInfo(itemName)
-			local hydrationRegen = itemInfo.HydrationRegen
-			local canDrink = MaxDrinkConsume(hydrationRegen, Stats, maxDrink, item)
+			local itemInfo: {} = Self:GetItemInfo(itemName)
+			local hydrationRegen: number = itemInfo.HydrationRegen
+			local canDrink: number = MaxDrinkConsume(hydrationRegen, Stats, maxDrink, item)
 			if canDrink > 0 then
 				--Found drink that doesnt waste
 				Self:RemoveItem(itemName, canDrink)
@@ -182,7 +210,7 @@ local function ConsumeDrink(Self, StatsConfig, Stats, Tasks) : boolean
 	if leastWastedDrink and Tasks.ThirstTask then
 		--There was food and NPC is starving so eat out of desperation
 		Self:RemoveItem(leastWastedDrink, 1)
-		local newDrinkStat = Stats.Hydration + math.abs(leastWasteRegen)
+		local newDrinkStat: number = Stats.Hydration + math.abs(leastWasteRegen)
 		if newDrinkStat <= maxDrink then
 			--Within max hunger
 			Stats.Hydration = newDrinkStat
@@ -197,7 +225,14 @@ local function ConsumeDrink(Self, StatsConfig, Stats, Tasks) : boolean
 	return false --Could not drink
 end
 
-local function Thirst(Self, StatsConfig, Stats, Tasks)
+--[[
+Handles when an NPC is thirsty
+	@param Self (any) any instance fo this class
+	@param StatsConfig ({}) table of stat configs
+	@param Stats ({}) table of stats
+	@param Tasks ({thread}) table of the current tasks
+--]]
+local function Thirst(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : ()
 	Tasks.ThirstTask = task.spawn(function()
 		--Damage NPC
 		while true do
@@ -213,13 +248,20 @@ local function Thirst(Self, StatsConfig, Stats, Tasks)
 	end)
 end
 
-local function HandleDrinkStat(Self, StatsConfig, Stats, Tasks)
+--[[
+Handles the drink stat
+	@param Self (any) any instance of this class
+	@param StatsConfig ({}) table of stat configs
+	@param Stats ({}) table of stats
+	@param Tasks ({thread}) table of the current tasks
+--]]
+local function HandleDrinkStat(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : ()
 	--For each loop if thristy then consume drink until out
 	--If out of drink then need to cancel ThirstTask when given drink
 	print("Handling hydration")
 	while true do
 		task.wait(StatsConfig.FdDeteriorationRate) --Wait between decrements
-		local newStat = Stats.Hydration - StatsConfig.HydDecrement
+		local newStat: number = Stats.Hydration - StatsConfig.HydDecrement
 		if newStat < 0 then
 			newStat = 0 --Prevent negative stat
 		end
@@ -245,11 +287,11 @@ Handles the NPC's stats like food and hydration
 	Movement impacts rate of food stats going down
 	Should be used inside of a task.spawn
 --]]
-local function HandleStats(Self)
+local function HandleStats(Self) : ()
 	print("Starting stats")
-	local statsConfig = Self.__StatsConfig
-	local stats = Self.__Stats
-	local tasks = Self.__Tasks
+	local statsConfig: {} = Self.__StatsConfig
+	local stats: {} = Self.__Stats
+	local tasks: {thread} = Self.__Tasks
 	--Handle food stats
 	tasks.FoodStat = task.spawn(function()
 		HandleFoodStat(Self, statsConfig, stats, tasks)
@@ -260,7 +302,11 @@ local function HandleStats(Self)
 	print("Finished seting up food stats handler")
 end
 
-local function HandleDeath(Self)
+--[[
+Handles what happens when the NPC dies
+	@param Self (any) an instance of the class
+--]]
+local function HandleDeath(Self) : ()
 	Self.__Humanoid.Died:Once(function()
 		print("Backpack NPC died!")
 		--End tasks
