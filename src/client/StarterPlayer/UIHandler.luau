@@ -38,8 +38,8 @@ local UIColors = {
 }
 -- Functions
 
-function UIHandler.new(Data : table) : ()
-	local self = Object.new("PlayerUI")
+function UIHandler.new(Name: string, Data: table) : ()
+	local self = Object.new(Name)
 	setmetatable(self, UIHandler)
 	self.__DeathConnection = Character.Humanoid.Died:Connect(function()
 		self.__HealthChanged:Disconnect()
