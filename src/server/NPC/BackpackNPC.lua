@@ -338,6 +338,10 @@ Constructor for the BackpackNPC class
     @param EncumbranceSpeed ({[Light, Medium, Heavy] = number}) a table of keys defined
     as Light, Medium, Heavy that have a value pair indicating the speed to go at each Encumbrance level
     if not provided then Light = -1/3speed, Heavy = -2/3 speed
+	@param DeathHandler (boolean) if set to true enables the death handler for clean up or disables otherwise
+	If you do not know what your doing, then you should set this to true.
+	@param StatsConfig ({}) determines the config for the NPC's stats. Keys left out follow a default format
+	see the table of statsconfig below in the cosntructor for more details
 --]]
 function BackpackNPC.new(
 	Name: string,
@@ -352,7 +356,8 @@ function BackpackNPC.new(
 	WhiteList: { string },
 	Backpack: {}?,
 	EncumbranceSpeed: {}?,
-	DeathHandler: boolean
+	DeathHandler: boolean,
+	StatsConfig: {}
 )
 	local self = NPC.new(Name, Rig, Health, SpawnPos, Speed, false)
 	setmetatable(self, BackpackNPC)
@@ -386,6 +391,21 @@ function BackpackNPC.new(
 		ThirstDmg = 5,
 		ThirstDmgRate = 30,
 	}
+
+	if StatsConfig then
+		--Stats config passed in so set anything they set
+		self.__StatsConfig.MaxFood = StatsConfig.MaxFood or self.__StatsConfig.MaxFood
+		self.__StatsConfig.MaxHydration = StatsConfig.MaxHydration or self.__StatsConfig.MaxHydration
+		self.__StatsConfig.FdDeteriorationRate = StatsConfig.FdDeteriorationRate or self.__StatsConfig.FdDeteriorationRate
+		self.__StatsConfig.HydDeteriorationRate = StatsConfig.HydDeteriorationRate or self.__StatsConfig.HydDeteriorationRate
+		self.__StatsConfig.FdDecrement = StatsConfig.FdDecrement or self.__StatsConfig.FdDecrement
+		self.__StatsConfig.HydDecrement = StatsConfig.HydDecrement or self.__StatsConfig.HydDecrement
+		self.__StatsConfig.StarveDmg = StatsConfig.StarveDmg or self.__StatsConfig.StarveDmg
+		self.__StatsConfig.StarveDmgRate = StatsConfig.StarveDmgRate or self.__StatsConfig.StarveDmgRate
+		self.__StatsConfig.ThirstDmg = StatsConfig.ThirstDmg or self.__StatsConfig.ThirstDmg
+		self.__StatsConfig.ThirstDmgRate = StatsConfig.ThirstDmgRate or self.__StatsConfig.ThirstDmgRate
+	end
+
 	self.__Stats = {
 		--The stat values
 		Food = self.__StatsConfig.MaxFood,

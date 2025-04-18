@@ -30,6 +30,10 @@ Constructor for the ToolNPC class
     @param EncumbranceSpeed ({[Light, Medium, Heavy] = number}) a table of keys defined
     as Light, Medium, Heavy that have a value pair indicating the speed to go at each Encumbrance level
     if not provided then Light = -1/3speed, Heavy = -2/3 speed
+	@param DeathHandler (boolean) if set to true enables the death handler for clean up or disables otherwise
+	If you do not know what your doing, then you should set this to true.
+	@param StatsConfig ({}) determines the config for the NPC's stats. Keys left out follow a default format
+	see the table of statsconfig below in the cosntructor for more details in Backpack NPC
 --]]
 function ToolNPC.new(
 	Name: string,
@@ -44,7 +48,8 @@ function ToolNPC.new(
 	WhiteList: { string },
 	Backpack: {}?,
 	EncumbranceSpeed: {}?,
-	DeathHandler: any
+	DeathHandler: any,
+	StatsConfig: {}
 )
 	local self = BackpackNPC.new(
 		Name,
@@ -59,7 +64,8 @@ function ToolNPC.new(
 		WhiteList,
 		Backpack,
 		EncumbranceSpeed,
-		DeathHandler
+		DeathHandler,
+		StatsConfig
 	)
 	setmetatable(self, ToolNPC)
 	self.__EquippedTool = nil --The tool equipped by the NPC
