@@ -351,7 +351,7 @@ Adds a given pickaxe tool to the Miner NPC
 	@param Tool (Tool) the tool to add for the NPC
 	@param Amount (number) the number of the pickaxe to add to the miner NPC
 --]]
-function MinerNPC:AddPickaxe(Tool, Amount): ()
+function MinerNPC:AddPickaxe(Tool: Tool, Amount: number): ()
 	self:AddTool(Tool, 1)
 	self.__Pickaxe = self.__Backpack[Tool.Name]
 end
