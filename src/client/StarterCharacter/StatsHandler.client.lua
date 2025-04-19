@@ -15,7 +15,7 @@ local statsUIHandler = UIHandler.new("StatsUIHandler")
 local StatsDmgPlayer = BridgeNet2.ReferenceBridge("StatsDmgPlayer")
 
 local tasks = {} --table of executing tasks
-
+local connections = {} --Table of conections
 --UIHandler:Test()
 
 local statsConfig = {
@@ -135,4 +135,24 @@ tasks.Hydration = task.spawn(function()
         lastStat = newStat --Update lastStat
         print("Hydration stat is now: " .. stats.Hydration)
 	end
+end)
+
+--Handles health bar
+tasks.Health = task.spawn(function()
+    local character = player.Character
+    local humanoid = character:FindFirstChild("Humanoid")
+
+    humanoid.Died:Once(function()
+        --Clean up health change connect to prevent mem leaks
+        if connections.healthChange then
+            connections.healthChange:Disconnect()
+        end
+    end)
+    
+    connections.healthChange = humanoid.HealthChanged:Connect(function(curHealth)
+        --Update health
+        local newPrcnt = curHealth / humanoid.MaxHealth
+        statsUIHandler:AdjustBarUI("Health", newPrcnt, false)
+    end)
+
 end)

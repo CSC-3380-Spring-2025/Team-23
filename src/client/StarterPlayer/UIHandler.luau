@@ -41,18 +41,6 @@ local UIColors = {
 function UIHandler.new(Name: string, Data: table) : ()
 	local self = Object.new(Name)
 	setmetatable(self, UIHandler)
-	self.__DeathConnection = Character.Humanoid.Died:Connect(function()
-		self.__HealthChanged:Disconnect()
-	end)
-	self.__NewCharacterConnection = Player.CharacterAdded:Connect(function(NCharacter : Model)
-		Character = NCharacter
-		if self.__HealthChanged then
-			self.__HealthChanged:Disconnect()
-		end
-		self.__HealthChanged = Character.Humanoid.HealthChanged:Connect(function()
-			self:AdjustBarUI("Health", Character.Humanoid.Health/Character.Humanoid.MaxHealth)
-		end)
-	end)
 	return self
 end
 
