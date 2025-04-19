@@ -6,13 +6,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
 --Events
 local StatsDmgPlayer = BridgeNet2.ReferenceBridge("StatsDmgPlayer")
+
 StatsDmgPlayer:Connect(function(Player, Damage)
-    print("Taking damage from server!")
-    local character = Player.Character
+    local character: Model? = Player.Character
     if not character then
         return
     end
-    local humanoid = character:FindFirstChild("Humanoid")
+    local humanoid: Humanoid? = character:FindFirstChild("Humanoid") :: Humanoid?
     if not humanoid then
         return
     end

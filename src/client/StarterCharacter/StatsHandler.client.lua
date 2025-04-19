@@ -5,20 +5,19 @@ All subsequent deaths after a player joins will have an entirely new stats for H
 --]]
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
+local player: Player = Players.LocalPlayer
 local playerScripts = player.PlayerScripts
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
 local UIHandler = require(playerScripts:WaitForChild("UIHandler"))
 --Instances
-local statsUIHandler = UIHandler.new("StatsUIHandler")
+local statsUIHandler: any = UIHandler.new("StatsUIHandler")
 --Events
 local StatsDmgPlayer = BridgeNet2.ReferenceBridge("StatsDmgPlayer")
 
-local tasks = {} --table of executing tasks
-local connections = {} --Table of conections
---UIHandler:Test()
+local tasks: {thread} = {} --table of executing tasks
+local connections: {RBXScriptConnection} = {} --Table of conections
 
-local statsConfig = {
+local statsConfig: {any} = {
 	--Handles config for stats
 	MaxFood = 100, --Max hunger of the player
 	MaxHydration = 100, --MaxHydration of the player
@@ -32,7 +31,7 @@ local statsConfig = {
 	ThirstDmgRate = 5,--rate in seconds that damage is dealt during a thirst
 }
 
-local stats = {
+local stats: {number} = {
 	--The stat values
 	Food = statsConfig.MaxFood,
 	Hydration = statsConfig.MaxHydration,
@@ -42,12 +41,10 @@ local stats = {
 Starves the player until it is given food
 --]]
 local function Starve() : ()
-    print("Player is starving!")
 	tasks.StvTask = task.spawn(function()
 		--Damage NPC
 		while true do
 			if stats.Food > 0 then
-                print("Canceling starve. No longer starving!")
 				tasks.StvTask = nil
 				return--No longer starving
 			end
@@ -60,11 +57,8 @@ end
 
 --Handle hunger stats
 tasks.Hunger = task.spawn(function()
-    local testCount = 0
-    local lastStat = 0
+    local lastStat: number = 0
 	while true do
-        testCount = testCount + 10
-        print("Test count is: " .. testCount)
 		task.wait(statsConfig.FdDeteriorationRate) --Wait between decrements
 		local newStat: number = stats.Food - statsConfig.FdDecrement
 		if newStat < 0 then
@@ -75,7 +69,7 @@ tasks.Hunger = task.spawn(function()
             continue--Skip to next loop nothing new to do
         else
             --Update UI for new hunger stat
-            local newPrcnt = (newStat / statsConfig.MaxFood)
+            local newPrcnt: number = (newStat / statsConfig.MaxFood)
             statsUIHandler:AdjustBarUI("Hunger", newPrcnt, false)
         end
 		stats.Food = newStat
@@ -85,20 +79,17 @@ tasks.Hunger = task.spawn(function()
 			Starve()
 		end
         lastStat = newStat --Update lastStat
-        print("Hunger stat is now: " .. stats.Food)
 	end
 end)
 
 --[[
-Starves the player until it is given food
+Thirsts the player until it is given a drink
 --]]
 local function Thirst() : ()
-    print("Player is thirsting!")
 	tasks.ThirstTask = task.spawn(function()
 		--Damage NPC
 		while true do
 			if stats.Hydration > 0 then
-                print("Canceling thirst. No longer thirsting!")
 				tasks.ThirstTask = nil
 				return--No longer starving
 			end
@@ -111,7 +102,7 @@ end
 
 --Handle hydration stats
 tasks.Hydration = task.spawn(function()
-    local lastStat = 0
+    local lastStat: number = 0
 	while true do
 		task.wait(statsConfig.HydDeteriorationRate) --Wait between decrements
 		local newStat: number = stats.Hydration - statsConfig.HydDecrement
@@ -123,7 +114,7 @@ tasks.Hydration = task.spawn(function()
             continue--Skip to next loop nothing new to do
         else
             --Update UI for new Hydration stat
-            local newPrcnt = (newStat / statsConfig.MaxHydration)
+            local newPrcnt: number = (newStat / statsConfig.MaxHydration)
             statsUIHandler:AdjustBarUI("Water", newPrcnt, false)
         end
 		stats.Hydration = newStat
@@ -133,14 +124,13 @@ tasks.Hydration = task.spawn(function()
 			Thirst()
 		end
         lastStat = newStat --Update lastStat
-        print("Hydration stat is now: " .. stats.Hydration)
 	end
 end)
 
 --Handles health bar
 tasks.Health = task.spawn(function()
-    local character = player.Character
-    local humanoid = character:FindFirstChild("Humanoid")
+    local character: Model = player.Character :: Model
+    local humanoid: Humanoid = character:FindFirstChild("Humanoid") :: Humanoid
 
     humanoid.Died:Once(function()
         --Clean up health change connect to prevent mem leaks
@@ -151,7 +141,7 @@ tasks.Health = task.spawn(function()
     
     connections.healthChange = humanoid.HealthChanged:Connect(function(curHealth)
         --Update health
-        local newPrcnt = curHealth / humanoid.MaxHealth
+        local newPrcnt: number = curHealth / humanoid.MaxHealth
         statsUIHandler:AdjustBarUI("Health", newPrcnt, false)
     end)
 
