@@ -57,8 +57,8 @@ function UIHandler.new(Name: string, Data: table) : ()
 end
 
 --[[
-@Description: Adjusts one of three bar UIs (Health, Hunger, Thirst) based on a provided decimal within the range of 0-1.
-@Param UIName (String): The name of the UI bar to be changed. This is not its actual name in the GUI, but what it represents (Health, Hunger, Thirst)
+@Description: Adjusts one of three bar UIs (Health, Hunger, Water) based on a provided decimal within the range of 0-1.
+@Param UIName (String): The name of the UI bar to be changed. This is not its actual name in the GUI, but what it represents (Health, Hunger, Water)
 @Param Percentage (Number): A number between or equal to 0-1 that represents how far the bar will be shrunk/expanded based on its minimum/maximum size.
 @Param SkipTween (Boolean): If true, no graphical "tween" effect will play, the bar will simply snap to its new size.
 ]]
