@@ -32,8 +32,9 @@ Constructor that creates an NPC
     @param Health (number) health value to set NPC at
     @param SpawnPos (Vector3) position to spawn NPC at
 	@param Speed (number) the walk speed of a NPC. Default of 16
+	@param DeathHandler (boolean) determines if the death handler is run for clean up on death
 --]]
-function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Speed: number)
+function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Speed: number, DeathHandler: boolean)
 	local self = Object.new(Name)
 	setmetatable(self, NPC)
 	--Set up NPC body
@@ -56,6 +57,15 @@ function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Sp
 	self.__PathFindingTask = nil --Task set to executing the pathfinding
 	self.__HomePoint = nil
 	self.__Animations = {} --Loaded animations track
+	--Detect when an NPC dies for object clean up
+	self.__Tasks = {}
+	if DeathHandler then
+		self.__Humanoid.Died:Once(function()
+			print("Normal NPC died!")
+			task.wait(5)
+			self:Destroy()
+		end)
+	end
 	return self
 end
 
@@ -277,7 +287,7 @@ end
 Determines if a NPC is still traversing
 	@return (boolean) true if traversing or false otherwise
 --]]
-function NPC:IsTraversing() : boolean
+function NPC:IsTraversing(): boolean
 	if self.__PathFindingTask then
 		return true
 	else
@@ -288,7 +298,7 @@ end
 --[[
 Cancels waypoints of any type
 --]]
-function NPC:CancelWaypoints() : ()
+function NPC:CancelWaypoints(): ()
 	if self.__PathFindingTask then
 		task.cancel(self.__PathFindingTask)
 		self.__PathFindingTask = nil --Reset pathfindingtask to indicate no pathfinding
@@ -429,20 +439,15 @@ function NPC:LoadAnimation(Animation: Animation): AnimationTrack
 	return track
 end
 
-
 --[[
 Removes an animation track from the NPC
 	Once removed an animation must be loaded again to use
 	@param NPCTrack (AnimationTrack) a track previously loaded into the NPC
 --]]
-function NPC:RemoveAnimation(NPCTrack: AnimationTrack) : ()
+function NPC:RemoveAnimation(NPCTrack: AnimationTrack): ()
 	if #self.__Animations == 0 then
 		--No animations added
-		warn(
-			'Attempt to remove animation track for NPC "'
-				.. self.Name
-				.. '" but NPC has no animations added'
-		)
+		warn('Attempt to remove animation track for NPC "' .. self.Name .. '" but NPC has no animations added')
 		return
 	end
 
@@ -456,7 +461,7 @@ function NPC:RemoveAnimation(NPCTrack: AnimationTrack) : ()
 
 	if trackIndex ~= 0 then
 		self.__Animations[trackIndex]:Destroy() --Not destroying for somereason?
-		
+
 		table.remove(self.__Animations, trackIndex)
 	else
 		--track not present
