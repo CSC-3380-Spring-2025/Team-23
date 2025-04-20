@@ -41,7 +41,7 @@ Handles the stack when removing an item
 	@param Self (any) an instance of the class
 	@param ItemInfo (ModuleScript) the module script containing the items info
 --]]
-local function ManageStacksRemove(Item: any, Amount: number, Self: any, ItemInfo: ModuleScript): ()
+local function ManageStacksRemove(Item: any, Amount: number, Self: any, ItemInfo: {}): ()
 	local amountItemAfter: number = Item.Count - Amount
 	if amountItemAfter <= 0 then
 		--Stack count will be empty because removing more or same amount of exisitng items that exist
@@ -70,7 +70,7 @@ function StorageHandler:RemoveItem(StorageDescriptor, ItemName, Amount)
 		return
 	end
 	--Handle stack during remove
-	local itemInfo: ModuleScript = self:GetItemInfo(ItemName)
+	local itemInfo: {} = itemUtilities:GetItemInfo(ItemName)
 	ManageStacksRemove(item, Amount, self, itemInfo)
 	item.Count = item.Count - Amount
 	if item.Count < 0 or item.Count == 0 then

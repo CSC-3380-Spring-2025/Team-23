@@ -16,3 +16,5 @@ print("Get max add before adding item: " .. instStorageHandler:GetMaxAdd("Coal",
 instStorageHandler:AddItem(storageDesc, "Coal", 10)
 print("Item count in storage is: " .. instStorageHandler:GetItemCount("Coal", storageDesc))
 print("Get max add after adding item: " .. instStorageHandler:GetMaxAdd("Coal", storageDesc))
+instStorageHandler:RemoveItem(storageDesc, "Coal", 10)
+print("Item count in storage after remove is: " .. instStorageHandler:GetItemCount("Coal", storageDesc))
