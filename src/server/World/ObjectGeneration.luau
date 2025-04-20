@@ -1,9 +1,7 @@
 --[[ObjectGeneration - Handles spawning items in terrain]]
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 
-local __SpawnLocation = workspace:FindFirstChild("SpawnLocation")  -- Retrieve SpawnLocation
-local __BasePlate = workspace:FindFirstChild("Baseplate")  -- Retrieve Baseplate
-
+local __BasePlate = workspace:FindFirstChild("Baseplate") 
 
 local ObjectGeneration = {}
 Object:Supersedes(ObjectGeneration)
@@ -30,21 +28,33 @@ end
 
 --[[
  * IsPartAtPosition - Checks if any part of an object is at a given position, excluding certain objects
- * like the terrain where the item spawns on, the spawn location, and the base plate. This is useful to detect if other items 
+ * like the terrain where the item spawns on and the baseplate. Also checks if item will spawn in any of the player plots. This is useful to detect if other items 
  * like trees or buildings are present at the spawn position.
  * 
  * @position - The position (Vector3) where the check will be performed.
  * @terrain - The terrain (Instance) in which the item will spawn, which will be excluded from the check.
  * 
  * @return - boolean - Returns true if one or more parts are found at the position (excluding terrain, 
- *                     spawn location, and base plate), otherwise returns false.
+ *                     spawn location, and base plate), and if the position is within the area of where a playerplot spawns.Otherwise returns false.
 ]]
 local function IsPartAtPosition(Position: Vector3, Terrain: Instance): boolean
+	local playerPlots: BasePart = workspace.PlotRootParts:GetDescendants()
+	local playerPlotXSize: number = game.ServerStorage.PlayerPlot.PlayerPlotTemplate.Size.X
+	local playerPlotZSize: number = game.ServerStorage.PlayerPlot.PlayerPlotTemplate.Size.Z
+	for _,playerPlot: BasePart in ipairs(playerPlots) do
+		local xUpperBound = playerPlot.Position.X + playerPlotXSize/2
+		local xLowerBound = playerPlot.Position.X - playerPlotXSize/2
+		local zUpperBound = playerPlot.Position.Z + playerPlotZSize/2
+		local zLowerBound = playerPlot.Position.Z - playerPlotZSize/2
+		if (Position.X < xUpperBound and Position.Z < zUpperBound and Position.X > xLowerBound and Position.Z > zLowerBound) then
+			return true
+		end
+	end
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
-	overlapParams.FilterDescendantsInstances = { Terrain, __SpawnLocation, __BasePlate }
+	overlapParams.FilterDescendantsInstances = { Terrain, __BasePlate }
 
-	local parts = workspace:GetPartBoundsInBox(CFrame.new(Position), Vector3.one * 0.1, overlapParams)
+	local parts = workspace:GetPartBoundsInBox(CFrame.new(Position), Vector3.one * 0.5, overlapParams)
 	return #parts > 0
 end
 
@@ -320,10 +330,14 @@ function ObjectGeneration:SpawnItemsAtOnce(
 	if ItemToSpawn:IsA("Tool") or ItemToSpawn:IsA("Model") then
 		if ItemToSpawn.PrimaryPart then
 			local points: table = PoisonDiscSampling(CenterX, CenterZ, AreaLength, AreaWidth, Terrain, NumOfItems)
+			print("number of spawns for ", ItemToSpawn.Name, " is ", #points)
 			for _,point in pairs(points) do
 				local spawnedItem: Model | Tool = ItemToSpawn:Clone()
-				spawnedItem:SetPrimaryPartCFrame(CFrame.new(point))
-				spawnedItem.Parent = workspace
+				local itemAngles: CFrame = spawnedItem:GetPrimaryPartCFrame() - spawnedItem.PrimaryPart.Position
+				local spawnedCFrame: CFrame = CFrame.new(point) * itemAngles
+				spawnedItem:SetPrimaryPartCFrame(spawnedCFrame)
+				spawnedItem.PrimaryPart.Anchored=true
+				spawnedItem.Parent = workspace.Terrain
 			end
 		else
 			warn("Error: ", ItemToSpawn.Name, " needs to posses a primary part in order to use SpawnItemsAtOnce")
@@ -332,10 +346,14 @@ function ObjectGeneration:SpawnItemsAtOnce(
 		
 	elseif ItemToSpawn:IsA("BasePart") then
 		local points: table = PoisonDiscSampling(CenterX, CenterZ, AreaLength, AreaWidth, Terrain, NumOfItems)
+		print("number of spawns for ", ItemToSpawn.Name, " is ", #points)
 		for _,point in pairs(points) do
 			local spawnedItem: BasePart = ItemToSpawn:Clone()
-			spawnedItem.Position = CFrame.new(point)
-			spawnedItem.Parent = workspace
+			local itemAngles: CFrame = spawnedItem:GetPrimaryPartCFrame() - spawnedItem.PrimaryPart.Position
+			local spawnedCFrame: CFrame = CFrame.new(point) * itemAngles
+			spawnedItem.CFrame = CFrame.new(spawnedCFrame)
+			spawnedItem.Anchored = true
+			spawnedItem.Parent = workspace.Terrain
 		end
 		
 	else
