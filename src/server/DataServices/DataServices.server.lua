@@ -7,7 +7,8 @@
 local Players = game:GetService("Players")
 --Requires
 local Data = require(script.Parent.Data)
-local AssignPlot = require(game.ServerScriptService.Server.Buildings.AssignPlot)
+local AssignPlot = require(game.ServerScriptService.Server.Building.AssignPlot)
+
 local function RunData()
 	--Initialize classes to call
 	local AssignPlotInstance = AssignPlot.new("AssignPlotInstance")
@@ -15,7 +16,44 @@ local function RunData()
 	-- Player joins: Load their data
 	game.Players.PlayerAdded:Connect(function(player)
 		DataInstance:LoadPlayerData(player)
-		--For testing. For now keeping commented out. Should be used along with setting datatable to someting else. print("at beginning: ",SessionDataManagerInstance:GetPlayerData(player.UserId))
+		local SessionDataManager = require(game.ServerScriptService.Server.DataServices.SessionDataManager)
+		local SessionDataManagerInstance = SessionDataManager.new("SessionDataManagerInstance") 
+		--[[comment this whole test table stuff out after presentaion]]
+		local testTable = {
+			Currency = {
+				gold = 69,
+			},
+			Base = {
+				{
+					buildingType = "basepart",
+					CFrame = {-70.237, 0.093, -66.48, 0, 0, 0},
+					properties = {},
+					attributes = { 
+						BuildingTemplate = "HouseLevel1",
+					}
+				},
+				{
+					buildingType = "model",
+					CFrame = {-61.635, 0.093, -141.038, -90, 0, 0},
+					properties = {},
+					attributes = {
+						BuildingTemplate = "BarracksLevel1",
+						health = nil
+					}
+				},
+				{
+					buildingType = "model",
+					CFrame = {-81.635, 0.093, -141.038, -90, 0, 0},
+					properties = {},
+					attributes = {
+						BuildingTemplate = "BarracksLevel1",
+						health = 69
+					}
+				}
+			},
+			Backpack = {}
+		}
+		SessionDataManagerInstance:SetPlayerData(player.UserId, testTable)
 		AssignPlotInstance:AssignPlot(player)
 	end)
 	
