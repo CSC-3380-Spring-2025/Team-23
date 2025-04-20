@@ -464,12 +464,40 @@ end
 --[[
 Returns a table of strings of all items in a storage device
 --]]
-function StorageHandler:SeekContents()
+function StorageHandler:SeekStorageContents(StorageDescriptor)
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempted to SeekStorageContents from storage descriptor that is not valid")
+        return nil
+    end
+    local inventory = GetInventory(StorageDescriptor)
+    local invenCount = 0
+    local contents = {}
+
+    for itemName, _ in pairs(inventory) do
+        table.insert(contents, itemName)
+        invenCount = invenCount + 1
+    end
+
+    if invenCount ==  0 then
+        --No items in inventory
+        return nil
+    end
     
+    return contents
 end
 
-function StorageHandler:GetItemType()
-    
+function StorageHandler:GetItemType(ItemName, StorageDescriptor)
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempted to SeekStorageContents from storage descriptor that is not valid")
+        return nil
+    end
+    local inventory = GetInventory(StorageDescriptor)
+    local item = inventory[ItemName]
+    if not item then
+        warn('Item "' .. ItemName .. '" not in storage when checking item type')
+        return nil
+    end
+    return item.ItemType
 end
 
 --[[
@@ -518,16 +546,27 @@ function StorageHandler:ExportStorageDevice()
     
 end
 
-function StorageHandler:RemoveStorageDevice()
-    
+function StorageHandler:RemoveStorageDevice(StorageDescriptor)
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempted to remove storage device from storage descriptor that is not valid")
+        return
+    end
+    --Remove storage device from table
+    storageTable[StorageDescriptor] = nil
 end
 
-function StorageHandler:FindStorageBySD()
-    
-end
-
-function StorageHandler:FindStorageByModel()
-    
+--[[
+Used to find the storage descriptor associated with a given instance
+--]]
+function StorageHandler:FindStorageByInstance(Instance: Instance)
+    for storageDescriptor, storage in pairs(storageTable) do
+        local device = storage.Device
+        if device == Instance then
+            --Found storage descriptor
+            return storageDescriptor
+        end
+    end
+    return -1--Failed to find an instance with the descriptor
 end
 
 return StorageHandler
