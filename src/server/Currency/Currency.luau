@@ -7,23 +7,22 @@
 ]]
 
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
+local SessionDataManager = require(game.ServerScriptService.Server.DataServices.SessionDataManager)
+
 
 local Currency: table = {}
 Object:Supersedes(Currency)
 Currency.__index = Currency --Currency has lookup.
-
---Attributes
-local __Amount: number = 0
+local SessionDataManagerInstance: {} = SessionDataManager.new("SessionDataManagerInstance")
 --[[
 Base constructor of all currencies
     @param Name (string) name of instance you are creating
     @param Amount (number) optional amount of the currency
     @return (instance) instance of the object.
 ]]
-function Currency.new(Name: string, Amount: number) 
+function Currency.new(Name: string) 
 	local self = Object.new(Name)
 	setmetatable(self, Currency)  
-	self.__Amount = Amount
 	return self
 end
 
@@ -32,8 +31,13 @@ end
  * 
  * @return - (number) - The current value of `self.__Amount`.
 ]]
-function Currency:GetAmount()
-    return self.__Amount
+function Currency:GetAmount(Player: Player, NameOfCurrency: string): number
+	local table = SessionDataManagerInstance:GetPlayerData(Player.UserId)
+	if table then
+		local amount: number = table.Currency[NameOfCurrency]
+		return amount
+	end
+	return nil
 end
 
 --[[
@@ -44,9 +48,13 @@ end
  *
  * @return - None
 ]]
-function Currency:SetAmount(Value: number): ()
-    if Value > 0 then 
-	    self.__Amount = Value
+function Currency:SetAmount(Player: Player, Value: number, NameOfCurrency: string): ()
+	if Value > 0 then 
+		local table = SessionDataManagerInstance:GetPlayerData(Player.UserId)
+		if table then
+			table.Currency[NameOfCurrency] = Value
+			SessionDataManagerInstance:SetPlayerData(Player.UserId, table)
+		end
     end
 end
 
@@ -60,15 +68,21 @@ end
  * 
  * @return - None 
 ]]
-function Currency:ModAmountBy(Value: number): ()
-    if Value > 0 then
-        self.__Amount = self.__Amount + Value
-    else 
-        if self.__Amount > Value then 
-            self.__Amount = self.__Amount - Value
-        end
+function Currency:ModAmountBy(Player:Player, Value: number, NameOfCurrency: string): ()
+	local table = SessionDataManagerInstance:GetPlayerData(Player.UserId)
+	if table then
+		local currencyAmount: number = table.Currency[NameOfCurrency] 
+		if Value > 0 then
+			currencyAmount = currencyAmount + Value
+		elseif currencyAmount > Value then
+			currencyAmount = currencyAmount - Value
+		end
+		if 
+			currencyAmount < 0 then currencyAmount=0 
+		end
+	table.Currency[NameOfCurrency] = currencyAmount
+	SessionDataManagerInstance:SetPlayerData(Player.UserId, table)
 	end
-	if self.__Amount < 0 then self.__Amount=0 end
 end
 
 return Currency
