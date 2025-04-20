@@ -330,7 +330,6 @@ function ObjectGeneration:SpawnItemsAtOnce(
 	if ItemToSpawn:IsA("Tool") or ItemToSpawn:IsA("Model") then
 		if ItemToSpawn.PrimaryPart then
 			local points: table = PoisonDiscSampling(CenterX, CenterZ, AreaLength, AreaWidth, Terrain, NumOfItems)
-			print("number of spawns for ", ItemToSpawn.Name, " is ", #points)
 			for _,point in pairs(points) do
 				local spawnedItem: Model | Tool = ItemToSpawn:Clone()
 				local itemAngles: CFrame = spawnedItem:GetPrimaryPartCFrame() - spawnedItem.PrimaryPart.Position
@@ -346,7 +345,6 @@ function ObjectGeneration:SpawnItemsAtOnce(
 		
 	elseif ItemToSpawn:IsA("BasePart") then
 		local points: {} = PoisonDiscSampling(CenterX, CenterZ, AreaLength, AreaWidth, Terrain, NumOfItems)
-		print("number of spawns for ", ItemToSpawn.Name, " is ", #points)
 		for _,point in pairs(points) do
 			local spawnedItem: BasePart = ItemToSpawn:Clone()
 			local itemAngles: CFrame = spawnedItem:GetPrimaryPartCFrame() - spawnedItem.PrimaryPart.Position

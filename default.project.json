@@ -44,9 +44,7 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Color": [
-            44, 101, 29
-          ],
+          "Color": [212, 155, 227],
           "Locked": true,
           "Position": [
             0, 0, 0
