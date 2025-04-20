@@ -95,25 +95,7 @@ local function setBasePartProperty(part: BasePart, propertyName: string, propert
 end
 
 
---[[
- * SaveBasePart/SaveModel - This function saves BaseParts data 
- *                into a table of primitive values suitable for saving to a DataStore. 
- *                It stores the part's CFrame relative to the `PlayerPlot` origin, 
- *                along with its key properties and custom attributes.
- *
- *                If the building does not contain the "BuildingTemplate" attribute, it returns `nil` 
- *                to prevent saving an invalid or unrecognized object by the load functions.
- *
- * @Building - (BasePart) The part to be turned into a table.
- * @PlayerPlot - (BasePart) The origin part used to calculate the relative CFrame. Should be center of land building is on
- *
- * @return -  Returns nil or a table containing the following:
- *           - buildingType: string ("basepart")
- *           - CFrame: table {x, y, z, rotX, rotY, rotZ}
- *           - properties: table of BasePart properties
- *           - attributes: table of custom attributes from the part
 
-]]
 local function SaveBasePart(Building: BasePart, PlayerPlot: BasePart): {}?
 	--check if building template attribute exists
 	if not Building:GetAttribute("BuildingTemplate") then
