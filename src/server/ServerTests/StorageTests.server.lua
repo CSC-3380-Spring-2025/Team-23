@@ -1,3 +1,4 @@
+--[[
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 local StorageHandler = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
@@ -11,6 +12,7 @@ local storageConfig = {
     }
 }
 local storageDesc = instStorageHandler:AddStorageDevice(storageConfig, coalCrate)
+--]]
 --[[
 print(instStorageHandler:ItemFits(storageDesc, "Coal", 10))
 print("Get max add before adding item: " .. instStorageHandler:GetMaxAdd("Coal", storageDesc))
@@ -22,5 +24,7 @@ print("Get max add after adding item: " .. instStorageHandler:GetMaxAdd("Coal", 
 instStorageHandler:RemoveItem(storageDesc, "Coal", 10)
 print("Item count in storage after remove is: " .. instStorageHandler:GetItemCount("Coal", storageDesc))
 --]]
+--[[
 local descByInstance = instStorageHandler:FindStorageByInstance(coalCrate)
 print("SD is: " .. descByInstance)
+--]]
