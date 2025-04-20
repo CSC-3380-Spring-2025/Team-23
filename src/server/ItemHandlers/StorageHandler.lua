@@ -1,0 +1,454 @@
+--[[
+This script provides handling for any and all storage types
+--]]
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+local ServerMutexSeq = require(ServerScriptService.Server.ServerUtilities.ServerMutexSeq)
+local ItemUtils = require(ReplicatedStorage.Shared.Items.ItemsUtils)
+local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
+local StorageHandler = {}
+Object:Supersedes(StorageHandler)
+
+function StorageHandler.new(Name)
+    local self = Object.new(Name)
+    setmetatable(self, StorageHandler)
+    return self
+end
+
+--Instances
+local itemUtilities = ItemUtils.new("StorageHandlerItemUtils")
+
+--Vars
+local storageTable = {} --Stores a list of all storage availible on the server
+local storageDescriptor = 1 --GLobal storage descriptor for easy access to storage
+local storageMutex = ServerMutexSeq.new("StorageMutex")
+
+--Gets the table of items from a StorageDescriptors value
+local function GetInventory(StorageDescriptor)
+    local curDescript = storageTable[StorageDescriptor]
+    return curDescript.Inventory
+end
+
+local function GetMaxStack(StorageDescriptor)
+    local curDescript = storageTable[StorageDescriptor]
+    return curDescript.Config.MaxStack
+end
+
+--[[
+Handles the stack when removing an item
+	@param Item (any) any item to manage the stack for thats in the storage inventory
+	@param Amount (number) amount of item being removed
+	@param Self (any) an instance of the class
+	@param ItemInfo (ModuleScript) the module script containing the items info
+--]]
+local function ManageStacksRemove(Item: any, Amount: number, Self: any, ItemInfo: ModuleScript): ()
+	local amountItemAfter: number = Item.Count - Amount
+	if amountItemAfter <= 0 then
+		--Stack count will be empty because removing more or same amount of exisitng items that exist
+		Item.StackCount = 0
+	else
+		--Calc new amount of stacks needed
+		Item.StackCount = math.ceil(amountItemAfter / ItemInfo.ItemStack)
+	end
+end
+
+--[[
+Removes an item from a storage effectively deleting it
+--]]
+function StorageHandler:RemoveItem(StorageDescriptor, ItemName, Amount)
+    storageMutex:Lock()
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempted to remove item from storage descriptor that is not valid")
+        storageMutex:Unlock()
+        return
+    end
+    local inventory = GetInventory(StorageDescriptor)
+    local item: any = inventory[ItemName]
+	if not item then
+		warn('"' .. ItemName .. '" not found in inventory of storage when attempting to remove item')
+        storageMutex:Unlock()
+		return
+	end
+	--Handle stack during remove
+	local itemInfo: ModuleScript = self:GetItemInfo(ItemName)
+	ManageStacksRemove(item, Amount, self, itemInfo)
+	item.Count = item.Count - Amount
+	if item.Count < 0 or item.Count == 0 then
+		--Remove item from inventory because 0 or less
+		inventory[ItemName] = nil
+	end
+	storageMutex:Unlock()
+end
+
+--[[
+Deletes all items from a storage inventory
+--]]
+function StorageHandler:RemoveAllItems(StorageDescriptor): ()
+    storageMutex:Lock()
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempted to remove all items from storage descriptor that is not valid")
+        storageMutex:Unlock()
+        return
+    end
+    local curDescript = storageTable[StorageDescriptor]
+	curDescript.Inventory = {} --Empty ineventory table
+    storageMutex:Unlock()
+end
+
+--[[
+Checks for a given item in a storage inventory
+	@param ItemName (string) the name of the item to check for
+	@return (boolean) true if in inventory or false otherwise
+--]]
+function StorageHandler:CheckForItem(ItemName: string, StorageDescriptor): boolean
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempted to check for item from storage descriptor that is not valid")
+        return false
+    end
+    local inventory = GetInventory(StorageDescriptor)
+	local item: any = inventory[ItemName]
+	if item then
+		--item is present in inventory
+		return true
+	else
+		return false --item not found in inventory
+	end
+end
+
+--[[
+Checks for a given item and returns the count of that item
+	@param ItemName (string) the name of the item to check for
+	@return (number) count of item if found or -1 otherwise
+--]]
+function StorageHandler:GetItemCount(ItemName: string, StorageDescriptor): number
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempted to check for item from storage descriptor that is not valid")
+        return -1
+    end
+    local inventory = GetInventory(StorageDescriptor)
+	local item: any = inventory[ItemName]
+	if item then
+		--item is present in inventory so return count of item
+		return item.Count
+	else
+		warn(
+			'"' .. ItemName .. '" not found in inventory of storage when attempting to get item count'
+		)
+		return -1 --item not found in inventory
+	end
+end
+
+--Checks if a given storage descriptor is valid
+function StorageHandler:ValidDescriptor(StorageDescriptor)
+    if not storageTable[StorageDescriptor] then
+        --No refrence to this descriptor anymore
+        return false
+    else
+        return true
+    end
+end
+
+--[[
+Returns the current amount of stacks filled in the storage device
+    @return (number) the amount of stacks filled in storage or -1 on error
+--]]
+function StorageHandler:GetFilledStackAmount(StorageDescriptor): number
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempt to GetFilledStackAmount but descriptor was invalid")
+        return -1
+    end
+	local stackCount: number = 0
+	for _, item in pairs(GetInventory(StorageDescriptor)) do
+		stackCount = stackCount + item.StackCount
+	end
+	return stackCount
+end
+
+--[[
+Returns the amount of stack slots left into a storages inventory
+    @return (number) the amount of slots left or -1 on error
+--]]
+function StorageHandler:StackSlotsLeft(StorageDescriptor): number
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempt to StackSlotsLeft but descriptor was invalid")
+        return -1
+    end
+    local maxStack = GetMaxStack(StorageDescriptor)
+	return maxStack - self:GetFilledStackAmount(StorageDescriptor)
+end
+
+--[[
+Returns the space left for a particular item in an exisitng stack without allocating a new stack for a given item
+    @param ItemName (string) name of the item in the storages inventory
+    @return (number) space left for given item on success or -1 otherwise
+--]]
+function StorageHandler:StackSpace(ItemName: string, StorageDescriptor): number
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempt to get StackSpace but descriptor was invalid")
+        return -1
+    end
+    local inventory = GetInventory(StorageDescriptor)
+	local item: any = inventory[ItemName]
+	if not item then
+		warn('Item "' .. ItemName .. '" does not exist within given storage')
+		return -1
+	end
+
+	local itemInfo: {} = itemUtilities:GetItemInfo(ItemName)
+    if not itemInfo then
+        return -1
+    end
+	local stackSpaceCap: number = item.StackCount * itemInfo.ItemStack
+	local spaceLeft: number = stackSpaceCap - item.Count
+	return spaceLeft
+end
+
+--[[
+Handles the stack when adding a new item
+	@param Item (any) a refrence to the item element of the storages item table
+	@param Amount (number) to amount of the item being added (not amount of stacks)
+	@param Self (any) instance of the class
+	@param ItemInfo (ModuleScript) the module script of the items info
+	@return (boolean) true on success or false otherwise
+--]]
+local function ManageStacksAdd(Item: any, Amount: number, Self: any, ItemInfo: ModuleScript, StorageDescriptor: number): boolean
+    local inventory = GetInventory(StorageDescriptor)
+	local spaceLeft: number = 0
+	if inventory[ItemInfo.ItemName] then
+		--Is already in inventory so can get stackspace
+		spaceLeft = Self:StackSpace(ItemInfo.ItemName)
+		--else spaceLeft is 0 because no stack made yet
+	end
+	local spaceAfter: number = spaceLeft - Amount
+
+	if spaceAfter >= 0 then
+		--Current stack can accomodate no need to add new stack
+		return true
+	else
+		--Attempt to add new stack or stacks
+		local neededStacks: number = math.ceil(math.abs(spaceAfter) / ItemInfo.ItemStack)
+		if (Self:StackSlotsLeft(StorageDescriptor) - neededStacks) < 0 then
+			--NPC out of slots to add more
+			return false
+		end
+
+		--Stacks are availible to add
+		Item.StackCount = Item.StackCount + neededStacks
+		return true
+	end
+end
+
+--[[
+Checks the stack when adding a new item to see if valid
+	@param Item (any) a refrence to the item element of the inventory table
+	@param Amount (number) to amount of the item being added (not amoutn of stacks)
+	@param Self (any) instance of the class
+	@param ItemInfo (ModuleScript) the module script of the items info
+	@return (boolean) true on success or false otherwise
+--]]
+local function CheckStacksAdd(Item: any, Amount: number, Self: any, ItemInfo: {}, StorageDescriptor): boolean
+    local inventory = GetInventory(StorageDescriptor)
+	local spaceLeft: number = 0
+	if inventory[ItemInfo.ItemName] then
+		--Is already in inventory so can get stackspace
+		spaceLeft = Self:StackSpace(ItemInfo.ItemName)
+		--else spaceLeft is 0 because no stack made yet
+	end
+	local spaceAfter: number = spaceLeft - Amount
+
+	if spaceAfter >= 0 then
+		--Current stack can accomodate no need to add new stack
+		return true
+	else
+		--Attempt to add new stack or stacks
+		local neededStacks: number = math.ceil(math.abs(spaceAfter) / ItemInfo.ItemStack)
+		if (Self:StackSlotsLeft(StorageDescriptor) - neededStacks) < 0 then
+			--NPC out of slots to add more
+			return false
+		end
+
+		--Stacks are availible to add
+		return true
+	end
+end
+
+local function AddToStorage(StorageDescriptor, ItemName, Amount, Self) : boolean
+    local inventory = GetInventory(StorageDescriptor)
+
+    local itemInfo: ModuleScript = itemUtilities:GetItemInfo(ItemName)
+	if not itemInfo then
+		return false
+	end
+	local item: any = inventory[ItemName]
+	local firstAdd: boolean = false
+	if not item then
+		--Not added yet needs set up
+		item = {} --Init item
+		item.Count = 0
+		item.StackCount = 0
+		item.ItemType = itemInfo.ItemType
+		item.DropItem = itemInfo.DropItem
+		firstAdd = true
+	end
+
+	local stackSuccess: boolean = ManageStacksAdd(item, Amount, Self, itemInfo, StorageDescriptor)
+	if stackSuccess then
+		--Add amount to count and weight
+		item.Count = item.Count + Amount
+	else
+		warn('Attempted to add Item "' .. ItemName .. '" to storage but amount exceeded stack slots')
+		return false
+	end
+
+	--If first add of item then set up item in inventory
+	if firstAdd then
+		inventory[ItemName] = item
+	end
+	return true
+end
+
+--[[
+Checks if item is a valid item for the storage and if so then adds to the storage
+    @param StorageDescriptor (number) the descriptor of the storage device
+    returned by other methods like AddStorageDevice
+    @param Item (any) any item in the Items directory in replciated storage
+    @param Amount (number) the number of this item to add to storage
+    @return (boolean) true on success or false otherwise
+--]]
+function StorageHandler:AddItem(StorageDescriptor, ItemName, Amount)
+    storageMutex:Lock()
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempted to add item to storage descriptor that is not valid")
+        storageMutex:Unlock()
+        return
+    end
+    --Check amount for negative or 0
+	if Amount <= 0 then
+		warn('Attempted to add Item "' .. ItemName .. '" to storage with amount of 0 or less')
+        storageMutex:Unlock()
+		return false
+	end
+    local success = false
+    --Check for if whitelsited item
+    if self:IsValidItem(StorageDescriptor, ItemName) then
+        --Valid item so add item
+        success = AddToStorage(StorageDescriptor, ItemName, Amount, self)
+    end
+    --Try to add item if item is not full
+    storageMutex:Unlock()
+    return success
+end
+
+
+local function CheckItem(DescriptorValue, ItemName, ItemTypeName) : boolean
+    local itemConfig = DescriptorValue.Config.ItemsConfig
+    for itemType, itemList in pairs(itemConfig) do
+        if ItemTypeName == itemType then
+            for _, item in pairs(itemList) do
+                if item == "AllItems" then
+                    --All items are valid of this type
+                    return true
+                elseif item == ItemName then
+                    return true
+                end
+            end 
+        end
+    end
+    return false --Item not found in whitelist
+end
+
+--[[
+Determines if an item is a valid add or not.
+--]]
+function StorageHandler:IsValidItem(StorageDescriptor, ItemName) : boolean
+    --Check for if item is in whitelist
+    local curDescript = storageTable[StorageDescriptor]
+    if not curDescript then
+        warn("Storage Descriptor not exist for any storage")
+        return false
+    end
+    local itemInfo = itemUtilities:GetItemInfo(ItemName)
+    if not itemInfo then
+        return false --No info found and itemInfo already warns
+    end
+    return CheckItem(curDescript, ItemName, itemInfo.ItemType)
+end
+
+function StorageHandler:ItemFits(StorageDescriptor, Item, Amount)
+    
+end
+
+
+
+--[[
+Returns a table of strings of all items in a storage device
+--]]
+function StorageHandler:SeekContents()
+    
+end
+
+function StorageHandler:GetItemType()
+    
+end
+
+--[[
+Initializes a storage device and returns its Storage Descriptor
+    @param StorageConfig ({{string}}?) table of keys that hold a table of strings allwoed fro that ItemType
+    setting the value to string "AllItems" for an ItemType indicates all items are allwoed for
+    that item type. Not including a StorageConfig table indicates that all items are allowed
+    Example:
+    StorageConfig = {
+        MaxStack = 10,
+        ItemsConfig = {
+            Food = {"Bread", "Rice"},
+            Drink = {"Water"},
+            Tool = {"AllItems"}
+        }
+    } 
+    @param StorageDevice (Instance) any instance representing the storage device
+    @return (number) the storageDescriptor for access
+--]]
+function StorageHandler:AddStorageDevice(StorageConfig: {{string}}?, StorageDevice: Instance) : number
+    storageMutex:Lock()
+    local curDescriptor = storageDescriptor
+    local storageValue = {
+        Config = StorageConfig,
+        Device = StorageDevice,
+        Inventory = {} --Table of contents of this device
+    }
+    storageTable[curDescriptor] = storageValue
+    storageDescriptor = storageDescriptor + 1
+    storageMutex:Unlock()
+    return curDescriptor
+end
+
+--[[
+Used to load in a previously saved storage device
+--]]
+function StorageHandler:LoadStorageDevice()
+    
+end
+
+--[[
+Exports the data of a storage device for saving
+    should only be used for saving to a datastore
+--]]
+function StorageHandler:ExportStorageDevice()
+    
+end
+
+function StorageHandler:RemoveStorageDevice()
+    
+end
+
+function StorageHandler:FindStorageBySD()
+    
+end
+
+function StorageHandler:FindStorageByModel()
+    
+end
+
+return StorageHandler
+
+
