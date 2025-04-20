@@ -16,18 +16,23 @@ local CS : CollectionService = game:GetService("CollectionService")
 local UIS : UserInputService = game:GetService("UserInputService")
 
 -- Variables
-local OverheadCameraHandler : table = {}
+local OverheadCameraHandler : any = {}
 
 local Player : Player = Players.LocalPlayer
 local Camera : Camera = workspace.CurrentCamera
 local Character : Model = Player.Character or Player.CharacterAdded:Wait()
-local Controls : table = require(Player.PlayerScripts.PlayerModule):GetControls()
+local Controls : {} = require(Player.PlayerScripts.PlayerModule):GetControls()
 --local BridgeNet2 : table = require(game.ReplicatedStorage.BridgeNet2)
-local Object : table = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
+local Object : {} = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local RaycastParams = RaycastParams.new()
 RaycastParams.FilterType = Enum.RaycastFilterType.Exclude
 Object:Supersedes(OverheadCameraHandler)
 
+local IconTable : {string} = {
+	["Axe"] = script.Tags.AxemanTag,
+	["Pickaxe"] = script.Tags.PickaxeManTag,
+	["Sword"] = script.Tags.SwordmanTag,
+}
 -- Functions
 
 --[[
@@ -47,7 +52,10 @@ function OverheadCameraHandler.new(Name, CamPosition, Whitelist, Blacklist) : {}
 	self.__ReleaseKeyhandler = nil
 	self.__HeldKeyHandler = nil
 	self.__ActiveTweens = {}
+	self.__ActiveIcons = {}
+	self.__Selected = {}
 	self.__Active = false
+	Character:WaitForChild("Humanoid")
 	self.__DeathConnection = Character.Humanoid.Died:Connect(function()
 		self:Deactivate()
 	end)
@@ -140,6 +148,17 @@ function OverheadCameraHandler:HandleKeyPressed(Input : InputObject) : ()
 			self.__CamPosition += Vector3.new(1,0,0)
 			end
 		end
+	elseif Input.UserInputType == Enum.UserInputType.MouseButton1 and self.__Active then
+		local HoveredOver : {any} = Player.PlayerGui:GetGuiObjectsAtPosition(Input.Position.X, Input.Position.Y)
+		for i,v in pairs(HoveredOver) do
+			if table.find(self.__ActiveIcons, v) then
+				return
+			end
+		end
+		for c,d in pairs(self.__ActiveIcons) do
+			d.Background.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		end
+		table.clear(self.__Selected)
 	--[[elseif Input.KeyCode == Enum.KeyCode.E and self.__Active then
 		while UIS:IsKeyDown(Enum.KeyCode.E) do
 			task.wait(0.01)
@@ -195,6 +214,7 @@ function OverheadCameraHandler:Activate(SetPosition : Vector3) : {}
 	local Tween = TS:Create(Camera, TweenInfo.new(2), {CFrame = CFrame.new(TargetPosition) * CFrame.Angles(math.rad(-90),0,math.rad(self.__CamRotation))})
 	Tween:Play()
 	Tween.Completed:Wait()
+	self:SetupIcons()
 	self.__ActiveLoop = task.spawn(function()
 		local TargetPos : Vector3 = TargetPosition
 		local ActiveTween : Tween
@@ -236,9 +256,11 @@ end
 function OverheadCameraHandler:Deactivate() : {}
 	if not self.__Active then return end
 	self.__Active = false
+	self:RemoveIcons()
 	local Tween = TS:Create(Camera, TweenInfo.new(2), {CFrame = CFrame.new(Character.HumanoidRootPart.Position) * CFrame.Angles(0,0,0) * CFrame.new(0,1,5)})
 	Tween:Play()
 	Tween.Completed:Wait()
+	
 	Controls:Enable()
 
 	Camera.CameraType = Enum.CameraType.Custom
@@ -326,17 +348,64 @@ end
 @Description: Gets the camera's current position.
 @Param: BlacklistTable (Array): The array to replace the current blacklist array, should be formatted Array[Item] = Item.Transparency
 ]]
-function OverheadCameraHandler:SetBlacklist(BlacklistTable : table) : {}
+function OverheadCameraHandler:SetBlacklist(BlacklistTable : {BasePart}) : {}
 	self.__Blacklist = BlacklistTable
 	self:DisableTransparency()
 	self:UpdateTransparency()
 end
 
 --[[
-@Description: Placeholder function for when icons are added.
+@Description: Sets up interactable icons on friendly/hostile buildings/units with predefined tags. Sorts icons into tables based on type and hostility.
 ]]
-function OverheadCameraHandler:UpdateIcons() : {}
-	
+function OverheadCameraHandler:SetupIcons() : {}
+	for i,v in pairs(self.__ActiveIcons) do
+		v:Destroy()
+	end
+	local Tagged = CS:GetTagged("OverheadUnit")
+	for i,v in pairs(Tagged) do
+		if not IconTable[v:GetAttribute("Type")] then continue end
+		self.__ActiveIcons[v] = IconTable[v:GetAttribute("Type")]:Clone()
+		self.__ActiveIcons[v].Parent = Player.PlayerGui
+		if v:IsA("BasePart") then
+			self.__ActiveIcons[v].Adornee = v
+		elseif v:IsA("Model") then
+			self.__ActiveIcons[v].Adornee = v:FindFirstChild(v:GetAttribute("AttachTo"))
+		end
+		if v:GetAttribute("Owner") ~= Player.Name then
+			self.__ActiveIcons[v].Background.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+			table.insert(self.__HostileTags,self.__ActiveIcons[v])
+		else
+			table.insert(self.__FriendlyTags,self.__ActiveIcons[v])
+			self.__ActiveIcons[v].TextButton.MouseButton1Click:Connect(function()
+				if not UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
+					for c,d in pairs(self.__ActiveIcons) do
+						d.Background.BorderColor3 = Color3.fromRGB(0, 0, 0)
+					end
+					table.clear(self.__Selected)
+					table.insert(self.__Selected, v)
+					self.__ActiveIcons[v].Background.BorderColor3 = Color3.fromRGB(255, 255, 255)
+				else
+					table.insert(self.__Selected, v)
+					self.__ActiveIcons[v].Background.BorderColor3 = Color3.fromRGB(255, 255, 255)
+				end
+			end)
+		end
+		if v:GetAttribute("NPC") then
+			table.insert(self.__UnitTags, self.__ActiveIcons[v])
+		end
+		
+	end
 end
-
+--[[
+@Description: Removes all interactable icons.
+]]
+function OverheadCameraHandler:RemoveIcons() : {}
+	for i,v in pairs(self.__ActiveIcons) do
+		v:Destroy()
+	end
+	table.clear(self.__Selected)
+	table.clear(self.__UnitTags)	
+	table.clear(self.__HostileTags)	
+	table.clear(self.__FriendlyTags)	
+end
 return OverheadCameraHandler
