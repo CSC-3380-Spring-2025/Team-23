@@ -42,10 +42,10 @@ local function IsPartAtPosition(Position: Vector3, Terrain: Instance): boolean
 	local playerPlotXSize: number = game.ServerStorage.PlayerPlot.PlayerPlotTemplate.Size.X
 	local playerPlotZSize: number = game.ServerStorage.PlayerPlot.PlayerPlotTemplate.Size.Z
 	for _,playerPlot: BasePart in ipairs(playerPlots) do
-		local xUpperBound = playerPlot.Position.X + playerPlotXSize/2
-		local xLowerBound = playerPlot.Position.X - playerPlotXSize/2
-		local zUpperBound = playerPlot.Position.Z + playerPlotZSize/2
-		local zLowerBound = playerPlot.Position.Z - playerPlotZSize/2
+		local xUpperBound: number = playerPlot.Position.X + playerPlotXSize/2
+		local xLowerBound: number = playerPlot.Position.X - playerPlotXSize/2
+		local zUpperBound: number = playerPlot.Position.Z + playerPlotZSize/2
+		local zLowerBound: number = playerPlot.Position.Z - playerPlotZSize/2
 		if (Position.X < xUpperBound and Position.Z < zUpperBound and Position.X > xLowerBound and Position.Z > zLowerBound) then
 			return true
 		end
@@ -140,7 +140,7 @@ local function SpawnBasePartAtRandom(
 			for attempt = 1, 5 do
 				local x: number = math.random(CenterX - (AreaLength / 2), CenterX + (AreaLength / 2))
 				local z: number = math.random(CenterZ - (AreaWidth / 2), CenterZ + (AreaWidth / 2))
-				local spawnLocation: Vector3 | nil = FindValidSpawnHeight(x, z, Terrain)
+				local spawnLocation: Vector3? = FindValidSpawnHeight(x, z, Terrain)
 				if spawnLocation then
 					local spawnedItem: BasePart = ItemToSpawn:Clone()
 					spawnedItem.Position = spawnLocation
@@ -245,8 +245,8 @@ end
 ]]
 local function IsFarEnough(X: number, Z: number, SpawnPoints: table, MinRadius: number): boolean
 	for _, point in pairs(SpawnPoints) do
-		local dx = point.x - X
-		local dz = point.z - Z
+		local dx: number = point.x - X
+		local dz: number = point.z - Z
 		if math.sqrt(dx * dx + dz * dz) < MinRadius then
 			return false
 		end
@@ -272,18 +272,18 @@ end
 ]]
 local function PoisonDiscSampling(CenterX: number, CenterZ: number, AreaLength: number, AreaWidth: number, Terrain: Instance, NumOfItems: number): { Vector3 }?
 
-	local minRadius = 6  -- Minimum distance between spawn points
-	local spawnPoints = {} 
-	local maxAttempts = 100
-	local attempts = 0
+	local minRadius: number = 6  -- Minimum distance between spawn points
+	local spawnPoints: {} = {} 
+	local maxAttempts: number = 100
+	local attempts: number = 0
 
 	while #spawnPoints < NumOfItems and attempts < maxAttempts do
 		attempts += 1
-		local randX = CenterX - AreaLength / 2 + math.random() * AreaLength
-		local randZ = CenterZ - AreaWidth / 2 + math.random() * AreaWidth
+		local randX: number = CenterX - AreaLength / 2 + math.random() * AreaLength
+		local randZ: number = CenterZ - AreaWidth / 2 + math.random() * AreaWidth
 
 		if IsFarEnough(randX, randZ, spawnPoints, minRadius) then
-			local spawnPoint = FindValidSpawnHeight(randX, randZ, Terrain)
+			local spawnPoint: Vector3? = FindValidSpawnHeight(randX, randZ, Terrain)
 			if spawnPoint then
 				table.insert(spawnPoints, spawnPoint)
 			end
@@ -345,7 +345,7 @@ function ObjectGeneration:SpawnItemsAtOnce(
 		end
 		
 	elseif ItemToSpawn:IsA("BasePart") then
-		local points: table = PoisonDiscSampling(CenterX, CenterZ, AreaLength, AreaWidth, Terrain, NumOfItems)
+		local points: {} = PoisonDiscSampling(CenterX, CenterZ, AreaLength, AreaWidth, Terrain, NumOfItems)
 		print("number of spawns for ", ItemToSpawn.Name, " is ", #points)
 		for _,point in pairs(points) do
 			local spawnedItem: BasePart = ItemToSpawn:Clone()
