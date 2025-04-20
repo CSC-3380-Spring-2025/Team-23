@@ -38,27 +38,15 @@ local UIColors = {
 }
 -- Functions
 
-function UIHandler.new(Data : table) : ()
-	local self = Object.new("PlayerUI")
+function UIHandler.new(Name: string, Data: table) : ()
+	local self = Object.new(Name)
 	setmetatable(self, UIHandler)
-	self.__DeathConnection = Character.Humanoid.Died:Connect(function()
-		self.__HealthChanged:Disconnect()
-	end)
-	self.__NewCharacterConnection = Player.CharacterAdded:Connect(function(NCharacter : Model)
-		Character = NCharacter
-		if self.__HealthChanged then
-			self.__HealthChanged:Disconnect()
-		end
-		self.__HealthChanged = Character.Humanoid.HealthChanged:Connect(function()
-			self:AdjustBarUI("Health", Character.Humanoid.Health/Character.Humanoid.MaxHealth)
-		end)
-	end)
 	return self
 end
 
 --[[
-@Description: Adjusts one of three bar UIs (Health, Hunger, Thirst) based on a provided decimal within the range of 0-1.
-@Param UIName (String): The name of the UI bar to be changed. This is not its actual name in the GUI, but what it represents (Health, Hunger, Thirst)
+@Description: Adjusts one of three bar UIs (Health, Hunger, Water) based on a provided decimal within the range of 0-1.
+@Param UIName (String): The name of the UI bar to be changed. This is not its actual name in the GUI, but what it represents (Health, Hunger, Water)
 @Param Percentage (Number): A number between or equal to 0-1 that represents how far the bar will be shrunk/expanded based on its minimum/maximum size.
 @Param SkipTween (Boolean): If true, no graphical "tween" effect will play, the bar will simply snap to its new size.
 ]]
