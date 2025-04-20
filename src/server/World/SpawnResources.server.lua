@@ -38,7 +38,7 @@ local function SpawnResources(): ()
 				warn(itemType, "Does not have the SpawnCount Attribute")
 				continue
 			end
-			local itemsToSpawn = {}
+			local itemsToSpawn: {} = {}
 
 			for i = 1, spawnCount do
 				local children: {any} = itemType:GetChildren() 
