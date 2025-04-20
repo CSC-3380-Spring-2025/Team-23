@@ -216,7 +216,7 @@ local function ManageStacksAdd(Item: any, Amount: number, Self: any, ItemInfo: M
 	local spaceLeft: number = 0
 	if inventory[ItemInfo.ItemName] then
 		--Is already in inventory so can get stackspace
-		spaceLeft = Self:StackSpace(ItemInfo.ItemName)
+		spaceLeft = Self:StackSpace(ItemInfo.ItemName, StorageDescriptor)
 		--else spaceLeft is 0 because no stack made yet
 	end
 	local spaceAfter: number = spaceLeft - Amount
@@ -251,7 +251,7 @@ local function CheckStacksAdd(Item: any, Amount: number, Self: any, ItemInfo: {}
 	local spaceLeft: number = 0
 	if inventory[ItemInfo.ItemName] then
 		--Is already in inventory so can get stackspace
-		spaceLeft = Self:StackSpace(ItemInfo.ItemName)
+		spaceLeft = Self:StackSpace(ItemInfo.ItemName, StorageDescriptor)
 		--else spaceLeft is 0 because no stack made yet
 	end
 	local spaceAfter: number = spaceLeft - Amount
@@ -374,8 +374,89 @@ function StorageHandler:IsValidItem(StorageDescriptor, ItemName) : boolean
     return CheckItem(curDescript, ItemName, itemInfo.ItemType)
 end
 
-function StorageHandler:ItemFits(StorageDescriptor, Item, Amount)
-    
+--[[
+Checks if an item add will fit into the storage device
+    This does NOT check if it is a valid item for the storage
+    If you attempt to see if an item fits that is invalid you will recieve a warning
+--]]
+function StorageHandler:ItemFits(StorageDescriptor, ItemName, Amount)
+    if not self:IsValidItem(StorageDescriptor, ItemName) then
+        warn("Attempted to use ItemFits with invalid item")
+        return false
+    end
+    if Amount <= 0 then
+		--Amount may not be 0 or negative
+		return false
+	end
+
+    local itemInfo: {} = itemUtilities:GetItemInfo(ItemName)
+	if not itemInfo then
+		--Info module missing from items folder
+		return false
+	end
+
+    local inventory = GetInventory(StorageDescriptor)
+    local item: any = inventory[ItemName]
+	local itemCopy: { any } = {}
+	if item then
+		itemCopy.Count = item.Count
+		itemCopy.StackCount = item.StackCount
+		itemCopy.ItemType = itemInfo.ItemType
+	else
+		itemCopy.Count = 0
+		itemCopy.StackCount = 0
+		itemCopy.ItemType = itemInfo.ItemType
+	end
+
+	local stackSuccess = CheckStacksAdd(itemCopy, Amount, self, itemInfo, StorageDescriptor)
+	if stackSuccess then
+		return true
+	else
+		return false
+	end
+end
+
+--[[
+Determines the max amount of an item type possible given NPCs backpack state
+	by stack
+	@param ItemInfo (ModuleScript) the module script holding the items info
+	@param Self (any) any instance of the class
+	@return (number) the max amount of the item that can be added to the backpack 
+	considering the stacks
+--]]
+local function CheckMaxByStack(ItemInfo: {}, Self: any, StorageDescriptor): number
+    local inventory = GetInventory(StorageDescriptor)
+	local spaceLeft: number = 0
+	if inventory[ItemInfo.ItemName] then
+		--Is already in backpack so can get stackspace
+		spaceLeft = Self:StackSpace(ItemInfo.ItemName, StorageDescriptor)
+		--else spaceLeft is 0 because no stack made yet
+	end
+
+	local stacksLeft: number = Self:StackSlotsLeft(StorageDescriptor)
+	local maxCount: number = (stacksLeft * ItemInfo.ItemStack) + spaceLeft
+	return maxCount
+end
+
+--[[
+Determines the max amount of the item that can be added to a storages inventory
+	given the storages current inventory
+	@param ItemName (string) name of the item
+	does not need to be in backpack but must have an info mod script
+	@return (number) max amount possible to be put into storage or -1 on error
+--]]
+function StorageHandler:GetMaxAdd(ItemName: string, StorageDescriptor): number
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempted to GetMaxAdd from storage descriptor that is not valid")
+        return -1
+    end
+	local itemInfo: {} = itemUtilities:GetItemInfo(ItemName)
+	if not itemInfo then
+        warn('Attempt to GetMaxAdd for item "' .. ItemName .. '" but item not listed in item directory')
+		return -1
+	end
+	--Determine what factor provides the least amount of the item and return that value
+	return CheckMaxByStack(itemInfo, self, StorageDescriptor)
 end
 
 
