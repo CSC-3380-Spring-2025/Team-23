@@ -1,5 +1,5 @@
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
-local BuildingDataManager = require(game.ServerScriptService.Server.DataServices.BuildingDataManager)
+local BuildingDataManager = require(game.ServerScriptService.Server.Bulidings.BuildingDataManager)
 local CollectionService = game:GetService("CollectionService")
 
 local Building: table = {}
