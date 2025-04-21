@@ -942,6 +942,9 @@ Helper function that transfers a given amount from NPC's backpack to a storage d
 	@return (boolean) true on success or false otherwise
 --]]
 local function TransferItem(ItemName: string, Amount: number, StorageDescriptor: number, Self: any) : boolean
+	if Amount == 0 then
+		return true--Nothing to transfer
+	end
 	local success: boolean = storageHandler:AddItem(StorageDescriptor, ItemName, Amount)
 	--Remove item from NPCs backpack
 	if success then
@@ -972,6 +975,41 @@ function BackpackNPC:TransferItemToStorage(ItemName: string, Amount: number, Sto
 	else
 		--Storage capacity is less than what NPC is trying to add so add as much as possible
 		return TransferItem(ItemName, maxStore, storageDesc, self)
+	end
+end
+
+--[[
+This function can be used to empty all items whitelsited by the storage device you want to transfer to.
+	This does NOT transfer only oen type of item but instead searches for all whitelisted items 
+	that a storage can take and dumps as much as possible into it.
+	@param StorageDevice (Instance) any instance used as a storage device
+--]]
+function BackpackNPC:EmptyInventoryToStorage(StorageDevice: Instance) : ()
+	local contents: {string}? = self:SeekBackpackContents()
+	if not contents then
+		--backpack empty
+		return
+	end
+	local storDesc: number = storageHandler:FindStorageByInstance(StorageDevice) 
+	if storDesc == -1 then
+		return--No such storage device
+	end
+	--Add any item that is valid to the inventory
+	for _, itemName in pairs(contents) do
+		--Check if is valid storage add
+		if not storageHandler:IsValidItem(storDesc, itemName) then
+			continue--Skip to next item because this storage can not take this type
+		end
+		local itemCount: number = self:GetItemCount(itemName)
+		--Check how much of NPC's inventory we can move into storage
+		local maxStore: number = storageHandler:GetMaxAdd(itemName, storDesc)
+		if maxStore >= itemCount then
+			--Max store is greater than or equal to Amount so can add full amount
+			TransferItem(itemName, itemCount, storDesc, self)
+		else
+			--Storage capacity is less than what NPC is trying to add so add as much as possible
+			TransferItem(itemName, maxStore, storDesc, self)
+		end
 	end
 end
 
@@ -1090,6 +1128,23 @@ function BackpackNPC:CheckItemWhitelist(ItemName: string): boolean
 		return true
 	else
 		return false --Not in whitelist
+	end
+end
+
+--[[
+Returns a list of all names of item currently in the NPC's backpack
+	@return ({string}?) returns table of names of all items in backpack or nil if empty
+--]]
+function BackpackNPC:SeekBackpackContents() : {string}?
+	local returnTable = {}
+	for itemName, _ in pairs(self.__Backpack) do
+		table.insert(returnTable, itemName)
+	end
+	if #returnTable == 0 then
+		--No items in backpack
+		return nil
+	else
+		return returnTable
 	end
 end
 

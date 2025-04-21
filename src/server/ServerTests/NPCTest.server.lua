@@ -293,6 +293,7 @@ local storageConfig = {
 }
 local storageDesc = storageHandler:AddStorageDevice(storageConfig, coalCrate)
 NPC1:SetHomePoint(waypoint1.Position)
+NPC1:CollectItem("Iron", 5)
 NPC1:AddPickaxe(pickaxe, 1)
 NPC1:HarvestResource(coal)
 print("Items collected by NPC is: " .. NPC1:GetItemCount("Coal"))
@@ -300,7 +301,7 @@ NPC1:ReturnHome()
 while NPC1:IsTraversing() do
 	task.wait(1)
 end
-NPC1:TransferItemToStorage("Coal", NPC1:GetItemCount("Coal"), coalCrate)
+NPC1:EmptyInventoryToStorage(coalCrate)
 print("Items NPC has after storing is: " .. NPC1:GetItemCount("Coal"))
 print("Storage contains this amount of coal: " .. storageHandler:GetItemCount("Coal", storageDesc))
 --NPC1:UnequipTool()
