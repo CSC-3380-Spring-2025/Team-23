@@ -259,14 +259,50 @@ NPC1:Kill()
 --MinerNPC test
 
 --[[
+local StorageHandlerObject = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
+local storageHandler: any = StorageHandlerObject.new("BackpackNPCStorageHandler")
+local waypoints = Workspace:FindFirstChild("PathfindingTest")
+local waypoint1 = waypoints:FindFirstChild("Waypoint1")
 local tools = ReplicatedStorage.Tools
 local pickaxe = tools.Resource.Pickaxes.Pickaxe
-local NPC1 = MinerNPC.new("Miner 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 100, 70, 100, {"Coal", "Iron", "Pickaxe"}, nil, nil, {"Coal"})
+local NPC1 = MinerNPC.new(
+	"Miner 1",
+	rigsFolder.DefaultNPC,
+	100,
+	Vector3.new(0, 10, 0),
+	16,
+	1000,
+	100,
+	70,
+	100,
+	{ "Coal", "Iron", "Pickaxe", "Bread", "Water"},
+	nil,
+	nil,
+	{ "Coal" },
+    true,
+	nil
+)
 local coal = workspace:FindFirstChild("OreModelDemo"):FindFirstChild("Coal")
 print(NPC1:IsOre(coal))
+local coalCrate = workspace:FindFirstChild("Coal Crate")
+local storageConfig = {
+	MaxStack = 10,
+	ItemsConfig = {
+		Ore = {"AllItems"}
+	}
+}
+local storageDesc = storageHandler:AddStorageDevice(storageConfig, coalCrate)
+NPC1:SetHomePoint(waypoint1.Position)
 NPC1:AddPickaxe(pickaxe, 1)
 NPC1:HarvestResource(coal)
-print(NPC1:GetItemCount("Coal"))
+print("Items collected by NPC is: " .. NPC1:GetItemCount("Coal"))
+NPC1:ReturnHome()
+while NPC1:IsTraversing() do
+	task.wait(1)
+end
+NPC1:TransferItemToStorage("Coal", NPC1:GetItemCount("Coal"), coalCrate)
+print("Items NPC has after storing is: " .. NPC1:GetItemCount("Coal"))
+print("Storage contains this amount of coal: " .. storageHandler:GetItemCount("Coal", storageDesc))
 --NPC1:UnequipTool()
 --NPC1:Kill()
 --]]

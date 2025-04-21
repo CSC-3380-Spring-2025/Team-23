@@ -15,7 +15,9 @@ local Players = game:GetService("Players")
 local AbstractInterface = require(ReplicatedStorage.Shared.Utilities.Object.AbstractInterface)
 local NPC = require(ServerScriptService.Server.NPC.NPC)
 local NPCUtils = require(ServerScriptService.Server.NPC.NPCUtils)
-local BackpackNPCUtils = NPCUtils.new("BackpackNPCUtils")
+local StorageHandlerObject = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
+local BackpackNPCUtils: any = NPCUtils.new("BackpackNPCUtils")
+local storageHandler: any = StorageHandlerObject.new("BackpackNPCStorageHandler")
 local BackpackNPC = {}
 NPC:Supersedes(BackpackNPC)
 
@@ -357,7 +359,7 @@ function BackpackNPC.new(
 	Backpack: {}?,
 	EncumbranceSpeed: {}?,
 	DeathHandler: boolean,
-	StatsConfig: {}
+	StatsConfig: {}?
 )
 	local self = NPC.new(Name, Rig, Health, SpawnPos, Speed, false)
 	setmetatable(self, BackpackNPC)
@@ -382,14 +384,14 @@ function BackpackNPC.new(
 		--Handles config for stats
 		MaxFood = 100,
 		MaxHydration = 100,
-		FdDeteriorationRate = 5, --time in seconds between when food stat gos down
+		FdDeteriorationRate = 120, --time in seconds between when food stat gos down
 		HydDeteriorationRate = 120, --time in seconds between when hydration stat gos down
-		FdDecrement = 20, --The amount that the food stat is decremented by every FdDeteriorationRate
-		HydDecrement = 10, --The amount that the hydration stat is decremented by every HydDeteriorationRate
-		StarveDmg = 20,
-		StarveDmgRate = 5,
+		FdDecrement = 5, --The amount that the food stat is decremented by every FdDeteriorationRate
+		HydDecrement = 5, --The amount that the hydration stat is decremented by every HydDeteriorationRate
+		StarveDmg = 5,
+		StarveDmgRate = 20,
 		ThirstDmg = 5,
-		ThirstDmgRate = 30,
+		ThirstDmgRate = 20,
 	}
 
 	if StatsConfig then
@@ -931,15 +933,46 @@ function BackpackNPC:RemoveAllItems(): ()
 end
 
 --[[
+Helper function that transfers a given amount from NPC's backpack to a storage device
+	Assumes that space is valid in storage device
+	@param ItemName (string) the name of the item to transfer
+    @param Amount (number) the amount of the item to transfer to storage
+	@param StorageDescriptor (number) the storage descriptor of the given storage device
+	@param Self (any) any instance of this class
+	@return (boolean) true on success or false otherwise
+--]]
+local function TransferItem(ItemName: string, Amount: number, StorageDescriptor: number, Self: any) : boolean
+	local success: boolean = storageHandler:AddItem(StorageDescriptor, ItemName, Amount)
+	--Remove item from NPCs backpack
+	if success then
+		Self:RemoveItem(ItemName, Amount)
+		return true
+	else
+		return false
+	end
+end
+
+--[[
 Transfers a given item from an NPC to some form of storage
     @param ItemName (string) the name of the item to transfer
     @param Amount (number) the amount of the item to transfer to storage
-    @param StorageDevice (any) any form of storage device that can take an item
+    @param StorageDevice (instance) any form of storage device that can take an item
     @return (boolean) true on success or false otherwise
 --]]
-function BackpackNPC:TransferItemToStorage(ItemName: string, Amount: number, StorageDevice: any): boolean
-	AbstractInterface:AbstractError("TransferItemToStorage", "BackpackNPC")
-	return false
+function BackpackNPC:TransferItemToStorage(ItemName: string, Amount: number, StorageDevice: Instance): boolean
+	local storageDesc: number = storageHandler:FindStorageByInstance(StorageDevice)
+	if (storageDesc == -1) then
+		return false --Storage device does not exist
+	end
+	--Check how much of NPC's inventory we can move into storage
+	local maxStore: number = storageHandler:GetMaxAdd(ItemName, storageDesc)
+	if maxStore >= Amount then
+		--Max store is greater than or equal to Amount so can add full amount
+		return TransferItem(ItemName, Amount, storageDesc, self)
+	else
+		--Storage capacity is less than what NPC is trying to add so add as much as possible
+		return TransferItem(ItemName, maxStore, storageDesc, self)
+	end
 end
 
 --[[

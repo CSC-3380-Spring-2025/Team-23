@@ -52,7 +52,7 @@ function MinerNPC.new(
 	EncumbranceSpeed: {}?,
 	ResourceWhiteList: { string }?,
 	DeathHandler: any,
-	StatsConfig: {}
+	StatsConfig: {}?
 )
 	local self = ResourceNPC.new(
 		Name,
