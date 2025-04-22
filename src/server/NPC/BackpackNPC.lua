@@ -19,8 +19,6 @@ local BackpackNPCUtils = NPCUtils.new("BackpackNPCUtils")
 local BackpackNPC = {}
 NPC:Supersedes(BackpackNPC)
 
-local statsEnabled = true --Indicates if the stats system is activated.
-
 --[[
 Returns the optomial amount of food to eat at a time given a food item in the NPC's backpack
 	@param HungerRegen (number) the amount of hunger that a single item of this tiem will regen
@@ -327,6 +325,7 @@ Constructor for the BackpackNPC class
     @param Health (number) health value to set NPC at
     @param SpawnPos (Vector3) position to spawn NPC at
     @param Speed (number) the walk speed of a NPC. Default of 16
+	@param PlayerID (number) the id of the player or 0 if its a server based NPC
     @param MaxStack (number) the number of stacks allowed for the backpack
     @param MaxWeight (number) max weight of an NPC
     @param MediumWeight (number) Weight at wich below you are light, 
@@ -349,6 +348,7 @@ function BackpackNPC.new(
 	Health: number,
 	SpawnPos: Vector3,
 	Speed: number,
+	PlayerID: number,
 	MaxStack: number,
 	MaxWeight: number,
 	MediumWeight: number,
@@ -359,7 +359,7 @@ function BackpackNPC.new(
 	DeathHandler: boolean,
 	StatsConfig: {}
 )
-	local self = NPC.new(Name, Rig, Health, SpawnPos, Speed, false)
+	local self = NPC.new(Name, Rig, Health, SpawnPos, Speed, false, PlayerID)
 	setmetatable(self, BackpackNPC)
 	self.__OriginalSpeed = Speed
 	self.__Backpack = Backpack or {}

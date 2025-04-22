@@ -1,5 +1,5 @@
 ----[[
---[[
+----[[
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -258,11 +258,28 @@ NPC1:Kill()
 
 --MinerNPC test
 
---[[
+----[[
 local tools = ReplicatedStorage.Tools
 local pickaxe = tools.Resource.Pickaxes.Pickaxe
-local NPC1 = MinerNPC.new("Miner 1", rigsFolder.DefaultNPC, 100, Vector3.new(0, 10, 0), 16, 1000, 100, 70, 100, {"Coal", "Iron", "Pickaxe"}, nil, nil, {"Coal"})
+local NPC1 = MinerNPC.new(
+	"Miner 1",
+	rigsFolder.DefaultNPC,
+	100,
+	Vector3.new(0, 10, 0),
+	16,
+	1000,
+	100,
+	70,
+	100,
+	{ "Coal", "Iron", "Pickaxe", "Bread", "Water"},
+	nil,
+	nil,
+	{ "Coal" },
+    true,
+	nil
+)
 local coal = workspace:FindFirstChild("OreModelDemo"):FindFirstChild("Coal")
+NPC1:AddNPCToPlayerPool(NPC1, 81328434)
 print(NPC1:IsOre(coal))
 NPC1:AddPickaxe(pickaxe, 1)
 NPC1:HarvestResource(coal)
