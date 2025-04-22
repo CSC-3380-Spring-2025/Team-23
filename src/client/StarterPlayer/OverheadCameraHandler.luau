@@ -16,14 +16,14 @@ local CS : CollectionService = game:GetService("CollectionService")
 local UIS : UserInputService = game:GetService("UserInputService")
 
 -- Variables
-local OverheadCameraHandler : table = {}
+local OverheadCameraHandler : any = {}
 
 local Player : Player = Players.LocalPlayer
 local Camera : Camera = workspace.CurrentCamera
 local Character : Model = Player.Character or Player.CharacterAdded:Wait()
-local Controls : table = require(Player.PlayerScripts.PlayerModule):GetControls()
+local Controls : any = require(Player.PlayerScripts.PlayerModule):GetControls()
 --local BridgeNet2 : table = require(game.ReplicatedStorage.BridgeNet2)
-local Object : table = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
+local Object : any = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local RaycastParams = RaycastParams.new()
 RaycastParams.FilterType = Enum.RaycastFilterType.Exclude
 Object:Supersedes(OverheadCameraHandler)
