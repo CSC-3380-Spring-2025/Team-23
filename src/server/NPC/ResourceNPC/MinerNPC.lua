@@ -72,6 +72,7 @@ function MinerNPC.new(
 		StatsConfig
 	)
 	setmetatable(self, MinerNPC)
+	self.__NPC:SetAttribute("Type", "Pickaxe")
 	return self
 end
 
