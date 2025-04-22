@@ -8,10 +8,10 @@
 
 local Crop = require(script.Parent.Crop)
 local CollectionService = game:GetService("CollectionService")
-
 local Wheat = {}
 Crop:Supersedes(Wheat) --Wheat inherits from crop superclass
 
+local __ItemName = "Wheat"
 --[[  
  * Constructor for Wheat object, inheriting from the Crop class 
  *  
@@ -41,7 +41,7 @@ function Wheat:Reap(Target: Instance, Player: Player): (string, number)
 	if Target:HasTag("FarmLand") and Target:HasTag("Harvest_Ready") then
 		local cropYield: number = Target:GetAttribute("HarvestAmount") * Target:GetAttribute("YieldFactor")
 		for _, cropModel in pairs(Target:GetDescendants()) do
-			if cropModel.Name == self.__ItemName then
+			if cropModel.Name == __ItemName then
 				cropModel:Destroy()
 			end
 		end
