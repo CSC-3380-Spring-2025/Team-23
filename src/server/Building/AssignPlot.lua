@@ -10,7 +10,7 @@
 
 --module scripts
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
-local BuildingDataManager = require(game.ServerScriptService.Server.Buildings.BuildingDataManager)
+local BuildingDataManager = require(game.ServerScriptService.Server.Building.BuildingDataManager)
 --services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")

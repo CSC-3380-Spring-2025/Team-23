@@ -30,29 +30,37 @@ local testTable = {
 	},
 	Base = {
 		{
-			buildingType = "basepart",
-			CFrame = {-70.237, 0.093, -66.48, 0, 0, 0},
+			buildingType = "model",
+			CFrame = {0, 0, 0, 0, 0, 0},
 			properties = {},
 			attributes = { 
-				BuildingTemplate = "HouseLevel1",
+				BuildingTemplate = "HouseLevel3",
 			}
 		},
 		{
 			buildingType = "model",
-			CFrame = {-61.635, 0.093, -141.038, -90, 0, 0},
-			properties = {},
-			attributes = {
-				BuildingTemplate = "BarracksLevel1",
-				health = nil
-			}
-		},
-		{
-			buildingType = "model",
-			CFrame = {-81.635, 0.093, -141.038, -90, 0, 0},
+			CFrame = {-81.635, 0, -141.038, 0, 0, 0},
 			properties = {},
 			attributes = {
 				BuildingTemplate = "BarracksLevel1",
 				health = 69
+			}
+		},
+		{
+			buildingType = "model",
+			CFrame = {91.635, 0, -34, 0, 0, 0},
+			properties = {},
+			attributes = {
+				BuildingTemplate = "RefineryLevel1",
+				health = 69
+			}
+		},
+		{
+			buildingType = "model",
+			CFrame = {60.635, 0.093, 32.038, 0, 0, 0},
+			properties = {},
+			attributes = {
+				BuildingTemplate = "WheatFarmLevel1",
 			}
 		}
 	},
