@@ -437,7 +437,7 @@ function OverheadCameraHandler:PopulateBuildMenu(TargetFolder : Folder) : {}
 			-- INSERT CODE HERE
 
 
-			GUI.Selection.GroupTransparency = 0
+			GUI.Selection.GroupTransparency = 1
 			GUI.Selection.Interactable = false
 			for i,v in pairs(GUI.Selection.SelectionHolder:GetChildren()) do
 				if not v:IsA("UIListLayout") then
