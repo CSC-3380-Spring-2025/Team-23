@@ -16,14 +16,14 @@ local CS : CollectionService = game:GetService("CollectionService")
 local UIS : UserInputService = game:GetService("UserInputService")
 
 -- Variables
-local OverheadCameraHandler : table = {}
+local OverheadCameraHandler : any = {}
 
 local Player : Player = Players.LocalPlayer
 local Camera : Camera = workspace.CurrentCamera
 local Character : Model = Player.Character or Player.CharacterAdded:Wait()
-local Controls : table = require(Player.PlayerScripts.PlayerModule):GetControls()
+local Controls : {} = require(Player.PlayerScripts.PlayerModule):GetControls()
 --local BridgeNet2 : table = require(game.ReplicatedStorage.BridgeNet2)
-local Object : table = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
+local Object : {} = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local RaycastParams = RaycastParams.new()
 RaycastParams.FilterType = Enum.RaycastFilterType.Exclude
 Object:Supersedes(OverheadCameraHandler)
@@ -55,7 +55,6 @@ function OverheadCameraHandler.new(Name, CamPosition, Whitelist, Blacklist) : {}
 	self.__ActiveIcons = {}
 	self.__Selected = {}
 	self.__Active = false
-	self.__Debounce = false
 	Character:WaitForChild("Humanoid")
 	self.__DeathConnection = Character.Humanoid.Died:Connect(function()
 		self:Deactivate()
@@ -220,8 +219,6 @@ function OverheadCameraHandler:Activate(SetPosition : Vector3) : {}
 	Character:SetAttribute("InOverhead",true)
 	Tween.Completed:Wait()
 	self:SetupIcons()
-	self:SetupBuildMenu()
-	self.__Debounce = false
 	self.__ActiveLoop = task.spawn(function()
 		local TargetPos : Vector3 = TargetPosition
 		local ActiveTween : Tween
@@ -263,16 +260,11 @@ end
 function OverheadCameraHandler:Deactivate() : {}
 	if not self.__Active or self.__Debounce then return end
 	self.__Active = false
-	self.__Debounce = true
 	self:RemoveIcons()
-	self:ClearBuildMenu()
-	local Tween = TS:Create(Camera, TweenInfo.new(2), {CFrame = CFrame.new(Character.HumanoidRootPart.Position) * CFrame.new(0,1,5)})
+	local Tween = TS:Create(Camera, TweenInfo.new(2), {CFrame = CFrame.new(Character.HumanoidRootPart.Position) * CFrame.Angles(0,0,0) * CFrame.new(0,1,5)})
 	Tween:Play()
 	Tween.Completed:Wait()
-	Character:SetAttribute("InOverhead",false)
-	self.__Debounce = false
-	Player.PlayerGui.PlayerUI.Hotbar.GroupTransparency = 0
-	Player.PlayerGui.PlayerUI.Hotbar.Interactable = true
+	
 	Controls:Enable()
 
 	Camera.CameraType = Enum.CameraType.Custom
@@ -360,14 +352,14 @@ end
 @Description: Gets the camera's current position.
 @Param: BlacklistTable (Array): The array to replace the current blacklist array, should be formatted Array[Item] = Item.Transparency
 ]]
-function OverheadCameraHandler:SetBlacklist(BlacklistTable : table) : {}
+function OverheadCameraHandler:SetBlacklist(BlacklistTable : {BasePart}) : {}
 	self.__Blacklist = BlacklistTable
 	self:DisableTransparency()
 	self:UpdateTransparency()
 end
 
 --[[
-@Description: Placeholder function for when icons are added.
+@Description: Sets up interactable icons on friendly/hostile buildings/units with predefined tags. Sorts icons into tables based on type and hostility.
 ]]
 function OverheadCameraHandler:SetupIcons() : {}
 	for i,v in pairs(self.__ActiveIcons) do
@@ -405,83 +397,12 @@ function OverheadCameraHandler:SetupIcons() : {}
 		if v:GetAttribute("NPC") then
 			table.insert(self.__UnitTags, self.__ActiveIcons[v])
 		end
-
+		
 	end
 end
-
-function OverheadCameraHandler:PopulateBuildMenu(TargetFolder : Folder) : {}
-	local GUI : CanvasGroup = Player.PlayerGui.PlayerUI.Overhead
-	GUI.Selection.GroupTransparency = 0
-	GUI.Selection.Interactable = true
-	for i,v in pairs(GUI.Selection.SelectionHolder:GetChildren()) do
-		if not v:IsA("UIListLayout") then
-			v:Destroy()
-		end
-	end
-	for i,v in pairs(TargetFolder:GetChildren()) do
-		local C : Frame = GUI.Templates.Building:Clone()
-		C.Interactable = true
-		C.Visible = true
-		C.BuildingName.Text = v.Name
-		C.Parent = GUI.Selection.SelectionHolder
-		local Viewport : ViewportFrame = C.ViewportFrame
-		local Camera : Camera = Instance.new("Camera")
-		Camera.Parent = Viewport
-		Camera.CFrame = CFrame.new(0, 15, 50)
-		Viewport.CurrentCamera = Camera
-		local Model : Model = v:Clone()
-		Model:PivotTo(CFrame.new(0,0,0))
-		Model.Parent = Viewport
-		Camera.CameraSubject = Model.PrimaryPart
-		C.Select.MouseButton1Click:Connect(function()
-			-- INSERT CODE HERE
-
-
-			GUI.Selection.GroupTransparency = 1
-			GUI.Selection.Interactable = false
-			for i,v in pairs(GUI.Selection.SelectionHolder:GetChildren()) do
-				if not v:IsA("UIListLayout") then
-					v:Destroy()
-				end
-			end
-		end)
-	end
-end
-
-function OverheadCameraHandler:SetupBuildMenu() : {}
-	local GUI : CanvasGroup = Player.PlayerGui.PlayerUI.Overhead
-	GUI.GroupTransparency = 0
-	GUI.Interactable = true
-	for i,v in pairs(game:GetService("ReplicatedStorage").Buildings:GetChildren()) do
-		local C : TextButton = GUI.Templates.Selection:Clone()
-		C.Interactable = true
-		C.Visible = true
-		C.Text = v.Name
-		C.Parent = GUI.Holder
-		C.MouseButton1Click:Connect(function()
-			self:PopulateBuildMenu(v)
-		end)
-	end
-end
-
-function OverheadCameraHandler:ClearBuildMenu() : {}
-	local GUI : CanvasGroup = Player.PlayerGui.PlayerUI.Overhead
-	GUI.GroupTransparency = 1
-	GUI.Selection.GroupTransparency = 1
-	GUI.Interactable = false
-	GUI.Selection.Interactable = false
-	for i,v in pairs(GUI.Holder:GetChildren()) do
-		if not v:IsA("UIListLayout") then
-			v:Destroy()
-		end
-	end
-	for i,v in pairs(GUI.Selection.SelectionHolder:GetChildren()) do
-		if not v:IsA("UIListLayout") then
-			v:Destroy()
-		end
-	end
-end
-
+--[[
+@Description: Removes all interactable icons.
+]]
 function OverheadCameraHandler:RemoveIcons() : {}
 	for i,v in pairs(self.__ActiveIcons) do
 		v:Destroy()

@@ -1,85 +1,19 @@
---[[  
- * Crop - Superclass of types of crops for farming  
- *  
- * This class represents a basic farming system that handles the process of planting the crops, waiting for them to grow, and harvesting them.
- * It then stores the crops to the players invetory via the inventory handler   
-]]
-
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
-local BackpackHandler = require(game.ServerScriptService.Server.Player.BackpackHandler)
+local BuildingDataManager = require(game.ServerScriptService.Server.Bulidings.BuildingDataManager)
 local CollectionService = game:GetService("CollectionService")
 
-local Crop: table = {}
-Object:Supersedes(Crop)
-Crop.__index = Crop --Currency has lookup.
+local Building: table = {}
+Object:Supersedes(Building)
+Building.__index = Building --Building has lookup.
 
 --Attributes
-local __EarlyCrop: Model
-local __MidCrop: Model
-local __FinishedCrop: Model
-local __GrowTime: number
 
---backpack related attributes 
-local __ItemName: string
-local __ItemWeight: number
-local __ItemStack: number
 
---[[
-@Description: Returns the weight of one item of this type.
-@Return Weight (Number): The weight of one item.
-]]
-function Crop:GetWeight() : number
-    return self.__ItemWeight
-end
---[[
-@Description: Returns the name of this item.
-@Return ItemName (String): The name of one item.
-]]
-function Crop:GetName() : string
-    return self.__ItemName
-end
---[[
-@Description: Returns the maximum stack size of this item.
-@Return ItemStack (Number): The maximum amount this item can be stacked.
-]]
-function Crop:GetMaxStack() : number
-    return self.__ItemStack
- end
-
---[[  
- * Constructor for creating a new Crop object, initializing the crop's growth stages,
- * attributes related to item handling, and its appearance in the game.
-
- *
- * @Name - A string representing the name of the crop.
- *
- * NOTE: Models for early, mid, and finished crop stages should have their PrimaryPart set to "Hitbox".
- * @EarlyCrop - A Model representing the crop in its early growth stage.
- * @MidCrop - A Model representing the crop at its mid-growth stage.
- * @FinishedCrop - A Model representing the fully grown crop, ready for harvest.
- * @GrowTime - A number representing the time in seconds it takes for the crop to fully grow.
- *
- * NOTE: SubclassName,ItemWeight, and ItemStack are to be handled by the subclass constructor
- * @SubclassName - A string used to categorize the crop item in the backpack system.
- * @ItemWeight - A number representing the weight of the crop item for backpack handling.
- * @ItemStack - A number representing the maximum stack size for the crop item in the backpack.
- *
- * @return - table - Returns a new Crop object.
-]]
-function Crop.new(Name: string, EarlyCrop: Model, MidCrop: Model, FinishedCrop: Model, GrowTime: number, SubclassName: string, ItemWeight: number, ItemStack: number): table?
+function Building.new(Name: string): table?
 	local self = Object.new(Name)
-	setmetatable(self, Crop)
-	self.__EarlyCrop = EarlyCrop or error("EarlyCrop not provided for Crop constructor")
-	self.__MidCrop = MidCrop or error("MidCrop not provided for Crop constructor")
-	self.__FinishedCrop = FinishedCrop or error("FinishedCrop not provided for Crop constructor")
-	self.__GrowTime = GrowTime or error("GrowTime not provided for Crop constructor")
-	self.__ItemName = SubclassName or error("SubclassName not provided for Crop constructor") 
-	self.__ItemWeight = ItemWeight or error("ItemWeight not provided for Crop constructor") 
-	self.__ItemStack = ItemStack or error("ItemStack not provided for Crop constructor") 
-	
-	--for backpack handler
-	self.Weight = ItemWeight 
-	self.MaxStack = ItemStack; 
+	setmetatable(self, Building)
+	--self.__EarlyCrop = EarlyCrop or error("EarlyCrop not provided for Crop constructor")
+	 
 	return self
 end
 

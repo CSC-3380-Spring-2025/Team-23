@@ -28,9 +28,7 @@ end
 
 --[[
  * getAmount - Retrieves the current amount of currency.
- * @Player - The player whos currency will be fetched from their sesssion data
- * @NameOfCurrency - The name of the type of currency whos value will be returned. Should only be passed in and called from subclasses. For example, Gold class should pass "gold"
- *
+ * 
  * @return - (number) - The current value of `self.__Amount`.
 ]]
 function Currency:GetAmount(Player: Player, NameOfCurrency: string): number
@@ -45,10 +43,8 @@ end
 --[[
  * setAmount - Sets the currency amount to a specified value.
  * 
- * @Player - The player whose currency will be updated in their session data.
- * @Value - (number) The new currency amount. 
- *          - Must be a positive number; the amount cannot be negative.
- * @NameOfCurrency - The name of the type of currency being updated (e.g., "gold"). Must be passed from the subclass
+ * @value - (number) The new currency amount. 
+ *          - Value needs to be positive since amount cant ve negative  
  *
  * @return - None
 ]]
@@ -65,14 +61,11 @@ end
 --[[
  * modAmountBy - Modifies the amount of currency by adding or subtracting a given value.
  * 
- * @Player - The player whose currency will be modified in their session data.
- * @Value - (number) The amount to modify the currency by. 
- *          - Positive values increase the amount.
- *          - Negative values decrease the amount (only if balance is sufficient).
- * @NameOfCurrency - The name of the type of currency being modified (e.g., "gold"). Must be passed from subclass
- *
- * @NOTE: No negative currency balances are allowed. If the operation would cause the balance to fall below zero, it is clamped to 0.
- *
+ * @value - (number) The amount to modify the currency by. 
+ *          - If positive, the currency amount increases by this value.
+ *          - If negative, the currency amount decreases by this value (if sufficient balance exists).
+ * @note - No negative amounts can exist so if you decrease by mroe than the current amount, it will be 0
+ * 
  * @return - None 
 ]]
 function Currency:ModAmountBy(Player:Player, Value: number, NameOfCurrency: string): ()
