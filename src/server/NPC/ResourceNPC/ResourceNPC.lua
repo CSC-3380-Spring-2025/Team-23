@@ -67,6 +67,7 @@ function ResourceNPC.new(
 	)
 	setmetatable(self, ResourceNPC)
 	self.__ResourceWhiteList = ResourceWhiteList or {}
+	self.__NPC:SetAttribute("ResourceNPC", true)
 	return self
 end
 

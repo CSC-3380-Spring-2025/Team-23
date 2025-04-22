@@ -32,6 +32,7 @@ Object:Supersedes(OverheadCameraHandler)
 
 --Events
 local TraverseNPCs = BridgeNet2.ReferenceBridge("TraverseNPCs")
+local CollectNPCs = BridgeNet2.ReferenceBridge("CollectNPCs")
 
 local IconTable : {string} = {
 	["Axe"] = script.Tags.AxemanTag,
@@ -175,6 +176,22 @@ function OverheadCameraHandler:HandleKeyPressed(Input : InputObject) : ()
 		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
 			--Linked way point
 			table.insert(wayPointTable, playersMouse.Hit.Position)
+		elseif UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+			--Do action on object like get resource
+			local target = playersMouse.Target
+			local argsNPCs = {}
+			for _, item in pairs(self.__Selected) do
+				if item:GetAttribute("NPC") and item:GetAttribute("ResourceNPC") then
+					table.insert(argsNPCs, item)
+				end
+			end
+			if target:HasTag("Resource") then
+				local eventArgs = {
+					Resource = playersMouse.Target,
+					NPCs = argsNPCs
+				}
+				CollectNPCs:Fire(eventArgs)
+			end
 		else
 			--only click so traverse
 			table.insert(wayPointTable, playersMouse.Hit.Position)

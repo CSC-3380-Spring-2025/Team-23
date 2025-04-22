@@ -7,6 +7,7 @@ local MinerNPCObject = require(ServerScriptService.Server.NPC.ResourceNPC.MinerN
 local NPCHandlerObject = require(ServerScriptService.Server.NPC.NPCHandlers.NPCHandler)
 local NPCHandler = NPCHandlerObject.new("NPCHandlerEvents")
 local TraverseNPCs = BridgeNet2.ReferenceBridge("TraverseNPCs")
+local CollectNPCs = BridgeNet2.ReferenceBridge("CollectNPCs")
 
 --Rigs
 local rigs = ServerStorage.NPC.Rigs
@@ -60,5 +61,26 @@ TraverseNPCs:Connect(function(Player, Args)
 
 	for _, NPCInstance in pairs(realNPCs) do
 		NPCInstance:TraverseWaypoints()
+	end
+end)
+
+CollectNPCs:Connect(function(Player, Args)
+	local NPCs = Args.NPCs
+	local resourceTarget = Args.Resource
+	local realNPCs = {}
+	for _, character in pairs(NPCs) do
+		if character:GetAttribute("Type") == "Pickaxe" then
+			--Is pickaxe NPC
+			table.insert(realNPCs, NPCHandler:GetPlayerNPCByCharacter(character, Player.UserId))
+		end
+	end
+
+	for _, NPCInstance in pairs(realNPCs) do
+		NPCInstance:CancelWaypoints()
+	end
+
+	for _, NPCInstance in pairs(realNPCs) do
+		--Check if resource type
+		NPCInstance:HarvestResource(resourceTarget)
 	end
 end)

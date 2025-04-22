@@ -1,5 +1,5 @@
 ----[[
-----[[
+--[[
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -261,7 +261,7 @@ NPC1:Kill()
 
 --MinerNPC test
 
-----[[
+--[[
 local StorageHandlerObject = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
 local storageHandler: any = StorageHandlerObject.new("BackpackNPCStorageHandler")
 local waypoints = Workspace:FindFirstChild("PathfindingTest")
@@ -281,7 +281,7 @@ local NPC1 = MinerNPC.new(
 	{ "Coal", "Iron", "Pickaxe", "Bread", "Water"},
 	nil,
 	nil,
-	{ "Coal" },
+	{ "Coal", "Iron"},
     true,
 	nil
 )
@@ -289,7 +289,6 @@ local coal = workspace:FindFirstChild("OreModelDemo"):FindFirstChild("Coal")
 
 Players:WaitForChild("claytakiler")
 
-NPCHandler:AddNPCToPlayerPool(NPC1, 81328434)
 local NPC1secondref = NPCHandler:GetPlayerNPCByCharacter(NPC1.__NPC, 81328434)
 print(NPC1:IsOre(coal))
 local coalCrate = workspace:FindFirstChild("Coal Crate")
@@ -302,8 +301,10 @@ local storageConfig = {
 local storageDesc = storageHandler:AddStorageDevice(storageConfig, coalCrate)
 --NPC1:SetHomePoint(waypoint1.Position)
 --NPC1:CollectItem("Iron", 5)
+--NPC1:CollectItem("Iron", 5)
 NPC1:AddPickaxe(pickaxe, 1)
-NPC1:HarvestResource(coal)
+NPCHandler:AddNPCToPlayerPool(NPC1, 81328434)
+--NPC1:HarvestResource(coal)
 print("Items collected by NPC is: " .. NPC1:GetItemCount("Coal"))
 --NPC1:ReturnHome()
 --while NPC1:IsTraversing() do

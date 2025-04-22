@@ -350,7 +350,6 @@ function BackpackNPC.new(
 	Health: number,
 	SpawnPos: Vector3,
 	Speed: number,
-	PlayerID: number,
 	MaxStack: number,
 	MaxWeight: number,
 	MediumWeight: number,
