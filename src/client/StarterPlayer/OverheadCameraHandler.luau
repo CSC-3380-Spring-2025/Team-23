@@ -86,13 +86,13 @@ function OverheadCameraHandler:Enable() : {}
 	self.__PressKeyHandler = UIS.InputBegan:Connect(function(Input : InputObject, GME : boolean)
 		print("Key pressed")
 		if GME then return end
-        self:HandleKeyPressed(Input)
+		self:HandleKeyPressed(Input)
 	end)
-	
+
 	self.__ReleaseKeyHandler = UIS.InputEnded:Connect(function(Input : InputObject, GME : boolean)
 		if GME then return end
 	end)
-	
+
 	self.__HeldKeyHandler = UIS.InputChanged:Connect(function(Input : InputObject, GME :boolean)
 		if GME then return end
 		self:InputChanged(Input)
@@ -115,37 +115,37 @@ function OverheadCameraHandler:HandleKeyPressed(Input : InputObject) : ()
 	elseif Input.KeyCode == Enum.KeyCode.W and self.__Active then
 		while UIS:IsKeyDown(Enum.KeyCode.W) do
 			task.wait(0.01)
-		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
-			self.__CamPosition += Vector3.new(0,0,-5)
-		else
-			self.__CamPosition += Vector3.new(0,0,-1)
+			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+				self.__CamPosition += Vector3.new(0,0,-5)
+			else
+				self.__CamPosition += Vector3.new(0,0,-1)
 			end
-			end
+		end
 	elseif Input.KeyCode == Enum.KeyCode.S and self.__Active then
 		while UIS:IsKeyDown(Enum.KeyCode.S) do
 			task.wait(0.01)
-		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
-			self.__CamPosition += Vector3.new(0,0,5)
-		else
-			self.__CamPosition += Vector3.new(0,0,1)
+			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+				self.__CamPosition += Vector3.new(0,0,5)
+			else
+				self.__CamPosition += Vector3.new(0,0,1)
 			end
-			end
+		end
 	elseif Input.KeyCode== Enum.KeyCode.A and self.__Active then
 		while UIS:IsKeyDown(Enum.KeyCode.A) do
 			task.wait(0.01)
-		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
-			self.__CamPosition += Vector3.new(-5,0,0)
-		else
-			self.__CamPosition += Vector3.new(-1,0,0)
+			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+				self.__CamPosition += Vector3.new(-5,0,0)
+			else
+				self.__CamPosition += Vector3.new(-1,0,0)
 			end
-			end
+		end
 	elseif Input.KeyCode == Enum.KeyCode.D and self.__Active then
 		while UIS:IsKeyDown(Enum.KeyCode.D) do
 			task.wait(0.01)
-		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
-			self.__CamPosition += Vector3.new(5,0,0)
-		else
-			self.__CamPosition += Vector3.new(1,0,0)
+			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+				self.__CamPosition += Vector3.new(5,0,0)
+			else
+				self.__CamPosition += Vector3.new(1,0,0)
 			end
 		end
 	elseif Input.UserInputType == Enum.UserInputType.MouseButton1 and self.__Active then
@@ -185,7 +185,7 @@ function OverheadCameraHandler:InputChanged(Input : InputObject) : {}
 			self.__ZoomLevel = math.clamp(self.__ZoomLevel + (Direction), self.__MaxZoom, self.__MinZoom)
 		end
 		self.__CamPosition = Vector3.new(self.__CamPosition.X, self.__ZoomLevel, self.__CamPosition.Z)
-		end
+	end
 end
 
 --[[
@@ -203,8 +203,9 @@ end
 @Param SetPosition (Vector3): The camera will zoom out to the position instead of above the character if it is supplied.
 ]]
 function OverheadCameraHandler:Activate(SetPosition : Vector3) : {}
-	if self.__Active then return end
+	if self.__Active or self.__Debounce then return end
 	print("Activating")
+	self.__Debounce = true
 	self.__Active = true
 	Controls:Disable()
 	self:UpdateTransparency()
@@ -212,7 +213,10 @@ function OverheadCameraHandler:Activate(SetPosition : Vector3) : {}
 	local TargetPosition = SetPosition or Vector3.new(Character.HumanoidRootPart.Position.X, self.__ZoomLevel, Character.HumanoidRootPart.Position.Z)
 	self.__CamPosition = TargetPosition
 	local Tween = TS:Create(Camera, TweenInfo.new(2), {CFrame = CFrame.new(TargetPosition) * CFrame.Angles(math.rad(-90),0,math.rad(self.__CamRotation))})
+	Player.PlayerGui.PlayerUI.Hotbar.GroupTransparency = 1
+	Player.PlayerGui.PlayerUI.Hotbar.Interactable = false
 	Tween:Play()
+	Character:SetAttribute("InOverhead",true)
 	Tween.Completed:Wait()
 	self:SetupIcons()
 	self.__ActiveLoop = task.spawn(function()
@@ -254,7 +258,7 @@ end
 @Description: Moves the camera back to the player and reattaches it, allowing the player to continue moving.
 ]]
 function OverheadCameraHandler:Deactivate() : {}
-	if not self.__Active then return end
+	if not self.__Active or self.__Debounce then return end
 	self.__Active = false
 	self:RemoveIcons()
 	local Tween = TS:Create(Camera, TweenInfo.new(2), {CFrame = CFrame.new(Character.HumanoidRootPart.Position) * CFrame.Angles(0,0,0) * CFrame.new(0,1,5)})
@@ -264,7 +268,7 @@ function OverheadCameraHandler:Deactivate() : {}
 	Controls:Enable()
 
 	Camera.CameraType = Enum.CameraType.Custom
-    
+
 end
 
 --[[
@@ -272,11 +276,11 @@ end
 ]]
 function OverheadCameraHandler:UpdateTransparency() : {}
 	local List : table = CS:GetTagged("MinimapInvisible")
-	
+
 	for i,v in pairs(List) do
 		self.__Blacklist[v] = v.Transparency
 	end
-	
+
 	for i,v in pairs(self.__Blacklist) do
 		i.Transparency = 1
 	end
@@ -295,7 +299,7 @@ end
 @Description: Updates the camera's position manually if the player is already in map view.
 ]]
 function OverheadCameraHandler:UpdatePosition(Position : Vector3) : {}
-  self.__CamPosition = Position
+	self.__CamPosition = Position
 end
 
 --[[
