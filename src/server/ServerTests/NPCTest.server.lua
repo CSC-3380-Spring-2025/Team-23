@@ -1,5 +1,5 @@
 ----[[
-----[[
+--[[
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -260,7 +260,7 @@ NPC1:Kill()
 
 --MinerNPC test
 
-----[[
+--[[
 local tools = ReplicatedStorage.Tools
 local pickaxe = tools.Resource.Pickaxes.Pickaxe
 local NPC1 = MinerNPC.new(
