@@ -21,9 +21,9 @@ local OverheadCameraHandler : any = {}
 local Player : Player = Players.LocalPlayer
 local Camera : Camera = workspace.CurrentCamera
 local Character : Model = Player.Character or Player.CharacterAdded:Wait()
-local Controls : {} = require(Player.PlayerScripts.PlayerModule):GetControls()
+local Controls : any = require(Player.PlayerScripts.PlayerModule):GetControls()
 --local BridgeNet2 : table = require(game.ReplicatedStorage.BridgeNet2)
-local Object : {} = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
+local Object : any = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local RaycastParams = RaycastParams.new()
 RaycastParams.FilterType = Enum.RaycastFilterType.Exclude
 Object:Supersedes(OverheadCameraHandler)
@@ -55,6 +55,7 @@ function OverheadCameraHandler.new(Name, CamPosition, Whitelist, Blacklist) : {}
 	self.__ActiveIcons = {}
 	self.__Selected = {}
 	self.__Active = false
+	self.__Debounce = false
 	Character:WaitForChild("Humanoid")
 	self.__DeathConnection = Character.Humanoid.Died:Connect(function()
 		self:Deactivate()
@@ -86,13 +87,13 @@ function OverheadCameraHandler:Enable() : {}
 	self.__PressKeyHandler = UIS.InputBegan:Connect(function(Input : InputObject, GME : boolean)
 		print("Key pressed")
 		if GME then return end
-		self:HandleKeyPressed(Input)
+        self:HandleKeyPressed(Input)
 	end)
-
+	
 	self.__ReleaseKeyHandler = UIS.InputEnded:Connect(function(Input : InputObject, GME : boolean)
 		if GME then return end
 	end)
-
+	
 	self.__HeldKeyHandler = UIS.InputChanged:Connect(function(Input : InputObject, GME :boolean)
 		if GME then return end
 		self:InputChanged(Input)
@@ -115,37 +116,37 @@ function OverheadCameraHandler:HandleKeyPressed(Input : InputObject) : ()
 	elseif Input.KeyCode == Enum.KeyCode.W and self.__Active then
 		while UIS:IsKeyDown(Enum.KeyCode.W) do
 			task.wait(0.01)
-			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
-				self.__CamPosition += Vector3.new(0,0,-5)
-			else
-				self.__CamPosition += Vector3.new(0,0,-1)
+		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+			self.__CamPosition += Vector3.new(0,0,-5)
+		else
+			self.__CamPosition += Vector3.new(0,0,-1)
 			end
-		end
+			end
 	elseif Input.KeyCode == Enum.KeyCode.S and self.__Active then
 		while UIS:IsKeyDown(Enum.KeyCode.S) do
 			task.wait(0.01)
-			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
-				self.__CamPosition += Vector3.new(0,0,5)
-			else
-				self.__CamPosition += Vector3.new(0,0,1)
+		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+			self.__CamPosition += Vector3.new(0,0,5)
+		else
+			self.__CamPosition += Vector3.new(0,0,1)
 			end
-		end
+			end
 	elseif Input.KeyCode== Enum.KeyCode.A and self.__Active then
 		while UIS:IsKeyDown(Enum.KeyCode.A) do
 			task.wait(0.01)
-			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
-				self.__CamPosition += Vector3.new(-5,0,0)
-			else
-				self.__CamPosition += Vector3.new(-1,0,0)
+		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+			self.__CamPosition += Vector3.new(-5,0,0)
+		else
+			self.__CamPosition += Vector3.new(-1,0,0)
 			end
-		end
+			end
 	elseif Input.KeyCode == Enum.KeyCode.D and self.__Active then
 		while UIS:IsKeyDown(Enum.KeyCode.D) do
 			task.wait(0.01)
-			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
-				self.__CamPosition += Vector3.new(5,0,0)
-			else
-				self.__CamPosition += Vector3.new(1,0,0)
+		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+			self.__CamPosition += Vector3.new(5,0,0)
+		else
+			self.__CamPosition += Vector3.new(1,0,0)
 			end
 		end
 	elseif Input.UserInputType == Enum.UserInputType.MouseButton1 and self.__Active then
@@ -185,7 +186,7 @@ function OverheadCameraHandler:InputChanged(Input : InputObject) : {}
 			self.__ZoomLevel = math.clamp(self.__ZoomLevel + (Direction), self.__MaxZoom, self.__MinZoom)
 		end
 		self.__CamPosition = Vector3.new(self.__CamPosition.X, self.__ZoomLevel, self.__CamPosition.Z)
-	end
+		end
 end
 
 --[[
@@ -219,6 +220,8 @@ function OverheadCameraHandler:Activate(SetPosition : Vector3) : {}
 	Character:SetAttribute("InOverhead",true)
 	Tween.Completed:Wait()
 	self:SetupIcons()
+	self:SetupBuildMenu()
+	self.__Debounce = false
 	self.__ActiveLoop = task.spawn(function()
 		local TargetPos : Vector3 = TargetPosition
 		local ActiveTween : Tween
@@ -260,15 +263,20 @@ end
 function OverheadCameraHandler:Deactivate() : {}
 	if not self.__Active or self.__Debounce then return end
 	self.__Active = false
+	self.__Debounce = true
 	self:RemoveIcons()
-	local Tween = TS:Create(Camera, TweenInfo.new(2), {CFrame = CFrame.new(Character.HumanoidRootPart.Position) * CFrame.Angles(0,0,0) * CFrame.new(0,1,5)})
+	self:ClearBuildMenu()
+	local Tween = TS:Create(Camera, TweenInfo.new(2), {CFrame = CFrame.new(Character.HumanoidRootPart.Position) * CFrame.new(0,1,5)})
 	Tween:Play()
 	Tween.Completed:Wait()
-	
+	Character:SetAttribute("InOverhead",false)
+	self.__Debounce = false
+	Player.PlayerGui.PlayerUI.Hotbar.GroupTransparency = 0
+	Player.PlayerGui.PlayerUI.Hotbar.Interactable = true
 	Controls:Enable()
 
 	Camera.CameraType = Enum.CameraType.Custom
-
+    
 end
 
 --[[
@@ -276,11 +284,11 @@ end
 ]]
 function OverheadCameraHandler:UpdateTransparency() : {}
 	local List : table = CS:GetTagged("MinimapInvisible")
-
+	
 	for i,v in pairs(List) do
 		self.__Blacklist[v] = v.Transparency
 	end
-
+	
 	for i,v in pairs(self.__Blacklist) do
 		i.Transparency = 1
 	end
@@ -299,7 +307,7 @@ end
 @Description: Updates the camera's position manually if the player is already in map view.
 ]]
 function OverheadCameraHandler:UpdatePosition(Position : Vector3) : {}
-	self.__CamPosition = Position
+  self.__CamPosition = Position
 end
 
 --[[
@@ -352,14 +360,14 @@ end
 @Description: Gets the camera's current position.
 @Param: BlacklistTable (Array): The array to replace the current blacklist array, should be formatted Array[Item] = Item.Transparency
 ]]
-function OverheadCameraHandler:SetBlacklist(BlacklistTable : {BasePart}) : {}
+function OverheadCameraHandler:SetBlacklist(BlacklistTable : table) : {}
 	self.__Blacklist = BlacklistTable
 	self:DisableTransparency()
 	self:UpdateTransparency()
 end
 
 --[[
-@Description: Sets up interactable icons on friendly/hostile buildings/units with predefined tags. Sorts icons into tables based on type and hostility.
+@Description: Placeholder function for when icons are added.
 ]]
 function OverheadCameraHandler:SetupIcons() : {}
 	for i,v in pairs(self.__ActiveIcons) do
@@ -400,9 +408,80 @@ function OverheadCameraHandler:SetupIcons() : {}
 		
 	end
 end
---[[
-@Description: Removes all interactable icons.
-]]
+
+function OverheadCameraHandler:PopulateBuildMenu(TargetFolder : Folder) : {}
+	local GUI : CanvasGroup = Player.PlayerGui.PlayerUI.Overhead
+	GUI.Selection.GroupTransparency = 0
+	GUI.Selection.Interactable = true
+	for i,v in pairs(GUI.Selection.SelectionHolder:GetChildren()) do
+		if not v:IsA("UIListLayout") then
+			v:Destroy()
+		end
+	end
+	for i,v in pairs(TargetFolder:GetChildren()) do
+		local C : Frame = GUI.Templates.Building:Clone()
+		C.Interactable = true
+		C.Visible = true
+		C.BuildingName.Text = v.Name
+		C.Parent = GUI.Selection.SelectionHolder
+		local Viewport : ViewportFrame = C.ViewportFrame
+		local Camera : Camera = Instance.new("Camera")
+		Camera.Parent = Viewport
+		Camera.CFrame = CFrame.new(0, 15, 50)
+		Viewport.CurrentCamera = Camera
+		local Model : Model = v:Clone()
+		Model:PivotTo(CFrame.new(0,0,0))
+		Model.Parent = Viewport
+		Camera.CameraSubject = Model.PrimaryPart
+		C.Select.MouseButton1Click:Connect(function()
+			-- INSERT CODE HERE
+			
+			
+			GUI.Selection.GroupTransparency = 1
+			GUI.Selection.Interactable = false
+			for i,v in pairs(GUI.Selection.SelectionHolder:GetChildren()) do
+				if not v:IsA("UIListLayout") then
+					v:Destroy()
+				end
+			end
+		end)
+	end
+end
+
+function OverheadCameraHandler:SetupBuildMenu() : {}
+	local GUI : CanvasGroup = Player.PlayerGui.PlayerUI.Overhead
+	GUI.GroupTransparency = 0
+	GUI.Interactable = true
+	for i,v in pairs(game:GetService("ReplicatedStorage").Buildings:GetChildren()) do
+		local C : TextButton = GUI.Templates.Selection:Clone()
+		C.Interactable = true
+		C.Visible = true
+		C.Text = v.Name
+		C.Parent = GUI.Holder
+		C.MouseButton1Click:Connect(function()
+			self:PopulateBuildMenu(v)
+		end)
+	end
+end
+
+function OverheadCameraHandler:ClearBuildMenu() : {}
+	local GUI : CanvasGroup = Player.PlayerGui.PlayerUI.Overhead
+	GUI.GroupTransparency = 1
+	GUI.Selection.GroupTransparency = 1
+	GUI.Interactable = false
+	GUI.Selection.Interactable = false
+	for i,v in pairs(GUI.Holder:GetChildren()) do
+		if not v:IsA("UIListLayout") then
+			v:Destroy()
+		end
+	end
+	for i,v in pairs(GUI.Selection.SelectionHolder:GetChildren()) do
+		if not v:IsA("UIListLayout") then
+			v:Destroy()
+		end
+	end
+end
+
 function OverheadCameraHandler:RemoveIcons() : {}
 	for i,v in pairs(self.__ActiveIcons) do
 		v:Destroy()
