@@ -47,7 +47,7 @@ function ResourceNPC.new(
 	EncumbranceSpeed: {}?,
 	ResourceWhiteList: { string }?,
 	DeathHandler: any,
-	StatsConfig: {}
+	StatsConfig: {}?
 )
 	local self = ToolNPC.new(
 		Name,

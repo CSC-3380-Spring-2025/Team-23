@@ -21,14 +21,14 @@ local statsConfig: {any} = {
 	--Handles config for stats
 	MaxFood = 100, --Max hunger of the player
 	MaxHydration = 100, --MaxHydration of the player
-	FdDeteriorationRate = 60, --time in seconds between when food stat gos down
-	HydDeteriorationRate = 5, --time in seconds between when hydration stat gos down
-	FdDecrement = 20, --The amount that the food stat is decremented by every FdDeteriorationRate
-	HydDecrement = 20, --The amount that the hydration stat is decremented by every HydDeteriorationRate
-	StarveDmg = 20, --The damage done to a player every StarveDmgRate
-	StarveDmgRate = 5, --rate in seconds that damage is dealt during a starve
-	ThirstDmg = 20, --The damage done to a player every ThirstDmgRate
-	ThirstDmgRate = 5,--rate in seconds that damage is dealt during a thirst
+	FdDeteriorationRate = 120, --time in seconds between when food stat gos down
+	HydDeteriorationRate = 120, --time in seconds between when hydration stat gos down
+	FdDecrement = 5, --The amount that the food stat is decremented by every FdDeteriorationRate
+	HydDecrement = 5, --The amount that the hydration stat is decremented by every HydDeteriorationRate
+	StarveDmg = 5, --The damage done to a player every StarveDmgRate
+	StarveDmgRate = 20, --rate in seconds that damage is dealt during a starve
+	ThirstDmg = 5, --The damage done to a player every ThirstDmgRate
+	ThirstDmgRate = 20,--rate in seconds that damage is dealt during a thirst
 }
 
 local stats: {number} = {

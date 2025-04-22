@@ -49,7 +49,7 @@ function ToolNPC.new(
 	Backpack: {}?,
 	EncumbranceSpeed: {}?,
 	DeathHandler: any,
-	StatsConfig: {}
+	StatsConfig: {}?
 )
 	local self = BackpackNPC.new(
 		Name,
