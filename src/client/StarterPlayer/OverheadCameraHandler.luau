@@ -91,7 +91,7 @@ end
 ]]
 function OverheadCameraHandler:Enable() : {}
 	self.__PressKeyHandler = UIS.InputBegan:Connect(function(Input : InputObject, GME : boolean)
-		print("Key pressed")
+		--print("Key pressed")
 		if GME then return end
         self:HandleKeyPressed(Input)
 	end)
@@ -116,7 +116,7 @@ local wayPointTable = {}
 ]]
 function OverheadCameraHandler:HandleKeyPressed(Input : InputObject) : ()
 	if Input.KeyCode == Enum.KeyCode.M then
-		print("Attempting to activate/deactivate map")
+		--print("Attempting to activate/deactivate map")
 		if self.__Active == false then
 			self:Activate()
 		else
@@ -316,6 +316,9 @@ function OverheadCameraHandler:Deactivate() : {}
 	if not self.__Active or self.__Debounce then return end
 	self.__Active = false
 	self.__Debounce = true
+	if self.__ActiveLoop then
+		task.cancel(self.__ActiveLoop)
+	end
 	self:RemoveIcons()
 	self:ClearBuildMenu()
 	local Tween = TS:Create(Camera, TweenInfo.new(2), {CFrame = CFrame.new(Character.HumanoidRootPart.Position) * CFrame.new(0,1,5)})
@@ -328,9 +331,8 @@ function OverheadCameraHandler:Deactivate() : {}
 	Controls:Enable()
 
 	Camera.CameraType = Enum.CameraType.Custom
-    
-end
 
+end
 --[[
 @Description: Checks for items tagged "MinimapInvisible" and the blacklist and sets their transparency to 1.
 ]]
@@ -487,9 +489,24 @@ function OverheadCameraHandler:PopulateBuildMenu(TargetFolder : Folder) : {}
 		Camera.CameraSubject = Model.PrimaryPart
 		C.Select.MouseButton1Click:Connect(function()
 			-- INSERT CODE HERE
+			local PlaceBuilding = require(game.StarterPlayer.StarterPlayerScripts.PlaceBuilding)
+			local replicatedStorage = game:GetService("ReplicatedStorage")
+			local Bulidings = replicatedStorage:FindFirstChild("Buildings")
+			local BuildingToPlace = Bulidings:FindFirstChild(v.Name, true)
+
+
+			local player = Players.LocalPlayer
+
+
+			local playerPlotTemplate = workspace.PlayersWorkspace[player.Name].PlayerPlots.PlayerPlot:FindFirstChild("PlayerPlotTemplate")
+
+
+			local PlaceBuildingInstance = PlaceBuilding.new("PlaceBuildingInstance")
+			PlaceBuildingInstance:PlaceBuilding(playerPlotTemplate, BuildingToPlace, player)
+
+
 			
-			
-			GUI.Selection.GroupTransparency = 1
+			GUI.Selection.GroupTransparency = 0
 			GUI.Selection.Interactable = false
 			for i,v in pairs(GUI.Selection.SelectionHolder:GetChildren()) do
 				if not v:IsA("UIListLayout") then
