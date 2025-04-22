@@ -10,6 +10,8 @@ local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+
+
 local PlaceBuilding = {}
 Object:Supersedes(PlaceBuilding)
 
@@ -86,7 +88,7 @@ local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): 
 	--clone building and set up ray for contant model tracking
 	local buildingToPlace: Model = Placing:Clone()
 	buildingToPlace.Parent = workspace.PlayersWorkspace[Player.Name].PlayerPlots.PlayerPlot
-
+	
 	for _, child in ipairs(buildingToPlace:GetDescendants()) do
 		if child:IsA("BasePart") then
 			child.Transparency = 0.35
@@ -152,7 +154,9 @@ local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): 
 							child.CanCollide = true
 						end
 					end
-					buildingToPlace:SetPrimaryPartCFrame(CFrame.new(buildingPosition))
+					local parentFolder = workspace.PlayersWorkspace[Player.Name].PlayerPlots.PlayerPlot
+					PlaceBuilding:Fire({BuildingName = buildingToPlace.Name, PlacementPosition = buildingPosition, ParentFolder = parentFolder})
+					buildingToPlace:Destroy()
 					buildingPlaced = true
 					endLoop = true
 				else
