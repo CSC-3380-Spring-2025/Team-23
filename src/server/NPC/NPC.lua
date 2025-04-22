@@ -9,11 +9,6 @@ local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
 local NPC = {}
 Object:Supersedes(NPC)
 
---Pool of all NPCs listed under a players id
-local playerNPCPool: {[number]: {[number]: any}} = {}
-local serverNPCPool: {[number]: any} = {}
-local serverPoolIndex = 1
-
 --[[
 Alters the cost of a path to take for an NPC
     example:
@@ -484,38 +479,6 @@ Destroys the NPC
 function NPC:Destroy(): ()
 	self.__NPC:Destroy()
 	self = nil
-end
-
---[[
-Inserts an NPC instance into the players NPC pool for easy access
-	@param NPCInstance (any) the actuale instance of the NPC object created
-	@param PlayerID (number) the players ID who owns the NPC
---]]
-function NPC:AddNPCToPlayerPool(NPCInstance: any, PlayerID: number) : ()
-	local curPlayersPool = playerNPCPool[PlayerID]
-	if not curPlayersPool then
-		--players first NPC so set up pool
-		local poolValue: {[number]: any} = {
-			NPCPool = {}, --Pool of all the players NPCs
-			playerPoolIndex = 1
-		}
-		poolValue.NPCPool[poolValue.playerPoolIndex] = NPCInstance
-		poolValue.playerPoolIndex = poolValue.playerPoolIndex + 1
-		playerNPCPool[PlayerID] = poolValue
-		return
-	end
-	local NPCPool = curPlayersPool.NPCPool
-	NPCPool[curPlayersPool.playerPoolIndex] = NPCInstance
-	curPlayersPool.playerPoolIndex =  curPlayersPool.playerPoolIndex + 1
-end
-
---[[
-Adds a given NPCInstance to the servers NPC Pool
-	@param NPCInstance (any) any NPC instance that needs to be added to the pool
---]]
-function NPC:AddNPCToServerPool(NPCInstance: any) : ()
-	serverNPCPool[serverPoolIndex] = NPCInstance
-	serverPoolIndex = serverPoolIndex + 1
 end
 
 return NPC

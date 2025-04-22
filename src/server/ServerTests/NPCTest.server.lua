@@ -9,6 +9,8 @@ local NPC = require(ServerScriptService.Server.NPC.NPC)
 local BackpackNPC = require(ServerScriptService.Server.NPC.BackpackNPC)
 local ResourceNPC = require(ServerScriptService.Server.NPC.ResourceNPC.ResourceNPC)
 local MinerNPC = require(ServerScriptService.Server.NPC.ResourceNPC.MinerNPC)
+local NPCHandlerObject = require(ServerScriptService.Server.NPC.NPCHandlers.NPCHandler)
+local NPCHandler = NPCHandlerObject.new("NPCHandler Test")
 --]]
 --[[
 local NPC1 = NPC.new("NPC 1", rigsFolder.DefaultNPC, 100, 0, nil, Vector3.new(0, 10, 0))
@@ -279,7 +281,8 @@ local NPC1 = MinerNPC.new(
 	nil
 )
 local coal = workspace:FindFirstChild("OreModelDemo"):FindFirstChild("Coal")
-NPC1:AddNPCToPlayerPool(NPC1, 81328434)
+NPCHandler:AddNPCToPlayerPool(NPC1, 81328434)
+local NPC1secondref = NPCHandler:GetPlayerNPCByCharacter(NPC1.__NPC, 81328434)
 print(NPC1:IsOre(coal))
 NPC1:AddPickaxe(pickaxe, 1)
 NPC1:HarvestResource(coal)
