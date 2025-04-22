@@ -1,5 +1,7 @@
 --[[This script handles the storing and access of any and all NPCs--]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
 local NPCHandler = {}
 Object:Supersedes(NPCHandler)
@@ -23,6 +25,12 @@ Inserts an NPC instance into the players NPC pool for easy access
     NOT the instance refrence
 --]]
 function NPCHandler:AddNPCToPlayerPool(NPCInstance: any, PlayerID: number) : ()
+	local NPCCharacter = NPCInstance.__NPC
+	NPCCharacter:SetAttribute("NPC", true)
+	CollectionService:AddTag(NPCCharacter, "OverheadUnit")
+	local player = Players:GetPlayerByUserId(PlayerID)
+	NPCCharacter:SetAttribute("Owner", player.Name)
+	NPCCharacter:SetAttribute("AttachTo", "Head")
 	local curPlayersPool: {[number]: {[string]: any}}? = playerNPCPool[PlayerID]
 	if not curPlayersPool then
 		--players first NPC so set up pool

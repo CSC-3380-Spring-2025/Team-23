@@ -10,6 +10,7 @@
 
 -- Services
 local Players : Players = game:GetService("Players")
+local ServerScriptService = game:GetService("ServerScriptService")
 local TS: TweenService = game:GetService("TweenService")
 local RS: RunService = game:GetService("RunService")
 local CS : CollectionService = game:GetService("CollectionService")
@@ -19,14 +20,19 @@ local UIS : UserInputService = game:GetService("UserInputService")
 local OverheadCameraHandler : any = {}
 
 local Player : Player = Players.LocalPlayer
+local playersMouse = Player:GetMouse()
 local Camera : Camera = workspace.CurrentCamera
 local Character : Model = Player.Character or Player.CharacterAdded:Wait()
 local Controls : any = require(Player.PlayerScripts.PlayerModule):GetControls()
---local BridgeNet2 : table = require(game.ReplicatedStorage.BridgeNet2)
+local BridgeNet2: {} = require(game.ReplicatedStorage.BridgeNet2)
 local Object : any = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local RaycastParams = RaycastParams.new()
 RaycastParams.FilterType = Enum.RaycastFilterType.Exclude
 Object:Supersedes(OverheadCameraHandler)
+
+--Events
+local TraverseNPCs = BridgeNet2.ReferenceBridge("TraverseNPCs")
+local CollectNPCs = BridgeNet2.ReferenceBridge("CollectNPCs")
 
 local IconTable : {string} = {
 	["Axe"] = script.Tags.AxemanTag,
@@ -100,6 +106,10 @@ function OverheadCameraHandler:Enable() : {}
 	end)
 end
 
+--Table of selected waypoints for a sequence of the player clicking on the ground
+--Clears if next click is not on the ground
+local wayPointTable = {}
+
 --[[
 @Description: Handles a key being pressed when the handler has been properly enabled.
 @Param Input (InputObject): Input object that holds all of the data for determing which key has been pressed.
@@ -159,7 +169,49 @@ function OverheadCameraHandler:HandleKeyPressed(Input : InputObject) : ()
 		for c,d in pairs(self.__ActiveIcons) do
 			d.Background.BorderColor3 = Color3.fromRGB(0, 0, 0)
 		end
+		
 		table.clear(self.__Selected)
+	elseif Input.UserInputType == Enum.UserInputType.MouseButton2 and self.__Active then
+		--Loop through all NPCs and tell them to go to players current positon
+		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
+			--Linked way point
+			table.insert(wayPointTable, playersMouse.Hit.Position)
+		elseif UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+			--Do action on object like get resource
+			local target = playersMouse.Target
+			local argsNPCs = {}
+			for _, item in pairs(self.__Selected) do
+				if item:GetAttribute("NPC") and item:GetAttribute("ResourceNPC") then
+					table.insert(argsNPCs, item)
+				end
+			end
+			if target:HasTag("Resource") then
+				local eventArgs = {
+					Resource = playersMouse.Target,
+					NPCs = argsNPCs
+				}
+				CollectNPCs:Fire(eventArgs)
+			end
+		else
+			--only click so traverse
+			table.insert(wayPointTable, playersMouse.Hit.Position)
+			--Send message to server to traverse with all NPCs and waypoint
+			local argsNPCs = {}
+			for _, item in pairs(self.__Selected) do
+				if item:GetAttribute("NPC") then
+					table.insert(argsNPCs, item)
+				end
+			end
+			local eventArgs = {
+				Waypoints = table.clone(wayPointTable),
+				NPCs = argsNPCs
+			}
+			TraverseNPCs:Fire(eventArgs)
+			table.clear(wayPointTable) --Reset so next click doesnt reuse
+		end
+	elseif Input.KeyCode == Enum.KeyCode.LeftAlt and self.__Active then
+		--Cancel all waypoints
+		table.clear(wayPointTable)
 	--[[elseif Input.KeyCode == Enum.KeyCode.E and self.__Active then
 		while UIS:IsKeyDown(Enum.KeyCode.E) do
 			task.wait(0.01)
