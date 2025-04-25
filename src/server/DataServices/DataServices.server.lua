@@ -21,7 +21,7 @@ local function RunData()
 		--[[comment this whole test table stuff out after presentaion]]
 		local testTable = {
 			Currency = {
-				gold = 69,
+				Gold = 69,
 			},
 			Base = {
 				{
@@ -61,7 +61,7 @@ local function RunData()
 			},
 			Backpack = {}
 		}
-		--SessionDataManagerInstance:SetPlayerData(player.UserId, testTable)
+		SessionDataManagerInstance:SetPlayerData(player.UserId, testTable)
 		AssignPlotInstance:AssignPlot(player)
 	end)
 	
