@@ -104,7 +104,6 @@ end
 --[[
 This function defines the behaivore of the Combat NPC when they
     are given a target to attack
-    If a homepoint is set they will return home once complete
     @param Target (Instance) any target instance to attack
 --]]
 function SwordsmanNPC:Attack(Target: Instance)
@@ -183,31 +182,45 @@ local function GetSentryTarget(Self, AggroRadious, EscapeRadious)
 	return nil --Failed to find target
 end
 
-local function HandleSentryTargetDeath(Self, humanoid)
-	--If not first target then disc last deathhandler
-	if Self.__Connections["DeathHandler"] then
-		--Disconnect previous death handler since old target no longer matters
-		Self.__Connections["DeathHandler"]:Disconnect()
-	end
-	Self.__Connections["DeathHandler"] = humanoid.Died:Once(function()
-		print("Target died!")
-		Self.__Target = nil
-		Self:CancelAttack(Self)
-	end)
-end
-
 --[[
 Helper funtion that handles finding targets and attacking them for the NPC during SentryMode
 --]]
 local function SentrySeekTarget(Self, AggroRadious, EscapeRadious)
+    local returningHome = false
 	while true do
         --print("Checking for target!")
 		local target = GetSentryTarget(Self, AggroRadious, EscapeRadious)
         --print("Target is: ", target)
 		if target == nil then
 			--No target to attack anymore
+            if returningHome then
+                --Can skip
+                RunService.Heartbeat:Wait()
+                continue
+            end
+
             Self.__Target = nil
-			Self:CancelAttack(Self)
+            Self:CancelAttack(Self)
+            --If has home point then return home
+            if not Self.__HomePoint then
+                --No homepoint set so done
+                RunService.Heartbeat:Wait()
+                continue
+            end
+
+            Self:ReturnHome()
+            returningHome = true
+            task.spawn(function()
+                --Detect when NPC gets home
+                while returningHome do
+                    if (not Self:IsTraversing()) then
+                        --Finished returning home
+                        returningHome = false
+                        return
+                    end
+                    RunService.Heartbeat:Wait()
+                end
+            end)
 		elseif not (target == Self.__Target) then
             print("Attacking new target!")
 			--New target to transition too
@@ -219,6 +232,7 @@ local function SentrySeekTarget(Self, AggroRadious, EscapeRadious)
 			end
 			--HandleSentryTargetDeath(Self, humanoid)
 			Self:CancelAttack(Self)
+            returningHome = false
 			--Set up new attack
 			Self:Attack(target)
 		end
