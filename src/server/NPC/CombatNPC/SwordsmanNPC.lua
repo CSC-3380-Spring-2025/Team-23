@@ -7,8 +7,12 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local RaycastHitboxV4 = require(ReplicatedStorage.RaycastHitboxV4)
 local CombatNPC = require(ServerScriptService.Server.NPC.CombatNPC.CombatNPC)
+local NPCHandlerObject = require(ServerScriptService.Server.NPC.NPCHandlers.NPCHandler)
 local SwordsmanNPC = {}
 CombatNPC:Supersedes(SwordsmanNPC)
+
+--Instances
+local NPCHandler = NPCHandlerObject.new("NPCHandlerSwordsman")
 
 --Vars
 local attackRange = 5 --Distance in studs that the NPCs sword will activate
@@ -81,7 +85,7 @@ Handles what happens when a item is hit by the sword
     @param Self ({[any]: any}) the instance of the class
     @param Damage (number) the amount of damage done on hits
 --]]
-local function HandleHits(HitBox: {[any]: any}, Self: {[any]: any}, Damage: number) : ()
+local function HandleHits(HitBox: { [any]: any }, Self: { [any]: any }, Damage: number): ()
 	Self.__Connections["Hit"] = HitBox.OnHit:Connect(function(HitPart, HitHum)
 		HitHum:TakeDamage(20)
 	end)
@@ -93,7 +97,7 @@ Cleans up the attack function
     @param Animation (AnimationTrack) the animation track of the swing animation
     @param Self ({[any]: any}) the instance of the class
 --]]
-local function CleanUpAttack(HitBox: {[any]: any}, Animation: AnimationTrack, Self: {[any]: any})
+local function CleanUpAttack(HitBox: { [any]: any }, Animation: AnimationTrack, Self: { [any]: any })
 	Animation.Stopped:Wait()
 	Self.__Connections["Hit"]:Disconnect() --Disc hit connection
 	HitBox:HitStop()
@@ -103,8 +107,8 @@ end
 Activates the given weapon
     @param Self ({[any]: any}) the instance of the class
 --]]
-local function ActivateWeapon(Self: {[any]: any})
-	local weapon: {[string]: any} = Self.__Weapon
+local function ActivateWeapon(Self: { [any]: any })
+	local weapon: { [string]: any } = Self.__Weapon
 	if not weapon then
 		warn("Attempt to attack with SwordsmanNPC but no weapon set")
 		return
@@ -114,7 +118,7 @@ local function ActivateWeapon(Self: {[any]: any})
 		warn('Swing animations not in Animations folder of weapon for NPC "' .. Self.Name .. '"')
 		return
 	end
-	local hitBox: {[any]: any} = weapon.Hitbox
+	local hitBox: { [any]: any } = weapon.Hitbox
 	if not hitBox then
 		warn('Hitbox not set for tool of NPC "' .. Self.Name .. '"')
 		return
@@ -136,7 +140,7 @@ end
 --[[
 Cancels an attack action
 --]]
-function SwordsmanNPC:CancelAttack() : ()
+function SwordsmanNPC:CancelAttack(): ()
 	if self.__Tasks.Attack then
 		--Handle target death by no longer attacking
 		self:Unfollow()
@@ -150,7 +154,7 @@ This function defines the behaivore of the Combat NPC when they
     are given a target to attack
     @param Target (Instance) any target instance to attack
 --]]
-function SwordsmanNPC:Attack(Target: Instance) : ()
+function SwordsmanNPC:Attack(Target: Instance): ()
 	if not self:CanTarget(Target) then
 		warn("Attempt to attack invalid target")
 		return
@@ -190,7 +194,7 @@ Helper function used to find the NPCs target during SentryMode
     @param EscapeRadious (number) the distance in studs that a NPC will give up on attacking a target
     @return (Model?) targets character on success or false otherwise
 --]]
-local function GetSentryTarget(Self: {[any]: any}, AggroRadious: number, EscapeRadious: number) : Model?
+local function GetSentryTarget(Self: { [any]: any }, AggroRadious: number, EscapeRadious: number): Model?
 	local targetMagnitudes: {} = {}
 	--Loop through players first
 	for _, player in pairs(Players:GetPlayers()) do
@@ -205,8 +209,8 @@ local function GetSentryTarget(Self: {[any]: any}, AggroRadious: number, EscapeR
 			if distance >= EscapeRadious then
 				Self.__Target = nil
 				continue --Target escaped
-            else
-                table.insert(targetMagnitudes, { distance, character })
+			else
+				table.insert(targetMagnitudes, { distance, character })
 			end
 		else
 			--Not the existing target so check if better target
@@ -217,8 +221,40 @@ local function GetSentryTarget(Self: {[any]: any}, AggroRadious: number, EscapeR
 			end
 		end
 	end
-	--Loop through for other NPCs
-	--Sort the mag table
+
+	--Loop through for NPCs
+	local allNPCs: { { [any]: any } }? = NPCHandler:GetAllNPCs()
+	if allNPCs then
+		--NPCs exist
+		for _, NPCInstance in pairs(allNPCs) do
+			if NPCInstance == Self then
+				continue --Dont count itself
+			end
+			local NPCRootPart = NPCInstance.__RootPart
+			local character: Model? = NPCInstance.__NPC
+			if not character or not Self:CanTarget(character) then
+				continue --Not a valid target so skip over
+			end
+			local distance = (NPCRootPart.Position - Self.__RootPart.Position).Magnitude
+			if Self.__Target == character then
+				--Is the existing target
+				if distance >= EscapeRadious then
+					Self.__Target = nil
+					continue --Target escaped
+				else
+					table.insert(targetMagnitudes, { distance, character })
+				end
+			else
+				--Not the existing target so check if better target
+				if distance <= AggroRadious then
+					--Can aggro
+					table.insert(targetMagnitudes, { distance, character })
+					continue
+				end
+			end
+		end
+	end
+    
 	table.sort(targetMagnitudes, function(a, b)
 		return a[1] < b[1]
 	end)
@@ -238,46 +274,46 @@ Helper funtion that handles finding targets and attacking them for the NPC durin
     in its AggroList
     @param EscapeRadious (number) the distance in studs that a NPC will give up on attacking a target
 --]]
-local function SentrySeekTarget(Self: {[any]: any}, AggroRadious: number, EscapeRadious: number) : ()
-    local returningHome: boolean = false
+local function SentrySeekTarget(Self: { [any]: any }, AggroRadious: number, EscapeRadious: number): ()
+	local returningHome: boolean = false
 	while true do
-        --print("Checking for target!")
+		--print("Checking for target!")
 		local target: Model? = GetSentryTarget(Self, AggroRadious, EscapeRadious)
-        --print("Target is: ", target)
+		--print("Target is: ", target)
 		if target == nil then
 			--No target to attack anymore
-            if returningHome then
-                --Can skip
-                RunService.Heartbeat:Wait()
-                continue
-            end
+			if returningHome then
+				--Can skip
+				RunService.Heartbeat:Wait()
+				continue
+			end
 
-            Self.__Target = nil
-            Self:CancelAttack()
-            --If has home point then return home
-            if not Self.__HomePoint then
-                --No homepoint set so done
-                RunService.Heartbeat:Wait()
-                continue
-            end
+			Self.__Target = nil
+			Self:CancelAttack()
+			--If has home point then return home
+			if not Self.__HomePoint then
+				--No homepoint set so done
+				RunService.Heartbeat:Wait()
+				continue
+			end
 
-            Self:ReturnHome()
-            returningHome = true
-            Self.__Tasks.SwordsmanReturnHome = task.spawn(function()
-                --Detect when NPC gets home
-                while returningHome do
-                    if (not Self:IsTraversing()) then
-                        --Finished returning home
-                        returningHome = false
-                        return
-                    end
-                    RunService.Heartbeat:Wait()
-                end
-            end)
+			Self:ReturnHome()
+			returningHome = true
+			Self.__Tasks.SwordsmanReturnHome = task.spawn(function()
+				--Detect when NPC gets home
+				while returningHome do
+					if not Self:IsTraversing() then
+						--Finished returning home
+						returningHome = false
+						return
+					end
+					RunService.Heartbeat:Wait()
+				end
+			end)
 		elseif not (target == Self.__Target) then
-            print("Attacking new target!")
+			print("Attacking new target!")
 			--New target to transition too
-            Self.__Target = target
+			Self.__Target = target
 			local humanoid: Humanoid? = target:FindFirstChild("Humanoid") :: Humanoid?
 			if not humanoid then
 				RunService.Heartbeat:Wait()
@@ -285,7 +321,7 @@ local function SentrySeekTarget(Self: {[any]: any}, AggroRadious: number, Escape
 			end
 			--HandleSentryTargetDeath(Self, humanoid)
 			Self:CancelAttack()
-            returningHome = false
+			returningHome = false
 			--Set up new attack
 			Self:Attack(target)
 		end

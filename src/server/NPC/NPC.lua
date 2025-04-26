@@ -3,6 +3,7 @@ This class functions as a general purpouse manager for creating non dialogue NPC
 --]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PathfindingService = game:GetService("PathfindingService")
+local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 local Runservice = game:GetService("RunService")
 local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
@@ -92,7 +93,11 @@ local function PrepWaypoint(StartPosition: Vector3, EndPositon: Vector3, Self: a
 		table.insert(Self.__Waypoints, path) --Insert at end of table
 		return true
 	else
-		warn('NPC "' .. Self.Name .. '" failed to find a path. ' .. errorMessage)
+		if errorMessage then
+			warn('NPC "' .. Self.Name .. '" failed to find a path. ' .. errorMessage)
+		else
+			warn('NPC "' .. Self.Name .. '" failed to find a path. ')
+		end
 		return false
 	end
 end
@@ -480,6 +485,23 @@ Destroys the NPC
 function NPC:Destroy(): ()
 	self.__NPC:Destroy()
 	self = nil
+end
+
+--[[
+Sets a given tag for an NPC
+	@param TagName (string) the name of the tag to set
+--]]
+function NPC:AddTag(TagName: string) : ()
+	CollectionService:AddTag(self.__NPC, TagName)
+end
+
+--[[
+Sets a given attribute for the NPC given a Key and Value
+	@param Key (String) any name for an attribute to set
+	@param Value (any) any attribute supported value to set
+--]]
+function NPC:SetAttribute(Key: string, Value: any) : ()
+	self.__NPC:SetAttribute(Key, Value)
 end
 
 return NPC
