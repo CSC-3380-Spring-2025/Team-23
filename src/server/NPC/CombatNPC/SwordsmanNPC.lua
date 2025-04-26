@@ -1,3 +1,6 @@
+--[[
+This class handles all SwordsmanNPCs and their behaivore
+--]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local RunService = game:GetService("RunService")
@@ -10,6 +13,30 @@ CombatNPC:Supersedes(SwordsmanNPC)
 --Vars
 local attackRange = 5 --Distance in studs that the NPCs sword will activate
 
+--[[
+Constructor of the SwordsmanNPC class
+    @param Name (string) name of the NPC
+    @param Rig (rig) rig to make an NPC (the body)
+    @param Health (number) health value to set NPC at
+    @param SpawnPos (Vector3) position to spawn NPC at
+    @param Speed (number) the walk speed of a NPC. Default of 16
+    @param MaxStack (number) the number of stacks allowed for the backpack
+    @param MaxWeight (number) max weight of an NPC
+    @param MediumWeight (number) Weight at wich below you are light, 
+    but above you are medium
+    @param HeavyWeight (number) weight at wich you become heavy
+    @param Backpack ({[ItemName]}) where [ItemName] has a .Count of item and 
+    .Weight of whole item stack. Backpack is empty if not given.
+    @param WhiteList ({string}) table of item names that may be added
+    @param EncumbranceSpeed ({[Light, Medium, Heavy] = number}) a table of keys defined
+    as Light, Medium, Heavy that have a value pair indicating the speed to go at each Encumbrance level
+    if not provided then Light = -1/3speed, Heavy = -2/3 speed
+	@param DeathHandler (boolean) if set to true enables the death handler for clean up or disables otherwise
+	If you do not know what your doing, then you should set this to true.
+	@param StatsConfig ({}) determines the config for the NPC's stats. Keys left out follow a default format
+	see the table of statsconfig below in the cosntructor for more details in Backpack NPC
+    @param AggroList ({string}) List of tags placed on a target that an NPC will check to see if it can Aggro
+--]]
 function SwordsmanNPC.new(
 	Name: string,
 	Rig: Model,
@@ -48,40 +75,54 @@ function SwordsmanNPC.new(
 	return self
 end
 
-local function HandleHits(HitBox, Self, Damage)
+--[[
+Handles what happens when a item is hit by the sword
+    @param HitBox ({[any]: any}) the raycast system hitbox instance. Not the block
+    @param Self ({[any]: any}) the instance of the class
+    @param Damage (number) the amount of damage done on hits
+--]]
+local function HandleHits(HitBox: {[any]: any}, Self: {[any]: any}, Damage: number) : ()
 	Self.__Connections["Hit"] = HitBox.OnHit:Connect(function(HitPart, HitHum)
-		print("SWORD HIT!")
-		print(HitPart, HitHum)
 		HitHum:TakeDamage(20)
 	end)
 end
 
-local function CleanUpAttack(HitBox, Animation, Self)
+--[[
+Cleans up the attack function
+    @param HitBox ({[any]: any}) the raycast system hitbox instance. Not the block
+    @param Animation (AnimationTrack) the animation track of the swing animation
+    @param Self ({[any]: any}) the instance of the class
+--]]
+local function CleanUpAttack(HitBox: {[any]: any}, Animation: AnimationTrack, Self: {[any]: any})
 	Animation.Stopped:Wait()
 	Self.__Connections["Hit"]:Disconnect() --Disc hit connection
 	HitBox:HitStop()
 end
 
-local function ActivateWeapon(Self)
-	local weapon = Self.__Weapon
+--[[
+Activates the given weapon
+    @param Self ({[any]: any}) the instance of the class
+--]]
+local function ActivateWeapon(Self: {[any]: any})
+	local weapon: {[string]: any} = Self.__Weapon
 	if not weapon then
 		warn("Attempt to attack with SwordsmanNPC but no weapon set")
 		return
 	end
-	local swingAnim = weapon.Animations["Swing"]
+	local swingAnim: AnimationTrack? = weapon.Animations["Swing"]
 	if not swingAnim then
 		warn('Swing animations not in Animations folder of weapon for NPC "' .. Self.Name .. '"')
 		return
 	end
-	local hitBox = weapon.Hitbox
+	local hitBox: {[any]: any} = weapon.Hitbox
 	if not hitBox then
 		warn('Hitbox not set for tool of NPC "' .. Self.Name .. '"')
 		return
 	end
 
 	--Activate weapon
-	local physTool = weapon.DropItem
-	local damage = physTool:GetAttribute("Damage")
+	local physTool: Tool = weapon.DropItem
+	local damage: number? = physTool:GetAttribute("Damage") :: number?
 	if not damage then
 		warn('Damage attribute not set for tool of NPC "' .. Self.Name .. '"')
 		return
@@ -92,12 +133,15 @@ local function ActivateWeapon(Self)
 	CleanUpAttack(hitBox, swingAnim, Self)
 end
 
-function SwordsmanNPC:CancelAttack(Self)
-	if Self.__Tasks.Attack then
+--[[
+Cancels an attack action
+--]]
+function SwordsmanNPC:CancelAttack() : ()
+	if self.__Tasks.Attack then
 		--Handle target death by no longer attacking
-		Self:Unfollow()
+		self:Unfollow()
 		--Instead of canceling attack allow it to end on its own to handle clean up
-		Self.__IsAttacking = false
+		self.__IsAttacking = false
 	end
 end
 
@@ -106,23 +150,23 @@ This function defines the behaivore of the Combat NPC when they
     are given a target to attack
     @param Target (Instance) any target instance to attack
 --]]
-function SwordsmanNPC:Attack(Target: Instance)
+function SwordsmanNPC:Attack(Target: Instance) : ()
 	if not self:CanTarget(Target) then
 		warn("Attempt to attack invalid target")
 		return
 	end
-	local rootPart = Target:FindFirstChild("HumanoidRootPart")
+	local rootPart: BasePart? = Target:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not rootPart then
 		return --has no root part to follow
 	end
 	--Handle target death
-	local humanoid = Target:FindFirstChild("Humanoid")
+	local humanoid: Humanoid? = Target:FindFirstChild("Humanoid") :: Humanoid?
 	if not humanoid then
 		return --No humanoid to track
 	end
 	humanoid.Died:Once(function()
 		print("Target died!")
-		self:CancelAttack(self)
+		self:CancelAttack()
 	end)
 	self:Follow(rootPart)
 	--Keep checking if in range to attack
@@ -140,17 +184,22 @@ end
 
 --[[
 Helper function used to find the NPCs target during SentryMode
+    @param Self ({[any]: any}) the instance of the class
+    @param AggroRadious (number) the number of studs within an NPC will attack a target
+    in its AggroList
+    @param EscapeRadious (number) the distance in studs that a NPC will give up on attacking a target
+    @return (Model?) targets character on success or false otherwise
 --]]
-local function GetSentryTarget(Self, AggroRadious, EscapeRadious)
+local function GetSentryTarget(Self: {[any]: any}, AggroRadious: number, EscapeRadious: number) : Model?
 	local targetMagnitudes: {} = {}
 	--Loop through players first
 	for _, player in pairs(Players:GetPlayers()) do
 		--Get distance between player and NPC
-		local character = player.Character
+		local character: Model? = player.Character
 		if not character or not Self:CanTarget(character) then
 			continue --Not a valid target so skip over
 		end
-		local distance = player:DistanceFromCharacter(Self.__RootPart.Position)
+		local distance: number = player:DistanceFromCharacter(Self.__RootPart.Position)
 		if Self.__Target == character then
 			--Is the existing target
 			if distance >= EscapeRadious then
@@ -184,12 +233,16 @@ end
 
 --[[
 Helper funtion that handles finding targets and attacking them for the NPC during SentryMode
+    @param Self ({[any]: any}) the instance of the class
+    @param AggroRadious (number) the number of studs within an NPC will attack a target
+    in its AggroList
+    @param EscapeRadious (number) the distance in studs that a NPC will give up on attacking a target
 --]]
-local function SentrySeekTarget(Self, AggroRadious, EscapeRadious)
-    local returningHome = false
+local function SentrySeekTarget(Self: {[any]: any}, AggroRadious: number, EscapeRadious: number) : ()
+    local returningHome: boolean = false
 	while true do
         --print("Checking for target!")
-		local target = GetSentryTarget(Self, AggroRadious, EscapeRadious)
+		local target: Model? = GetSentryTarget(Self, AggroRadious, EscapeRadious)
         --print("Target is: ", target)
 		if target == nil then
 			--No target to attack anymore
@@ -200,7 +253,7 @@ local function SentrySeekTarget(Self, AggroRadious, EscapeRadious)
             end
 
             Self.__Target = nil
-            Self:CancelAttack(Self)
+            Self:CancelAttack()
             --If has home point then return home
             if not Self.__HomePoint then
                 --No homepoint set so done
@@ -210,7 +263,7 @@ local function SentrySeekTarget(Self, AggroRadious, EscapeRadious)
 
             Self:ReturnHome()
             returningHome = true
-            task.spawn(function()
+            Self.__Tasks.SwordsmanReturnHome = task.spawn(function()
                 --Detect when NPC gets home
                 while returningHome do
                     if (not Self:IsTraversing()) then
@@ -225,13 +278,13 @@ local function SentrySeekTarget(Self, AggroRadious, EscapeRadious)
             print("Attacking new target!")
 			--New target to transition too
             Self.__Target = target
-			local humanoid = target:FindFirstChild("Humanoid")
+			local humanoid: Humanoid? = target:FindFirstChild("Humanoid") :: Humanoid?
 			if not humanoid then
 				RunService.Heartbeat:Wait()
 				continue --No humanoid found so skip
 			end
 			--HandleSentryTargetDeath(Self, humanoid)
-			Self:CancelAttack(Self)
+			Self:CancelAttack()
             returningHome = false
 			--Set up new attack
 			Self:Attack(target)
