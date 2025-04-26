@@ -92,7 +92,7 @@ local function PrepWaypoint(StartPosition: Vector3, EndPositon: Vector3, Self: a
 		table.insert(Self.__Waypoints, path) --Insert at end of table
 		return true
 	else
-		warn('NPC "' .. Self.__NPC.Name .. '" failed to find a path. ' .. errorMessage)
+		warn('NPC "' .. Self.Name .. '" failed to find a path. ' .. errorMessage)
 		return false
 	end
 end

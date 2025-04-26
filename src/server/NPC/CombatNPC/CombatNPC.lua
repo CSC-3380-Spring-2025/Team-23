@@ -43,14 +43,22 @@ function CombatNPC.new(
 	)
     setmetatable(self, CombatNPC)
     self.__Weapon = nil --The NPCs current weapon. The weapon/tool equipped when attacking
+    self.__IsAttacking = false--Indicates if the NPC is attacking
     return self
 end
 
 --[[
 This function defines the behaivore of the Combat NPC when they activate their weapon.
 --]]
-function CombatNPC:Attack()
+function CombatNPC:Attack(Target: Instance)
     AbstractInterface:AbstractError("Attack", "CombatNPC")
+end
+
+--[[
+Cancels an attack action.
+--]]
+function CombatNPC:CancelAttack()
+    AbstractInterface:AbstractError("CancelAttack", "CombatNPC")
 end
 
 local function PrepHitbox(WeaponRef: {[string]: any})
@@ -97,7 +105,6 @@ This function unselects the current weapon set.
     If this is called an NPC will not be able to use a weapon until SelectWeapon is used again
 --]]
 function CombatNPC:UnselectWeapon() : ()
-    --Clean up hit box first
     self.__Weapon = nil
 end
 

@@ -26,8 +26,4 @@ local sword = ReplicatedStorage.ItemDrops.Sword
 swordManNPC1:AddTool(sword, 1)
 swordManNPC1:SelectWeapon("Sword")
 task.wait(4)
-for i=1, 5, 1 do
-	print("Attack started")
-	swordManNPC1:Attack()
-	print("Attack ended")
-end
+swordManNPC1:Attack(Players:WaitForChild("claytakiler").Character)
