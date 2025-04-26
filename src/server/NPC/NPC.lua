@@ -66,6 +66,7 @@ function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Sp
 			self:Destroy()
 		end)
 	end
+	self.__Connections = {} --Table of all active connections
 	return self
 end
 
