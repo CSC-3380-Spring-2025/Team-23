@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local CollectionService = game:GetService("CollectionService")
 local ToolNPC = require(ServerScriptService.Server.NPC.ToolNPC)
 local AbstractInterface = require(ReplicatedStorage.Shared.Utilities.Object.AbstractInterface)
 local ItemUtilsObject = require(ReplicatedStorage.Shared.Items.ItemsUtils)
@@ -10,6 +11,10 @@ ToolNPC:Supersedes(CombatNPC)
 --Instances
 local itemUtils = ItemUtilsObject.new("CombatNPCItemUtils")
 
+--[[
+Constructor of the CombatNPC class
+    @param AggroList ({string}) List of tags placed on a target that an NPC will check to see if it can Aggro
+--]]
 function CombatNPC.new(
 	Name: string,
 	Rig: Model,
@@ -23,7 +28,8 @@ function CombatNPC.new(
 	WhiteList: { string },
 	Backpack: {}?,
 	EncumbranceSpeed: {}?,
-	StatsConfig: {}?
+	StatsConfig: {}?,
+    AggroList: {string}
 )
 	local self = ToolNPC.new(
 		Name,
@@ -44,6 +50,8 @@ function CombatNPC.new(
     setmetatable(self, CombatNPC)
     self.__Weapon = nil --The NPCs current weapon. The weapon/tool equipped when attacking
     self.__IsAttacking = false--Indicates if the NPC is attacking
+    self.__AggroList = AggroList or {}
+    self.__Target = nil --The current target of an NPC
     return self
 end
 
@@ -106,6 +114,20 @@ This function unselects the current weapon set.
 --]]
 function CombatNPC:UnselectWeapon() : ()
     self.__Weapon = nil
+end
+
+--[[
+Determines if an NPC can target a given instanc eby checking if its in its aggrolist
+    @param Target (Instance) any instance acting as a target
+    @return (boolean) true if valid or false otherwise
+--]]
+function CombatNPC:CanTarget(Target: Instance) : boolean
+    for _, tagName in pairs(self.__AggroList) do
+        if CollectionService:HasTag(Target, tagName) then
+            return true--Is in aggrolist
+        end
+    end
+    return false--Not in aggrolist
 end
 
 return CombatNPC
