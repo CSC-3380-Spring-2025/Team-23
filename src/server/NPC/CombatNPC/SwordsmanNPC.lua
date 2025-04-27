@@ -75,12 +75,12 @@ function SwordsmanNPC.new(
 	MaxWeight: number,
 	MediumWeight: number,
 	HeavyWeight: number,
-	WhiteList: { string },
+	WhiteList: { string }?,
 	Backpack: {}?,
 	EncumbranceSpeed: {}?,
 	DeathHandler: any,
 	StatsConfig: {}?,
-	AggroList: { string }
+	AggroList: { string }?
 )
 	local self = CombatNPC.new(
 		Name,

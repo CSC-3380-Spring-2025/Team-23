@@ -9,12 +9,13 @@ local NPCHandlerObject = require(ServerScriptService.Server.NPC.NPCHandlers.NPCH
 local NPCHandler = NPCHandlerObject.new("NPCHandler Test")
 --]]
 
+
 Players.PlayerAdded:Connect(function(player)
 	player.CharacterAdded:Connect(function(character)
-		CollectionService:AddTag(character, "Enemy")
+		CollectionService:AddTag(character, "Player")
 	end)
 end)
-
+--[[
 --Swordsman
 local SwordsmanObject = require(ServerScriptService.Server.NPC.CombatNPC.SwordsmanNPC)
 local swordManNPC1 = SwordsmanObject.new(
@@ -70,3 +71,4 @@ swordManNPC1:SetHomePoint(Vector3.new(0, 0, 0))
 swordManNPC1:SentryMode(10, 15)
 enemySwordsman:SetHomePoint(Vector3.new(0, 0, 0))
 enemySwordsman:SentryMode(10, 15)
+--]]
