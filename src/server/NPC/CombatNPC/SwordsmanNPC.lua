@@ -75,12 +75,12 @@ function SwordsmanNPC.new(
 	MaxWeight: number,
 	MediumWeight: number,
 	HeavyWeight: number,
-	WhiteList: { string },
+	WhiteList: { string }?,
 	Backpack: {}?,
 	EncumbranceSpeed: {}?,
 	DeathHandler: any,
 	StatsConfig: {}?,
-	AggroList: { string }
+	AggroList: { string }?
 )
 	local self = CombatNPC.new(
 		Name,
@@ -114,7 +114,10 @@ Handles what happens when a item is hit by the sword
 --]]
 local function HandleHits(HitBox: { [any]: any }, Self: { [any]: any }, Damage: number): ()
 	Self.__Connections["Hit"] = HitBox.OnHit:Connect(function(HitPart, HitHum)
-		HitHum:TakeDamage(20)
+		local character = HitHum.Parent
+		if Self:CanTarget(character) then
+			HitHum:TakeDamage(20)
+		end
 	end)
 end
 
@@ -337,7 +340,6 @@ local function SentrySeekTarget(Self: { [any]: any }, AggroRadious: number, Esca
 				end
 			end)
 		elseif not (target == Self.__Target) then
-			print("Attacking new target!")
 			--New target to transition too
 			Self.__Target = target
 			local humanoid: Humanoid? = target:FindFirstChild("Humanoid") :: Humanoid?
