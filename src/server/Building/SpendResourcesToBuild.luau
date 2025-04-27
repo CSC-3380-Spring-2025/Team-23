@@ -1,8 +1,7 @@
 --module scripts
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
-local BuildingDataManager = require(game.ServerScriptService.Server.Building.BuildingDataManager)
 local StorageHandler = require(game.ServerScriptService.Server.ItemHandlers.StorageHandler)
-local BuildingRequirments = require(script.Parent.SpendResourcesToBuild)
+local BuildingRequirments = require(script.Parent.BuildingRequirments)
 local SessionDataManager = require(game.ServerScriptService.Server.DataServices.SessionDataManager)
 
 --services
@@ -11,9 +10,7 @@ local Workspace = game:GetService("Workspace")
 
 local SpendResourcesToBuild = {}
 Object:Supersedes(SpendResourcesToBuild)
-local BuildingDataManagerInstance = BuildingDataManager.new("BuildingDataManagerInstance")
 local StorageHandlerInstance = StorageHandler.new("StorageHandlerInstance")
-local BuildingRequirmentsInstance = BuildingRequirments.new("BuildingRequirmentsInstance")
 local SessionDataManagerInstance: table = SessionDataManager.new()
 
 
@@ -25,11 +22,20 @@ function SpendResourcesToBuild.new(Name)
 end
 
 function SpendResourcesToBuild:AttemptToBuild(Player: Player, BuildingToBuild: Instance): boolean
-	local BuildingToBuildName: string = BuildingToBuild.Name
-	if ReplicatedStorage.Bulidings:FindFirstChild(BuildingToBuildName, true) and BuildingRequirmentsInstance:GetCostsFromName(BuildingToBuildName) then
+	local buildingToBuildName: string = BuildingToBuild.Name
+	local buildingCost: {} = BuildingRequirments:GetCostsFromName(buildingToBuildName)
+	if ReplicatedStorage.Buildings:FindFirstChild(buildingToBuildName, true) and buildingCost then
 		local data = SessionDataManagerInstance:GetPlayerData(Player.UserId)
+		if not data then return false end
 		local playerGoldCount = data.Currency.Gold
-		
+		local goldCost = buildingCost.Gold
+		if goldCost <= playerGoldCount then 
+			data.Currency.Gold -= goldCost
+			return SessionDataManagerInstance:SetPlayerData(Player.UserId, data)
+		else
+			return false
+		end
+
 		
 	end
 
