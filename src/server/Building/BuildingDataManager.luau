@@ -250,10 +250,12 @@ end
  * @return -Returns true if the building was successfully created and placed. Other wise false
 ]]
 local function LoadBasePart(PlayerPlot: BasePart, BuildingData: table): boolean
+	--creeate string version of table to print when something goes wrong
+	local tableString = table.concat(BuildingData, "/")
 	--check if building template attribute exists
 	local buildingTemplate: string = BuildingData.attributes.BuildingTemplate
 	if not buildingTemplate then
-		warn("BuildingTemplate attribute does not exist on: ", BuildingData.Name)
+		warn("BuildingTemplate attribute does not exist on: ", tableString)
 		return false
 	end 
 	
@@ -261,7 +263,7 @@ local function LoadBasePart(PlayerPlot: BasePart, BuildingData: table): boolean
 	local buildings: Folder = ReplicatedStorage:FindFirstChild("Buildings")
 	local buildingToClone: BasePart = buildings:FindFirstChild(buildingTemplate, true)
 	if not buildingToClone then
-		warn("Building template not found: " .. buildingToClone .. " / " .. BuildingData)
+		warn("Building template not found: ", tableString)
 		return false
 	end
 	local newBuilding: BasePart = buildingToClone:Clone()
@@ -295,10 +297,12 @@ end
 
 --Similar to LoadBasePart so view documentation for that.
 local function LoadModel(PlayerPlot: BasePart, BuildingData: table): boolean
+	--creeate string version of table to print when something goes wrong
+	local tableString = table.concat(BuildingData, "/")
 	--check if building template attribute exists
 	local buildingTemplate: string = BuildingData.attributes.BuildingTemplate
 	if not buildingTemplate then
-		warn("BuildingTemplate attribute does not exist on: ", BuildingData.Name)
+		warn("BuildingTemplate attribute does not exist on: ", tableString)
 		return false
 	end 
 
@@ -306,7 +310,7 @@ local function LoadModel(PlayerPlot: BasePart, BuildingData: table): boolean
 	local buildings: Folder = ReplicatedStorage:FindFirstChild("Buildings")
 	local buildingToClone: Model = buildings:FindFirstChild(buildingTemplate, true)
 	if not buildingToClone then
-		warn("Building template not found: " .. buildingToClone .. " / " .. BuildingData)
+		warn("Building template not found: " .. tableString)
 		return false
 	end
 	local newBuilding: Model = buildingToClone:Clone()
@@ -354,11 +358,10 @@ function BuildingDataManager:LoadBuildings(Player: Player, PlayerPlot: BasePart)
 		elseif building.buildingType == "model" then
 			buildingMade = LoadModel(PlayerPlot, building)
 		else
-			warn("building type not recognised", building.buildingType, "for: ", building)
+			warn("building type not recognised")
 		end
 		if not buildingMade then
-			warn("an error occured when attempting to load building: ", building)
-			return false
+			warn("an error occured when attempting to load building: ", building, ". This building will not be saved")
 		end
 	end
 	return true

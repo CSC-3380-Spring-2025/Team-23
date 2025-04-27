@@ -274,7 +274,7 @@ local function PoisonDiscSampling(CenterX: number, CenterZ: number, AreaLength: 
 
 	local minRadius: number = 6  -- Minimum distance between spawn points
 	local spawnPoints: {} = {} 
-	local maxAttempts: number = 100
+	local maxAttempts: number = 5000
 	local attempts: number = 0
 
 	while #spawnPoints < NumOfItems and attempts < maxAttempts do
@@ -330,6 +330,7 @@ function ObjectGeneration:SpawnItemsAtOnce(
 	if ItemToSpawn:IsA("Tool") or ItemToSpawn:IsA("Model") then
 		if ItemToSpawn.PrimaryPart then
 			local points: table = PoisonDiscSampling(CenterX, CenterZ, AreaLength, AreaWidth, Terrain, NumOfItems)
+			print("number of ", ItemToSpawn.Name, "spawned: ", #points)
 			for _,point in pairs(points) do
 				local spawnedItem: Model | Tool = ItemToSpawn:Clone()
 				local itemAngles: CFrame = spawnedItem:GetPrimaryPartCFrame() - spawnedItem.PrimaryPart.Position

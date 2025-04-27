@@ -5,7 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
 local CollectionService = game:GetService("CollectionService")
-local StorageHandler = game.ServerScriptService.Server.ItemHandlers.StorageHandler
+local StorageHandler = require(game.ServerScriptService.Server.ItemHandlers.StorageHandler)
 --Bridge Events
 local GetStorageDescriptor = BridgeNet2.ReferenceBridge("GetStorageDescriptor")
 local ReturnStorageDescriptor = BridgeNet2.ReferenceBridge("ReturnStorageDescriptor")
