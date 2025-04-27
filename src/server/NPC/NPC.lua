@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PathfindingService = game:GetService("PathfindingService")
 local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
+local Workspace = game:GetService("Workspace")
 local Runservice = game:GetService("RunService")
 local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
 local NPC = {}
@@ -68,6 +69,11 @@ function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Sp
 		end)
 	end
 	self.__Connections = {} --Table of all active connections
+	local hasDiedEvent = Instance.new("BindableEvent")
+	self.HasDied = hasDiedEvent.Event --Gos off when an NPC has died
+	self.__Humanoid.Died:Connect(function()
+		hasDiedEvent:Fire(self) --Let everyone know that this NPC has died for those listening
+	end)
 	return self
 end
 
@@ -502,6 +508,18 @@ Sets a given attribute for the NPC given a Key and Value
 --]]
 function NPC:SetAttribute(Key: string, Value: any) : ()
 	self.__NPC:SetAttribute(Key, Value)
+end
+
+--[[
+Sets the parent of the NPC
+	@param Instance (Instance) any Instance in the workspace to set the parent too
+--]]
+function NPC:SetParent(Instance: Instance)
+	if Instance:IsDescendantOf(Workspace) then
+		self.__NPC.Parent = Instance
+	else
+		warn("Attempt to set partent of NPC to an instance that is not in workspace")
+	end
 end
 
 return NPC

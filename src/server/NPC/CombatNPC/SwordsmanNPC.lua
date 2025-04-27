@@ -340,7 +340,6 @@ local function SentrySeekTarget(Self: { [any]: any }, AggroRadious: number, Esca
 				end
 			end)
 		elseif not (target == Self.__Target) then
-			print("Attacking new target!")
 			--New target to transition too
 			Self.__Target = target
 			local humanoid: Humanoid? = target:FindFirstChild("Humanoid") :: Humanoid?
