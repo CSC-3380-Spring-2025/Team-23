@@ -77,7 +77,7 @@ local function FindOpenIdlePoint(IdlePoints: Folder)
     return nil
 end
 
-CollectionService:GetInstanceAddedSignal("BarbarianFort"):Connect(function(Fort)
+local function FortHandler(Fort)
     print("Found barbarian fort!")
 	--For each type of listed NPC spawn and given enough time for NPC to move away.
 	--Give fort some time to load in
@@ -108,4 +108,15 @@ CollectionService:GetInstanceAddedSignal("BarbarianFort"):Connect(function(Fort)
             task.wait(5)
 		end
 	end
+end
+
+CollectionService:GetInstanceAddedSignal("BarbarianFort"):Connect(function(Fort)
+    FortHandler(Fort)
 end)
+
+task.wait(10) --Wait for forts to load in
+for _, fort in pairs(CollectionService:GetTagged("BarbarianFort")) do
+    task.spawn(function()
+        FortHandler(fort)
+    end)
+end

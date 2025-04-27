@@ -114,7 +114,10 @@ Handles what happens when a item is hit by the sword
 --]]
 local function HandleHits(HitBox: { [any]: any }, Self: { [any]: any }, Damage: number): ()
 	Self.__Connections["Hit"] = HitBox.OnHit:Connect(function(HitPart, HitHum)
-		HitHum:TakeDamage(20)
+		local character = HitHum.Parent
+		if Self:CanTarget(character) then
+			HitHum:TakeDamage(20)
+		end
 	end)
 end
 
