@@ -18,6 +18,30 @@ local NPCHandler = NPCHandlerObject.new("NPCHandlerSwordsman")
 local attackRange = 5 --Distance in studs that the NPCs sword will activate
 
 --[[
+Handles what happens when the NPC dies
+	@param Self (any) an instance of the class
+--]]
+local function HandleDeath(Self) : ()
+	Self.__Humanoid.Died:Once(function()
+		print("Bswordsman NPC died!")
+		--End tasks
+		for _, thread in pairs(Self.__Tasks) do
+			if task then
+				task.cancel(thread)
+			end
+		end
+        --Clean up connections
+        for _, connection in pairs(Self.__Connections) do
+            if connection then
+                connection:Disconnect()
+            end
+        end
+		task.wait(5)
+		Self:Destroy()
+	end)
+end
+
+--[[
 Constructor of the SwordsmanNPC class
     @param Name (string) name of the NPC
     @param Rig (rig) rig to make an NPC (the body)
@@ -75,6 +99,9 @@ function SwordsmanNPC.new(
 		AggroList
 	)
 	setmetatable(self, SwordsmanNPC)
+    if DeathHandler then
+		HandleDeath(self)
+	end
 	--Load animations
 	return self
 end
@@ -254,7 +281,6 @@ local function GetSentryTarget(Self: { [any]: any }, AggroRadious: number, Escap
 			end
 		end
 	end
-    
 	table.sort(targetMagnitudes, function(a, b)
 		return a[1] < b[1]
 	end)
