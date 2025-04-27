@@ -514,7 +514,7 @@ end
 Sets the parent of the NPC
 	@param Instance (Instance) any Instance in the workspace to set the parent too
 --]]
-function NPC:SetParent(Instance: Instance)
+function NPC:SetParent(Instance: Instance) : ()
 	if Instance:IsDescendantOf(Workspace) then
 		self.__NPC.Parent = Instance
 	else
