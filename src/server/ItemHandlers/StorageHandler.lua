@@ -424,7 +424,7 @@ Checks if an item add will fit into the storage device
     If you attempt to see if an item fits that is invalid you will recieve a warning
     @param StorageDescriptor (number) the storage descriptor number of the desired storage device
     @param ItemName (string) the name of the item to check if the item fits
-    @param Amount (number) the amount of the item to remove
+    @param Amount (number) the amount of the item you are adding
     @return (boolean) true on does fit or false otherwise
 --]]
 function StorageHandler:ItemFits(StorageDescriptor: number, ItemName: string, Amount: number)

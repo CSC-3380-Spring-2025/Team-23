@@ -98,4 +98,36 @@ function NPCHandler:GetServerNPCByCharacter(Character: Model, PlayerID: number) 
 	return nil
 end
 
+--[[
+Returns a list of every NPC of every type in the game
+	includes both server and player pools
+	similair to Players:GetPlayers()
+	@return ({{[any]: any}}?) table of NPCs if any or nil if no NPCs
+--]]
+function NPCHandler:GetAllNPCs() : {{[any]: any}}?
+	local fullTable = {}
+	--Get server NPCs
+	for _, NPCInstance in pairs(serverNPCPool) do
+		table.insert(fullTable, NPCInstance)
+	end
+	
+	--Get all player NPCs
+	for _, playersPool in pairs(playerNPCPool) do
+		--Get all npcs from pool
+		local NPCPool = playersPool.NPCPool
+		if not NPCPool then
+			continue--No NPC pool set
+		end
+		for _, NPCInstance in pairs(NPCPool) do
+			table.insert(fullTable, NPCInstance)
+		end
+	end
+
+	if #fullTable > 0 then
+		return fullTable
+	else
+		return nil--No NPCs
+	end
+end
+
 return NPCHandler

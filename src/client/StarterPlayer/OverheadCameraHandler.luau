@@ -11,6 +11,7 @@
 -- Services
 local Players : Players = game:GetService("Players")
 local ServerScriptService = game:GetService("ServerScriptService")
+local ReplicatedFirst: ReplicatedFirst = game:GetService("ReplicatedFirst")
 local TS: TweenService = game:GetService("TweenService")
 local RS: RunService = game:GetService("RunService")
 local CS : CollectionService = game:GetService("CollectionService")
@@ -34,10 +35,12 @@ Object:Supersedes(OverheadCameraHandler)
 local TraverseNPCs = BridgeNet2.ReferenceBridge("TraverseNPCs")
 local CollectNPCs = BridgeNet2.ReferenceBridge("CollectNPCs")
 
+local tags = ReplicatedFirst:WaitForChild("UI"):WaitForChild("Tags")
+
 local IconTable : {string} = {
-	["Axe"] = script.Tags.AxemanTag,
-	["Pickaxe"] = script.Tags.PickaxeManTag,
-	["Sword"] = script.Tags.SwordmanTag,
+	["Axe"] = tags.AxemanTag,
+	["Pickaxe"] = tags.PickaxeManTag,
+	["Sword"] = tags.SwordmanTag,
 }
 -- Functions
 

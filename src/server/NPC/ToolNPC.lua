@@ -165,6 +165,25 @@ local function CloneTool(Tool: Tool)
 end
 
 --[[
+Prepares all animations of a tool in the Animations folder by loading them and storing them to a dictionary of the NPC
+	@param ToolRef ({[string]: any}) a refrence to the toolitem in the backpack
+	@param Self ({[string]: any}) the instance of the coass
+--]]
+local function PrepAnims(ToolRef: {[string]: any}, Self: {[string]: any}) : ()
+	local physTool: Tool = ToolRef.DropItem
+	local animations: Folder? = physTool:FindFirstChild("Animations") :: Folder?
+	if not animations then
+		return
+	end
+	ToolRef.Animations = {}
+	for _, animation in pairs(animations:GetChildren()) do
+		if animation:IsA("Animation") then
+			ToolRef.Animations[animation.Name] = Self:LoadAnimation(animation)
+		end
+	end
+end
+
+--[[
 Adds a given tool to an NPC.
     The given tool is copied, not transfered.
     @param Tool (Tool) any given tool to be added to the NPC
@@ -190,6 +209,7 @@ function ToolNPC:AddTool(Tool: Tool, Amount: number): boolean
 	end
 
 	toolItem.DropItem = toolClone
+	PrepAnims(toolItem, self)
 	toolClone.Parent = nil --Not equipped
 	return true --Success
 end
