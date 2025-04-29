@@ -26,12 +26,7 @@ local function Food(Item)
 
 		local hungerRegen: number = foodInfo.HungerRegen
 		--Fire event to server to remove one item from backpack and suspend activating tool again until done
-        local removeArgs = {
-            ItemName = Item.Name,
-            DestroyAmount = 1
-        }
-        RemovePlayerBackpackItem:InvokeServer(Item.Name, 1)
-        --Find a way to wait for response
+        --RemovePlayerBackpackItem:InvokeServer(Item.Name, 1)
         --Regen hunger
         
 	end)

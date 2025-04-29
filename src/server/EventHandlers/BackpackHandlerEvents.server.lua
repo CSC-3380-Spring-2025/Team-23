@@ -16,4 +16,5 @@ local RemovePlayerBackpackItem = events:WaitForChild("RemovePlayerBackpackItem")
 
 RemovePlayerBackpackItem.OnServerInvoke = function(Player, ItemName, DestroyAmount)
 	backpackHandlerInst:DestroyItem(Player, ItemName, DestroyAmount)
+    return true--Success
 end

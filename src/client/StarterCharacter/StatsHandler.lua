@@ -9,6 +9,10 @@ local player: Player = Players.LocalPlayer
 local playerScripts = player.PlayerScripts
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
 local UIHandler = require(playerScripts:WaitForChild("UIHandler"))
+local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
+local StatsHandler = {}
+Object:Supersedes(StatsHandler)
+
 --Instances
 local statsUIHandler: any = UIHandler.new("StatsUIHandler")
 --Events
@@ -36,6 +40,46 @@ local stats: {number} = {
 	Food = statsConfig.MaxFood,
 	Hydration = statsConfig.MaxHydration,
 }
+
+--[[
+Constructor for a StatsHandler instance
+	@param Name (string) the name of the instance
+--]]
+function StatsHandler.new(Name: string)
+	local self = Object.new(Name)
+	setmetatable(self, StatsHandler)
+	return self
+end
+
+--[[
+This function increases the players hunger stat by FoodRegen amount
+	if foodregen exceeds the config for max hunger then it is set to max hunger
+	@param FoodRegen (number) the amount to increase hunger stat by
+--]]
+function StatsHandler:FeedPlayer(FoodRegen: number) : ()
+	--Up food stat by regen amount or max amount if greater than max amount
+	local newStat = stats.Food + FoodRegen
+	if newStat <= statsConfig.MaxFood then
+		stats.Food = newStat
+	else
+		stats.Food = statsConfig.MaxFood
+	end
+end
+
+--[[
+This function increases the players hydration stat by HydrationRegen amount
+	if HydrationRegen exceeds the config for max hunger then it is set to max hydration
+	@param HydrationRegen (number) the amount to increase Hydration stat by
+--]]
+function StatsHandler:HydratePlayer(HydrationRegen: number) : ()
+	--Up water stat by regen amount or max amount if greater than max amount
+	local newStat = stats.Hydration + HydrationRegen
+	if newStat <= statsConfig.MaxHydration then
+		stats.Hydration = newStat
+	else
+		stats.Hydration = statsConfig.MaxFood
+	end
+end
 
 --[[
 Starves the player until it is given food
@@ -146,3 +190,5 @@ tasks.Health = task.spawn(function()
     end)
 
 end)
+
+return StatsHandler
