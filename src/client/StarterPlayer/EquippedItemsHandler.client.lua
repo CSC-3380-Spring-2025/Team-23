@@ -37,12 +37,32 @@ local function Food(Item)
 	end)
 end
 
+local function Drink(Item)
+	Item.Activated:Connect(function()
+		print("Drink ACTIVATED!")
+		local drinkInfo = itemHandlerUtilsInst:GetItemInfo(Item.Name)
+		if not drinkInfo then
+			--Invalid food item
+			return
+		end
+
+		local thirstRegen: number = drinkInfo.ThirstRegen
+		--Fire event to server to remove one item from backpack and suspend activating tool again until done
+        --RemovePlayerBackpackItem:InvokeServer(Item.Name, 1)
+        --Regen hunger
+        statsHandlerInterface:HydratePlayer(thirstRegen)
+	end)
+end
+
 local function EquippedHandler(Item: Tool): ()
 	--Determine what type of item it is and do behaivore of that item
 	if CollectionService:HasTag(Item, "Food") then
 		--Food item
 		print("FOOD WAS EQUIPPED!")
 		Food(Item)
+	elseif CollectionService:HasTag(Item, "Drink") then
+		print("DRINK WAS EQUIPPED!")
+		Drink(Item)
 	end
 end
 
