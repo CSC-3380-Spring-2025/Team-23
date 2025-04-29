@@ -9,8 +9,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local ItemUtils = require(ReplicatedStorage.Shared.Items.ItemsUtils)
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
-
-local RemovePlayerBackpackItem = BridgeNet2.ReferenceBridge("RemovePlayerBackpackItem")
+--Events
+local events = ReplicatedStorage.Events
+local RemovePlayerBackpackItem = events:WaitForChild("RemovePlayerBackpackItem")
 
 --Instances
 local itemHandlerUtilsInst = ItemUtils.new("ItemHandlerUtilsInst")
@@ -29,7 +30,7 @@ local function Food(Item)
             ItemName = Item.Name,
             DestroyAmount = 1
         }
-        RemovePlayerBackpackItem:Fire(removeArgs)
+        RemovePlayerBackpackItem:InvokeServer(Item.Name, 1)
         --Find a way to wait for response
         --Regen hunger
         
@@ -40,6 +41,7 @@ local function EquippedHandler(Item: Tool): ()
 	--Determine what type of item it is and do behaivore of that item
 	if CollectionService:HasTag(Item, "Food") then
 		--Food item
+		Food(Item)
 	end
 end
 
