@@ -5,19 +5,24 @@ Must remain in starterplayer to avoid data loss
 
 local Players = game:GetService("Players")
 local player: Player = Players.LocalPlayer
+local playerScripts = player.PlayerScripts
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local ItemUtils = require(ReplicatedStorage.Shared.Items.ItemsUtils)
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
+local StatsHandlerInterfaceObject = require(playerScripts.StatsHandlerInterface)
+
 --Events
 local events = ReplicatedStorage.Events
 local RemovePlayerBackpackItem = events:WaitForChild("RemovePlayerBackpackItem")
 
 --Instances
 local itemHandlerUtilsInst = ItemUtils.new("ItemHandlerUtilsInst")
+local statsHandlerInterface = StatsHandlerInterfaceObject.new("ItemsHandlerStatsHandler")
 
 local function Food(Item)
 	Item.Activated:Connect(function()
+		print("FOOD ACTIVATED!")
 		local foodInfo = itemHandlerUtilsInst:GetItemInfo(Item.Name)
 		if not foodInfo then
 			--Invalid food item
@@ -28,7 +33,7 @@ local function Food(Item)
 		--Fire event to server to remove one item from backpack and suspend activating tool again until done
         --RemovePlayerBackpackItem:InvokeServer(Item.Name, 1)
         --Regen hunger
-        
+        statsHandlerInterface:FeedPlayer(hungerRegen)
 	end)
 end
 
@@ -36,6 +41,7 @@ local function EquippedHandler(Item: Tool): ()
 	--Determine what type of item it is and do behaivore of that item
 	if CollectionService:HasTag(Item, "Food") then
 		--Food item
+		print("FOOD WAS EQUIPPED!")
 		Food(Item)
 	end
 end
