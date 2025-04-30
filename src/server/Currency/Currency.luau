@@ -7,68 +7,89 @@
 ]]
 
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
+local SessionDataManager = require(game.ServerScriptService.Server.DataServices.SessionDataManager)
+
 
 local Currency: table = {}
 Object:Supersedes(Currency)
 Currency.__index = Currency --Currency has lookup.
-
---Attributes
-local __Amount: number = 0
+local SessionDataManagerInstance: {} = SessionDataManager.new("SessionDataManagerInstance")
 --[[
 Base constructor of all currencies
     @param Name (string) name of instance you are creating
     @param Amount (number) optional amount of the currency
     @return (instance) instance of the object.
 ]]
-function Currency.new(Name: string, Amount: number) 
+function Currency.new(Name: string) 
 	local self = Object.new(Name)
 	setmetatable(self, Currency)  
-	self.__Amount = Amount
 	return self
 end
 
 --[[
  * getAmount - Retrieves the current amount of currency.
- * 
+ * @Player - The player whos currency will be fetched from their sesssion data
+ * @NameOfCurrency - The name of the type of currency whos value will be returned. Should only be passed in and called from subclasses. For example, Gold class should pass "gold"
+ *
  * @return - (number) - The current value of `self.__Amount`.
 ]]
-function Currency:GetAmount()
-    return self.__Amount
+function Currency:GetAmount(Player: Player, NameOfCurrency: string): number
+	local table = SessionDataManagerInstance:GetPlayerData(Player.UserId)
+	if table then
+		local amount: number = table.Currency[NameOfCurrency]
+		return amount
+	end
+	return nil
 end
 
 --[[
  * setAmount - Sets the currency amount to a specified value.
  * 
- * @value - (number) The new currency amount. 
- *          - Value needs to be positive since amount cant ve negative  
+ * @Player - The player whose currency will be updated in their session data.
+ * @Value - (number) The new currency amount. 
+ *          - Must be a positive number; the amount cannot be negative.
+ * @NameOfCurrency - The name of the type of currency being updated (e.g., "gold"). Must be passed from the subclass
  *
  * @return - None
 ]]
-function Currency:SetAmount(Value: number): ()
-    if Value > 0 then 
-	    self.__Amount = Value
+function Currency:SetAmount(Player: Player, Value: number, NameOfCurrency: string): ()
+	if Value > 0 then 
+		local table = SessionDataManagerInstance:GetPlayerData(Player.UserId)
+		if table then
+			table.Currency[NameOfCurrency] = Value
+			SessionDataManagerInstance:SetPlayerData(Player.UserId, table)
+		end
     end
 end
 
 --[[
  * modAmountBy - Modifies the amount of currency by adding or subtracting a given value.
  * 
- * @value - (number) The amount to modify the currency by. 
- *          - If positive, the currency amount increases by this value.
- *          - If negative, the currency amount decreases by this value (if sufficient balance exists).
- * @note - No negative amounts can exist so if you decrease by mroe than the current amount, it will be 0
- * 
+ * @Player - The player whose currency will be modified in their session data.
+ * @Value - (number) The amount to modify the currency by. 
+ *          - Positive values increase the amount.
+ *          - Negative values decrease the amount (only if balance is sufficient).
+ * @NameOfCurrency - The name of the type of currency being modified (e.g., "gold"). Must be passed from subclass
+ *
+ * @NOTE: No negative currency balances are allowed. If the operation would cause the balance to fall below zero, it is clamped to 0.
+ *
  * @return - None 
 ]]
-function Currency:ModAmountBy(Value: number): ()
-    if Value > 0 then
-        self.__Amount = self.__Amount + Value
-    else 
-        if self.__Amount > Value then 
-            self.__Amount = self.__Amount - Value
-        end
+function Currency:ModAmountBy(Player:Player, Value: number, NameOfCurrency: string): ()
+	local table = SessionDataManagerInstance:GetPlayerData(Player.UserId)
+	if table then
+		local currencyAmount: number = table.Currency[NameOfCurrency] 
+		if Value > 0 then
+			currencyAmount = currencyAmount + Value
+		elseif currencyAmount > Value then
+			currencyAmount = currencyAmount - Value
+		end
+		if 
+			currencyAmount < 0 then currencyAmount=0 
+		end
+	table.Currency[NameOfCurrency] = currencyAmount
+	SessionDataManagerInstance:SetPlayerData(Player.UserId, table)
 	end
-	if self.__Amount < 0 then self.__Amount=0 end
 end
 
 return Currency

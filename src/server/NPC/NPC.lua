@@ -3,6 +3,8 @@ This class functions as a general purpouse manager for creating non dialogue NPC
 --]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PathfindingService = game:GetService("PathfindingService")
+local CollectionService = game:GetService("CollectionService")
+local Workspace = game:GetService("Workspace")
 local Workspace = game:GetService("Workspace")
 local Runservice = game:GetService("RunService")
 local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
@@ -32,8 +34,9 @@ Constructor that creates an NPC
     @param Health (number) health value to set NPC at
     @param SpawnPos (Vector3) position to spawn NPC at
 	@param Speed (number) the walk speed of a NPC. Default of 16
+	@param DeathHandler (boolean) determines if the death handler is run for clean up on death
 --]]
-function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Speed: number)
+function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Speed: number, DeathHandler: boolean)
 	local self = Object.new(Name)
 	setmetatable(self, NPC)
 	--Set up NPC body
@@ -56,6 +59,21 @@ function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Sp
 	self.__PathFindingTask = nil --Task set to executing the pathfinding
 	self.__HomePoint = nil
 	self.__Animations = {} --Loaded animations track
+	--Detect when an NPC dies for object clean up
+	self.__Tasks = {}
+	if DeathHandler then
+		self.__Humanoid.Died:Once(function()
+			print("Normal NPC died!")
+			task.wait(5)
+			self:Destroy()
+		end)
+	end
+	self.__Connections = {} --Table of all active connections
+	local hasDiedEvent = Instance.new("BindableEvent")
+	self.HasDied = hasDiedEvent.Event --Gos off when an NPC has died
+	self.__Humanoid.Died:Connect(function()
+		hasDiedEvent:Fire(self) --Let everyone know that this NPC has died for those listening
+	end)
 	return self
 end
 
@@ -81,7 +99,11 @@ local function PrepWaypoint(StartPosition: Vector3, EndPositon: Vector3, Self: a
 		table.insert(Self.__Waypoints, path) --Insert at end of table
 		return true
 	else
-		warn('NPC "' .. Self.__NPC.Name .. '" failed to find a path. ' .. errorMessage)
+		if errorMessage then
+			warn('NPC "' .. Self.Name .. '" failed to find a path. ' .. errorMessage)
+		else
+			warn('NPC "' .. Self.Name .. '" failed to find a path. ')
+		end
 		return false
 	end
 end
@@ -277,7 +299,7 @@ end
 Determines if a NPC is still traversing
 	@return (boolean) true if traversing or false otherwise
 --]]
-function NPC:IsTraversing() : boolean
+function NPC:IsTraversing(): boolean
 	if self.__PathFindingTask then
 		return true
 	else
@@ -288,7 +310,7 @@ end
 --[[
 Cancels waypoints of any type
 --]]
-function NPC:CancelWaypoints() : ()
+function NPC:CancelWaypoints(): ()
 	if self.__PathFindingTask then
 		task.cancel(self.__PathFindingTask)
 		self.__PathFindingTask = nil --Reset pathfindingtask to indicate no pathfinding
@@ -429,20 +451,15 @@ function NPC:LoadAnimation(Animation: Animation): AnimationTrack
 	return track
 end
 
-
 --[[
 Removes an animation track from the NPC
 	Once removed an animation must be loaded again to use
 	@param NPCTrack (AnimationTrack) a track previously loaded into the NPC
 --]]
-function NPC:RemoveAnimation(NPCTrack: AnimationTrack) : ()
+function NPC:RemoveAnimation(NPCTrack: AnimationTrack): ()
 	if #self.__Animations == 0 then
 		--No animations added
-		warn(
-			'Attempt to remove animation track for NPC "'
-				.. self.Name
-				.. '" but NPC has no animations added'
-		)
+		warn('Attempt to remove animation track for NPC "' .. self.Name .. '" but NPC has no animations added')
 		return
 	end
 
@@ -456,7 +473,7 @@ function NPC:RemoveAnimation(NPCTrack: AnimationTrack) : ()
 
 	if trackIndex ~= 0 then
 		self.__Animations[trackIndex]:Destroy() --Not destroying for somereason?
-		
+
 		table.remove(self.__Animations, trackIndex)
 	else
 		--track not present
@@ -474,6 +491,35 @@ Destroys the NPC
 function NPC:Destroy(): ()
 	self.__NPC:Destroy()
 	self = nil
+end
+
+--[[
+Sets a given tag for an NPC
+	@param TagName (string) the name of the tag to set
+--]]
+function NPC:AddTag(TagName: string) : ()
+	CollectionService:AddTag(self.__NPC, TagName)
+end
+
+--[[
+Sets a given attribute for the NPC given a Key and Value
+	@param Key (String) any name for an attribute to set
+	@param Value (any) any attribute supported value to set
+--]]
+function NPC:SetAttribute(Key: string, Value: any) : ()
+	self.__NPC:SetAttribute(Key, Value)
+end
+
+--[[
+Sets the parent of the NPC
+	@param Instance (Instance) any Instance in the workspace to set the parent too
+--]]
+function NPC:SetParent(Instance: Instance) : ()
+	if Instance:IsDescendantOf(Workspace) then
+		self.__NPC.Parent = Instance
+	else
+		warn("Attempt to set partent of NPC to an instance that is not in workspace")
+	end
 end
 
 return NPC

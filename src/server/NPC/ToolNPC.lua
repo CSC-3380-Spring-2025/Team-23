@@ -30,6 +30,10 @@ Constructor for the ToolNPC class
     @param EncumbranceSpeed ({[Light, Medium, Heavy] = number}) a table of keys defined
     as Light, Medium, Heavy that have a value pair indicating the speed to go at each Encumbrance level
     if not provided then Light = -1/3speed, Heavy = -2/3 speed
+	@param DeathHandler (boolean) if set to true enables the death handler for clean up or disables otherwise
+	If you do not know what your doing, then you should set this to true.
+	@param StatsConfig ({}) determines the config for the NPC's stats. Keys left out follow a default format
+	see the table of statsconfig below in the cosntructor for more details in Backpack NPC
 --]]
 function ToolNPC.new(
 	Name: string,
@@ -43,9 +47,26 @@ function ToolNPC.new(
 	HeavyWeight: number,
 	WhiteList: { string },
 	Backpack: {}?,
-	EncumbranceSpeed: {}?
+	EncumbranceSpeed: {}?,
+	DeathHandler: any,
+	StatsConfig: {}?
 )
-	local self = BackpackNPC.new(Name, Rig, Health, SpawnPos, Speed, MaxStack, MaxWeight, MediumWeight, HeavyWeight, WhiteList, Backpack, EncumbranceSpeed)
+	local self = BackpackNPC.new(
+		Name,
+		Rig,
+		Health,
+		SpawnPos,
+		Speed,
+		MaxStack,
+		MaxWeight,
+		MediumWeight,
+		HeavyWeight,
+		WhiteList,
+		Backpack,
+		EncumbranceSpeed,
+		DeathHandler,
+		StatsConfig
+	)
 	setmetatable(self, ToolNPC)
 	self.__EquippedTool = nil --The tool equipped by the NPC
 	return self
@@ -144,6 +165,25 @@ local function CloneTool(Tool: Tool)
 end
 
 --[[
+Prepares all animations of a tool in the Animations folder by loading them and storing them to a dictionary of the NPC
+	@param ToolRef ({[string]: any}) a refrence to the toolitem in the backpack
+	@param Self ({[string]: any}) the instance of the coass
+--]]
+local function PrepAnims(ToolRef: {[string]: any}, Self: {[string]: any}) : ()
+	local physTool: Tool = ToolRef.DropItem
+	local animations: Folder? = physTool:FindFirstChild("Animations") :: Folder?
+	if not animations then
+		return
+	end
+	ToolRef.Animations = {}
+	for _, animation in pairs(animations:GetChildren()) do
+		if animation:IsA("Animation") then
+			ToolRef.Animations[animation.Name] = Self:LoadAnimation(animation)
+		end
+	end
+end
+
+--[[
 Adds a given tool to an NPC.
     The given tool is copied, not transfered.
     @param Tool (Tool) any given tool to be added to the NPC
@@ -169,6 +209,7 @@ function ToolNPC:AddTool(Tool: Tool, Amount: number): boolean
 	end
 
 	toolItem.DropItem = toolClone
+	PrepAnims(toolItem, self)
 	toolClone.Parent = nil --Not equipped
 	return true --Success
 end

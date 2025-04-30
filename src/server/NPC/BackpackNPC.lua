@@ -3,6 +3,7 @@ This abstract class provides the required methods for an NPC that has a backpack
 Before making a subclass or expanding this class you should take great care
 in examining the existing functions and ensure that you follow the same approach 
 in the backpack table layout with its keys and values.
+All backpack NPC's are assumed to require food and water and must be provided food and water on an ongoing basis.
 --]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PathfindingService = game:GetService("PathfindingService")
@@ -14,9 +15,310 @@ local Players = game:GetService("Players")
 local AbstractInterface = require(ReplicatedStorage.Shared.Utilities.Object.AbstractInterface)
 local NPC = require(ServerScriptService.Server.NPC.NPC)
 local NPCUtils = require(ServerScriptService.Server.NPC.NPCUtils)
-local BackpackNPCUtils = NPCUtils.new("BackpackNPCUtils")
+local StorageHandlerObject = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
+local BackpackNPCUtils: any = NPCUtils.new("BackpackNPCUtils")
+local storageHandler: any = StorageHandlerObject.new("BackpackNPCStorageHandler")
 local BackpackNPC = {}
 NPC:Supersedes(BackpackNPC)
+
+--[[
+Returns the optomial amount of food to eat at a time given a food item in the NPC's backpack
+	@param HungerRegen (number) the amount of hunger that a single item of this tiem will regen
+	@param Stats ({}) the Stats of the NPC
+	@param MaxHunger (number) the max hunger of the NPC
+	@param ItemStats ({}) the table of the item in the backpack
+--]]
+local function MaxFoodConsume(HungerRegen: number, Stats: {}, MaxHunger: number, ItemStats: {}): number
+	local deficit: number = MaxHunger - Stats.Food
+	local foodMax: number = math.floor(deficit / HungerRegen)
+	local itemCount: number = ItemStats.Count
+	if foodMax <= itemCount then
+		return foodMax
+	else
+		return itemCount
+	end
+end
+
+--[[
+Handles when an NPC consumes food.
+	@param Self (any) instance of this class
+	@param StatsConfig ({}) the table of stats config 
+	@param Stats ({}) the table of the current stats
+	@param Tasks ({thread}) the table of active tasks
+	@return (boolean) true on success eating or false otherwise
+--]]
+local function ConsumeFood(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : boolean
+	--Check for food
+	local backpack: {} = Self.__Backpack
+	local maxHunger: number = StatsConfig.MaxFood
+	--Loop through backpack and find anything of type food
+	--If food is wasted attempt to search for another food
+	local leastWasteFood: string? = nil
+	local leastWasteRegen: number = 0
+	for itemName, item in pairs(backpack) do
+		if item.ItemType == "Food" then
+			--Check for if food is wasted an dif not add
+			local itemInfo: {} = Self:GetItemInfo(itemName)
+			local hungerRegen: number = itemInfo.HungerRegen
+			local canEat: number = MaxFoodConsume(hungerRegen, Stats, maxHunger, item)
+			if canEat > 0 then
+				--Found edible food that doesnt waste
+				Self:RemoveItem(itemName, canEat)
+				Stats.Food = Stats.Food + (canEat * hungerRegen) --Update stat
+				return true --Ate
+			end
+			--Could not consume without waste so check for if leastWaste
+			if ((-1 * hungerRegen) > leastWasteRegen) or not leastWasteFood then
+				--least waste so far
+				leastWasteFood = itemInfo.Name
+				leastWasteRegen = -1 * hungerRegen
+			end
+		end
+	end
+	--Could not consume without waste. If starving eat food of least waste
+	if leastWasteFood and Tasks.StvTask then
+		--There was food and NPC is starving so eat out of desperation
+		Self:RemoveItem(leastWasteFood, 1)
+		local newFoodStat: number = Stats.Food + math.abs(leastWasteRegen)
+		if newFoodStat <= maxHunger then
+			--Within max hunger
+			Stats.Food = newFoodStat
+		else
+			--Set to max stat since greater than allowed stat
+			Stats.Food = maxHunger
+		end
+		return true --Ate
+	elseif Tasks.StvTask then
+		--print("No Food found! Cant eat and starving!")
+	end
+	return false --Could not eat
+end
+
+--[[
+Starves a given NPC until it is given food
+	@param Self (any) any instance fo this class
+	@param StatsConfig ({}) table of stat configs
+	@param Stats ({}) table of stats
+	@param Tasks ({thread}) table of the current tasks
+--]]
+local function Starve(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : ()
+	Tasks.StvTask = task.spawn(function()
+		--Damage NPC
+		while true do
+			local didConsume: boolean = ConsumeFood(Self, StatsConfig, Stats, Tasks) --Try to consume food first
+			if didConsume or Stats.Food > 0 then
+				Tasks.StvTask = nil
+				return--No longer starving
+			end
+			--print("Taking starve damage!")
+			Self.__Humanoid:TakeDamage(StatsConfig.StarveDmg)
+			task.wait(StatsConfig.StarveDmgRate)
+		end
+	end)
+end
+
+--[[
+Handles the food stat
+	@param Self (any) any instance fo this class
+	@param StatsConfig ({}) table of stat configs
+	@param Stats ({}) table of stats
+	@param Tasks ({thread}) table of the current tasks
+--]]
+local function HandleFoodStat(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : ()
+	--For each loop if hungry then consume food until out
+	--If out of food then need to cancel starveTsk when given food
+	--local starveTsk = nil --The task for when a player is starving
+	--print("Handling food")
+	while true do
+		task.wait(StatsConfig.FdDeteriorationRate) --Wait between decrements
+		local newStat: number = Stats.Food - StatsConfig.FdDecrement
+		if newStat < 0 then
+			newStat = 0 --Prevent negative stat
+		end
+		--print("Decrementing food. Food is now: " .. newStat)
+		Stats.Food = newStat
+		--Check if starved
+		if newStat <= 0 and not Tasks.StvTask then
+			--Start damaging player and store task to cancel when given food
+			--print(Self.Name .. "Is starving")
+			--Attempt to consume food first
+			local didEat: boolean = ConsumeFood(Self, StatsConfig, Stats, Tasks)
+			if didEat then
+				continue--Skip to next loop
+			end
+			Starve(Self, StatsConfig, Stats, Tasks)
+		end
+	end
+end
+
+--[[
+Returns the optomial amount of food to eat at a time given a food item in the NPC's backpack
+	@param HungerRegen (number) the amount of hunger that a single item of this tiem will regen
+	@param Stats ({}) the Stats of the NPC
+	@param MaxHunger (number) the max hunger of the NPC
+	@param ItemStats ({}) the table of the item in the backpack
+--]]
+local function MaxDrinkConsume(HydrationRegen: number, Stats: {}, MaxHydration: number, ItemStats: {}): number
+	local deficit: number = MaxHydration - Stats.Hydration
+	local drinkMax: number = math.floor(deficit / HydrationRegen)
+	local itemCount: number = ItemStats.Count
+	if drinkMax <= itemCount then
+		return drinkMax
+	else
+		return itemCount
+	end
+end
+
+--[[
+Handles when an NPC consumes drinks
+	@param Self (any) any instance fo this class
+	@param StatsConfig ({}) table of stat configs
+	@param Stats ({}) table of stats
+	@param Tasks ({thread}) table of the current tasks
+	@return (boolean) true on drank or false otherwise
+--]]
+local function ConsumeDrink(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : boolean
+	--Check for drink
+	local backpack: {} = Self.__Backpack
+	local maxDrink: number = StatsConfig.MaxHydration
+	--Loop through backpack and find anything of type Drink
+	--If drink is wasted attempt to search for another drink
+	local leastWastedDrink: string? = nil
+	local leastWasteRegen: number = 0
+	for itemName, item in pairs(backpack) do
+		if item.ItemType == "Drink" then
+			--Check for if drink is wasted and if not add
+			local itemInfo: {} = Self:GetItemInfo(itemName)
+			local hydrationRegen: number = itemInfo.HydrationRegen
+			local canDrink: number = MaxDrinkConsume(hydrationRegen, Stats, maxDrink, item)
+			if canDrink > 0 then
+				--Found drink that doesnt waste
+				Self:RemoveItem(itemName, canDrink)
+				Stats.Hydration = Stats.Hydration + (canDrink * hydrationRegen) --Update stat
+				return true --Ate
+			end
+			--Could not consume without waste so check for if leastWaste
+			if ((-1 * hydrationRegen) > leastWasteRegen) or not leastWastedDrink then
+				--least waste so far
+				leastWastedDrink = itemInfo.Name
+				leastWasteRegen = -1 * hydrationRegen
+			end
+		end
+	end
+
+	--Could not consume without waste. If thirsting consome drink of least waste
+	if leastWastedDrink and Tasks.ThirstTask then
+		--There was food and NPC is starving so eat out of desperation
+		Self:RemoveItem(leastWastedDrink, 1)
+		local newDrinkStat: number = Stats.Hydration + math.abs(leastWasteRegen)
+		if newDrinkStat <= maxDrink then
+			--Within max hunger
+			Stats.Hydration = newDrinkStat
+		else
+			--Set to max stat since greater than allowed stat
+			Stats.Hydration = maxDrink
+		end
+		return true --Drinked
+	elseif Tasks.ThirstTask then
+		--print("No drink found! Cant drink and thirsting!")
+	end
+	return false --Could not drink
+end
+
+--[[
+Handles when an NPC is thirsty
+	@param Self (any) any instance fo this class
+	@param StatsConfig ({}) table of stat configs
+	@param Stats ({}) table of stats
+	@param Tasks ({thread}) table of the current tasks
+--]]
+local function Thirst(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : ()
+	Tasks.ThirstTask = task.spawn(function()
+		--Damage NPC
+		while true do
+			local didConsume: boolean = ConsumeDrink(Self, StatsConfig, Stats, Tasks) --Try to consume drink first
+			if didConsume or Stats.Hydration > 0 then
+				Tasks.ThirstTask = nil
+				return--No longer thirsting
+			end
+			print("Taking starve damage!")
+			Self.__Humanoid:TakeDamage(StatsConfig.ThirstDmg)
+			task.wait(StatsConfig.ThirstDmgRate)
+		end
+	end)
+end
+
+--[[
+Handles the drink stat
+	@param Self (any) any instance of this class
+	@param StatsConfig ({}) table of stat configs
+	@param Stats ({}) table of stats
+	@param Tasks ({thread}) table of the current tasks
+--]]
+local function HandleDrinkStat(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : ()
+	--For each loop if thristy then consume drink until out
+	--If out of drink then need to cancel ThirstTask when given drink
+	print("Handling hydration")
+	while true do
+		task.wait(StatsConfig.FdDeteriorationRate) --Wait between decrements
+		local newStat: number = Stats.Hydration - StatsConfig.HydDecrement
+		if newStat < 0 then
+			newStat = 0 --Prevent negative stat
+		end
+		print("Decrementing hydration. Hydration is now: " .. newStat)
+		Stats.Hydration = newStat
+		--Check if thristy
+		if newStat <= 0 and not Tasks.ThirstTask then
+			--Start damaging player and store task to cancel when given drink
+			print(Self.Name .. "Is thristing")
+			--Attempt to consume drink first
+			local didDrink: boolean = ConsumeDrink(Self, StatsConfig, Stats, Tasks)
+			if didDrink then
+				continue--Skip to next loop
+			end
+			Thirst(Self, StatsConfig, Stats, Tasks)
+		end
+	end
+end
+
+--[[
+Handles the NPC's stats like food and hydration
+	Weight impacts rate of food stats going down
+	Movement impacts rate of food stats going down
+	Should be used inside of a task.spawn
+--]]
+local function HandleStats(Self) : ()
+	print("Starting stats")
+	local statsConfig: {} = Self.__StatsConfig
+	local stats: {} = Self.__Stats
+	local tasks: {thread} = Self.__Tasks
+	--Handle food stats
+	tasks.FoodStat = task.spawn(function()
+		HandleFoodStat(Self, statsConfig, stats, tasks)
+	end)
+	tasks.HydrationStat = task.spawn(function()
+		HandleDrinkStat(Self, statsConfig, stats, tasks)
+	end)
+	print("Finished seting up food stats handler")
+end
+
+--[[
+Handles what happens when the NPC dies
+	@param Self (any) an instance of the class
+--]]
+local function HandleDeath(Self) : ()
+	Self.__Humanoid.Died:Once(function()
+		print("Backpack NPC died!")
+		--End tasks
+		for _, thread in pairs(Self.__Tasks) do
+			if task then
+				task.cancel(thread)
+			end
+		end
+		task.wait(5)
+		Self:Destroy()
+	end)
+end
 
 --[[
 Constructor for the BackpackNPC class
@@ -25,6 +327,7 @@ Constructor for the BackpackNPC class
     @param Health (number) health value to set NPC at
     @param SpawnPos (Vector3) position to spawn NPC at
     @param Speed (number) the walk speed of a NPC. Default of 16
+	@param PlayerID (number) the id of the player or 0 if its a server based NPC
     @param MaxStack (number) the number of stacks allowed for the backpack
     @param MaxWeight (number) max weight of an NPC
     @param MediumWeight (number) Weight at wich below you are light, 
@@ -36,6 +339,10 @@ Constructor for the BackpackNPC class
     @param EncumbranceSpeed ({[Light, Medium, Heavy] = number}) a table of keys defined
     as Light, Medium, Heavy that have a value pair indicating the speed to go at each Encumbrance level
     if not provided then Light = -1/3speed, Heavy = -2/3 speed
+	@param DeathHandler (boolean) if set to true enables the death handler for clean up or disables otherwise
+	If you do not know what your doing, then you should set this to true.
+	@param StatsConfig ({}) determines the config for the NPC's stats. Keys left out follow a default format
+	see the table of statsconfig below in the cosntructor for more details
 --]]
 function BackpackNPC.new(
 	Name: string,
@@ -49,9 +356,11 @@ function BackpackNPC.new(
 	HeavyWeight: number,
 	WhiteList: { string },
 	Backpack: {}?,
-	EncumbranceSpeed: {}?
+	EncumbranceSpeed: {}?,
+	DeathHandler: boolean,
+	StatsConfig: {}?
 )
-	local self = NPC.new(Name, Rig, Health, SpawnPos, Speed)
+	local self = NPC.new(Name, Rig, Health, SpawnPos, Speed, false, PlayerID)
 	setmetatable(self, BackpackNPC)
 	self.__OriginalSpeed = Speed
 	self.__Backpack = Backpack or {}
@@ -68,6 +377,53 @@ function BackpackNPC.new(
 			Medium = (2 / 3) * Speed,
 			Heavy = (1 / 3) * Speed,
 		}
+	end
+	--Handle stats set up
+	self.__StatsConfig = {
+		--Handles config for stats
+		MaxFood = 100,
+		MaxHydration = 100,
+		FdDeteriorationRate = 120, --time in seconds between when food stat gos down
+		HydDeteriorationRate = 120, --time in seconds between when hydration stat gos down
+		FdDecrement = 5, --The amount that the food stat is decremented by every FdDeteriorationRate
+		HydDecrement = 5, --The amount that the hydration stat is decremented by every HydDeteriorationRate
+		StarveDmg = 5,
+		StarveDmgRate = 20,
+		ThirstDmg = 5,
+		ThirstDmgRate = 20,
+	}
+
+	if StatsConfig then
+		--Stats config passed in so set anything they set
+		self.__StatsConfig.MaxFood = StatsConfig.MaxFood or self.__StatsConfig.MaxFood
+		self.__StatsConfig.MaxHydration = StatsConfig.MaxHydration or self.__StatsConfig.MaxHydration
+		self.__StatsConfig.FdDeteriorationRate = StatsConfig.FdDeteriorationRate or self.__StatsConfig.FdDeteriorationRate
+		self.__StatsConfig.HydDeteriorationRate = StatsConfig.HydDeteriorationRate or self.__StatsConfig.HydDeteriorationRate
+		self.__StatsConfig.FdDecrement = StatsConfig.FdDecrement or self.__StatsConfig.FdDecrement
+		self.__StatsConfig.HydDecrement = StatsConfig.HydDecrement or self.__StatsConfig.HydDecrement
+		self.__StatsConfig.StarveDmg = StatsConfig.StarveDmg or self.__StatsConfig.StarveDmg
+		self.__StatsConfig.StarveDmgRate = StatsConfig.StarveDmgRate or self.__StatsConfig.StarveDmgRate
+		self.__StatsConfig.ThirstDmg = StatsConfig.ThirstDmg or self.__StatsConfig.ThirstDmg
+		self.__StatsConfig.ThirstDmgRate = StatsConfig.ThirstDmgRate or self.__StatsConfig.ThirstDmgRate
+	end
+
+	self.__Stats = {
+		--The stat values
+		Food = self.__StatsConfig.MaxFood,
+		Hydration = self.__StatsConfig.MaxHydration,
+	}
+	self.__Tasks = {
+		StvTask = nil, --Task that dmgs player during starve
+		ThirstTask = nil, --Task that dmgs player during thirst
+	}
+	self.__Tasks.StvTask = nil
+	self.__Tasks.ThirstTask = nil
+	HandleStats(self)
+	--Handle death
+	print("Checking for humanoid")
+	print(self.__Humanoid)
+	if DeathHandler then
+		HandleDeath(self)
 	end
 	return self
 end
@@ -129,7 +485,7 @@ Checks if a given item is a drop item that can be picked up
 	@param Object (any) any object
 	@return (boolean) true if DropItem or false otherwise
 --]]
-function BackpackNPC:IsDropItem(Object: any) : boolean
+function BackpackNPC:IsDropItem(Object: any): boolean
 	return CollectionService:HasTag(Object, "DropItem")
 end
 
@@ -137,7 +493,7 @@ end
 Returns the current amount of stacks filled in the NPC's backpack
     @return (number) the amount of stacks filled in NPC's backpack
 --]]
-function BackpackNPC:GetStackAmount() : number
+function BackpackNPC:GetStackAmount(): number
 	local stackCount: number = 0
 	for _, item in pairs(self.__Backpack) do
 		stackCount = stackCount + item.StackCount
@@ -149,7 +505,7 @@ end
 Returns the amount of stack slots left into an NPC's inventory
     @return (number) the amount of slots left
 --]]
-function BackpackNPC:StackSlotsLeft() : number
+function BackpackNPC:StackSlotsLeft(): number
 	return self.__MaxStack - self:GetStackAmount()
 end
 
@@ -158,7 +514,7 @@ Returns the space left without allocating a new stack for a given item
     @param ItemName (string) name of the item in the NPC's backpack
     @return (number) space left for given item on success or -1 otherwise
 --]]
-function BackpackNPC:StackSpace(ItemName: string) : number
+function BackpackNPC:StackSpace(ItemName: string): number
 	local item: any = self.__Backpack[ItemName]
 	if not item then
 		warn('Item "' .. ItemName .. '" does not exist within NPC "' .. self.Name .. '"')
@@ -305,7 +661,7 @@ Determines the max amount of an item type possible given NPCs backpack state
 	@return (number) the max amount of the item that can be added to the backpack 
 	considering the stacks
 --]]
-local function CheckMaxByStack(ItemInfo: ModuleScript, Self: any) : number
+local function CheckMaxByStack(ItemInfo: ModuleScript, Self: any): number
 	local spaceLeft: number = 0
 	if Self.__Backpack[ItemInfo.ItemName] then
 		--Is already in backpack so can get stackspace
@@ -326,7 +682,7 @@ Determines the max amount of an item type possible given NPCs backpack state
 	@return (number) the max amount of the item that can be added to the backpack 
 	considering the weight
 --]]
-local function CheckMaxByWeight(ItemInfo: ModuleScript, Self: any) : number
+local function CheckMaxByWeight(ItemInfo: ModuleScript, Self: any): number
 	local currentWeight: number = Self:CheckNPCWeight()
 	local itemWeight: number = ItemInfo.ItemWeight
 	local remainingWeight: number = Self.__MaxWeight - currentWeight
@@ -341,7 +697,7 @@ Determines the max amount of the item type that can be picked up
 	does not need to be in backpack but must have an info mod script
 	@return (number) max amount possible to be put into the NPC
 --]]
-function BackpackNPC:GetMaxCollect(ItemName: string) : number
+function BackpackNPC:GetMaxCollect(ItemName: string): number
 	local itemInfo: ModuleScript = self:GetItemInfo(ItemName)
 	if not itemInfo then
 		return -1
@@ -364,7 +720,7 @@ Helper functiont that handles the count attribute of an item during pick up
 	@return (number) the count attributes remaining number of the item
 	returns -1 on error
 --]]
-local function HandleCount(Item: any, Self: any) : number
+local function HandleCount(Item: any, Self: any): number
 	local count: number = Item:GetAttribute("Count")
 	if not count then
 		warn('NPC "' .. Self.Name .. '" Attempted to pick up object that lacks a Count attribute')
@@ -393,9 +749,11 @@ Picks up an item physicaly in the workspace
 	due to not being able to add to NPC inventory
 	returns -1 on error
 --]]
-function BackpackNPC:PickUp(Item: any) : number
+function BackpackNPC:PickUp(Item: any): number
 	if not self:IsDropItem(Item) then
-		warn('Attempted to pick up Item "' .. Item.Name .. '" for NPC "' .. self.Name .. '" but item was not a DropItem')
+		warn(
+			'Attempted to pick up Item "' .. Item.Name .. '" for NPC "' .. self.Name .. '" but item was not a DropItem'
+		)
 		return -1
 	end
 	local itemCount: number = HandleCount(Item, self)
@@ -433,7 +791,7 @@ function BackpackNPC:ValidItemCollection(ItemName: string, Amount): boolean
 	end
 
 	local item: any = self.__Backpack[ItemName]
-	local itemCopy: {any} = {}
+	local itemCopy: { any } = {}
 	if item then
 		itemCopy.Weight = item.Weight
 		itemCopy.Count = item.Count
@@ -465,9 +823,9 @@ Drops the physical item of the item on to the ground of the NPC
 	@param NPCCharacter (Model) the model of the NPC
 	@param Count (number) the number of the item to drop
 --]]
-local function SpawnDrop(ItemTemplate: any, NPCCharacter: Model, Count: number) : ()
-    local item: any = BackpackNPCUtils:CopyItem(ItemTemplate)
-    item:SetAttribute("Count", Count)
+local function SpawnDrop(ItemTemplate: any, NPCCharacter: Model, Count: number): ()
+	local item: any = BackpackNPCUtils:CopyItem(ItemTemplate)
+	item:SetAttribute("Count", Count)
 	local spawnSuccess: boolean = BackpackNPCUtils:DropItem(item, NPCCharacter)
 	if not spawnSuccess then
 		--Consider at somepoint adding fallback
@@ -505,12 +863,12 @@ function BackpackNPC:DropItem(ItemName: string, Amount: number): ()
 	local currentAmount: number = item.Count
 	if (currentAmount - Amount) < 0 then
 		--Drop current amount
-        SpawnDrop(item.DropItem, self.__NPC, currentAmount)
+		SpawnDrop(item.DropItem, self.__NPC, currentAmount)
 		--Remove from backpack
 		self:RemoveItem(ItemName, currentAmount)
 	else
 		--Drop Amount
-        SpawnDrop(item.DropItem, self.__NPC, Amount)
+		SpawnDrop(item.DropItem, self.__NPC, Amount)
 		--Remove from backpack
 		self:RemoveItem(ItemName, Amount)
 	end
@@ -521,7 +879,7 @@ Drops all items in a NPC's backpack
 --]]
 function BackpackNPC:DropAllItems(): ()
 	for itemName, item in pairs(self.__Backpack) do
-        self:DropItem(itemName, item.Count)
+		self:DropItem(itemName, item.Count)
 	end
 end
 
@@ -574,15 +932,84 @@ function BackpackNPC:RemoveAllItems(): ()
 end
 
 --[[
+Helper function that transfers a given amount from NPC's backpack to a storage device
+	Assumes that space is valid in storage device
+	@param ItemName (string) the name of the item to transfer
+    @param Amount (number) the amount of the item to transfer to storage
+	@param StorageDescriptor (number) the storage descriptor of the given storage device
+	@param Self (any) any instance of this class
+	@return (boolean) true on success or false otherwise
+--]]
+local function TransferItem(ItemName: string, Amount: number, StorageDescriptor: number, Self: any) : boolean
+	if Amount == 0 then
+		return true--Nothing to transfer
+	end
+	local success: boolean = storageHandler:AddItem(StorageDescriptor, ItemName, Amount)
+	--Remove item from NPCs backpack
+	if success then
+		Self:RemoveItem(ItemName, Amount)
+		return true
+	else
+		return false
+	end
+end
+
+--[[
 Transfers a given item from an NPC to some form of storage
     @param ItemName (string) the name of the item to transfer
     @param Amount (number) the amount of the item to transfer to storage
-    @param StorageDevice (any) any form of storage device that can take an item
+    @param StorageDevice (instance) any form of storage device that can take an item
     @return (boolean) true on success or false otherwise
 --]]
-function BackpackNPC:TransferItemToStorage(ItemName: string, Amount: number, StorageDevice: any): boolean
-	AbstractInterface:AbstractError("TransferItemToStorage", "BackpackNPC")
-	return false
+function BackpackNPC:TransferItemToStorage(ItemName: string, Amount: number, StorageDevice: Instance): boolean
+	local storageDesc: number = storageHandler:FindStorageByInstance(StorageDevice)
+	if (storageDesc == -1) then
+		return false --Storage device does not exist
+	end
+	--Check how much of NPC's inventory we can move into storage
+	local maxStore: number = storageHandler:GetMaxAdd(ItemName, storageDesc)
+	if maxStore >= Amount then
+		--Max store is greater than or equal to Amount so can add full amount
+		return TransferItem(ItemName, Amount, storageDesc, self)
+	else
+		--Storage capacity is less than what NPC is trying to add so add as much as possible
+		return TransferItem(ItemName, maxStore, storageDesc, self)
+	end
+end
+
+--[[
+This function can be used to empty all items whitelsited by the storage device you want to transfer to.
+	This does NOT transfer only oen type of item but instead searches for all whitelisted items 
+	that a storage can take and dumps as much as possible into it.
+	@param StorageDevice (Instance) any instance used as a storage device
+--]]
+function BackpackNPC:EmptyInventoryToStorage(StorageDevice: Instance) : ()
+	local contents: {string}? = self:SeekBackpackContents()
+	if not contents then
+		--backpack empty
+		return
+	end
+	local storDesc: number = storageHandler:FindStorageByInstance(StorageDevice) 
+	if storDesc == -1 then
+		return--No such storage device
+	end
+	--Add any item that is valid to the inventory
+	for _, itemName in pairs(contents) do
+		--Check if is valid storage add
+		if not storageHandler:IsValidItem(storDesc, itemName) then
+			continue--Skip to next item because this storage can not take this type
+		end
+		local itemCount: number = self:GetItemCount(itemName)
+		--Check how much of NPC's inventory we can move into storage
+		local maxStore: number = storageHandler:GetMaxAdd(itemName, storDesc)
+		if maxStore >= itemCount then
+			--Max store is greater than or equal to Amount so can add full amount
+			TransferItem(itemName, itemCount, storDesc, self)
+		else
+			--Storage capacity is less than what NPC is trying to add so add as much as possible
+			TransferItem(itemName, maxStore, storDesc, self)
+		end
+	end
 end
 
 --[[
@@ -704,11 +1131,28 @@ function BackpackNPC:CheckItemWhitelist(ItemName: string): boolean
 end
 
 --[[
+Returns a list of all names of item currently in the NPC's backpack
+	@return ({string}?) returns table of names of all items in backpack or nil if empty
+--]]
+function BackpackNPC:SeekBackpackContents() : {string}?
+	local returnTable = {}
+	for itemName, _ in pairs(self.__Backpack) do
+		table.insert(returnTable, itemName)
+	end
+	if #returnTable == 0 then
+		--No items in backpack
+		return nil
+	else
+		return returnTable
+	end
+end
+
+--[[
 Kills the NPC and drops all items in its backpack and destroys the NPC
 --]]
 function BackpackNPC:Kill()
-    self:DropAllItems()
-    self:Destroy()
+	self:DropAllItems()
+	self:Destroy()
 end
 
 return BackpackNPC

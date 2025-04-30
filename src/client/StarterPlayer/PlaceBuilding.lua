@@ -10,6 +10,8 @@ local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+
+
 local PlaceBuilding = {}
 Object:Supersedes(PlaceBuilding)
 
@@ -38,8 +40,7 @@ local function IsPartAtPosition(Position: Vector3, PlacingOn: Instance, Placing:
 	local basePlate = workspace:FindFirstChild("Baseplate") -- Retrieve Baseplate
 
 	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
-	overlapParams.FilterDescendantsInstances = { PlacingOn.Parent, Placing, spawnLocation, basePlate }
-
+	overlapParams.FilterDescendantsInstances = { PlacingOn, Placing, spawnLocation, basePlate }
 	local parts = workspace:GetPartBoundsInBox(CFrame.new(Position), Vector3.one * 0.2, overlapParams)
 	return #parts > 0
 end
@@ -86,8 +87,8 @@ returns boolean - Returns true if the building was successfully placed. Returns 
 local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): boolean
 	--clone building and set up ray for contant model tracking
 	local buildingToPlace: Model = Placing:Clone()
-	buildingToPlace.Parent = workspace[Player.Name].PlayerPlots.PlayerPlot
-
+	buildingToPlace.Parent = workspace.PlayersWorkspace[Player.Name].PlayerPlots.PlayerPlot
+	
 	for _, child in ipairs(buildingToPlace:GetDescendants()) do
 		if child:IsA("BasePart") then
 			child.Transparency = 0.35
@@ -123,6 +124,7 @@ local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): 
 	--]]
 	local function ConfirmPlace(acitonName: string, inputState: Enum)
 		if acitonName == "PlaceBuilding" and inputState == Enum.UserInputState.Begin then
+			local canPlace = true
 			local modelCFrame: Vector3, modelSize: number = buildingToPlace:GetBoundingBox()
 			--check if all model corners in x-z plane are within the bounds of the player plot
 			local corners: { Vector3 } = {}
@@ -137,24 +139,46 @@ local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): 
 					or (corner.Z > PlacingOn.Position.Z + PlacingOn.Size.Z / 2)
 					or (corner.Z < PlacingOn.Position.Z - PlacingOn.Size.Z / 2)
 				then
-					return
+					canPlace = false
 				end
 			end
-			--check if other buildings exist at location as well as the height to place the building
-			local buildingPosition: Vector3 =
-				FindValidSpawnHeight(modelCFrame.X, modelCFrame.Z, PlacingOn, buildingToPlace)
-			if buildingPosition then
-				--Spanw model in location
+			if canPlace then
+				--check if other buildings exist at location as well as the height to place the building
+				local buildingPosition: Vector3 =
+					FindValidSpawnHeight(modelCFrame.X, modelCFrame.Z, PlacingOn, buildingToPlace)
+				if buildingPosition then
+					--Spawn model in location
+					for _, child in ipairs(buildingToPlace:GetDescendants()) do
+						if child:IsA("BasePart") then
+							child.Transparency = 0
+							child.CanCollide = true
+						end
+					end
+					local parentFolder = workspace.PlayersWorkspace[Player.Name].PlayerPlots.PlayerPlot
+					PlaceBuilding:Fire({BuildingName = buildingToPlace.Name, PlacementPosition = buildingPosition, ParentFolder = parentFolder})
+					buildingToPlace:Destroy()
+					buildingPlaced = true
+					endLoop = true
+				else
+					canPlace = false
+				end
+			end
+			if not canPlace then
+				--make building appear red for a moment
+				local colorsToRemember = {}
 				for _, child in ipairs(buildingToPlace:GetDescendants()) do
 					if child:IsA("BasePart") then
-						child.Transparency = 0
-						child.CanCollide = true
+						colorsToRemember[child] = child.Color
+						child.Color = Color3.fromRGB(255, 0, 0)
 					end
 				end
-				buildingToPlace:SetPrimaryPartCFrame(CFrame.new(buildingPosition))
-				buildingPlaced = true
-				endLoop = true
-			end
+
+				task.wait(1)
+
+				for part, color in pairs(colorsToRemember) do
+					part.Color = color
+				end
+			end 
 		end
 	end
 
@@ -208,7 +232,6 @@ local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): 
 	end
 	if moveBuildingWithMouse then
 		moveBuildingWithMouse:Disconnect()
-		print("ended mouse follow")
 	end
 
 	return buildingPlaced
@@ -218,7 +241,7 @@ end
 local function PlaceBasePart(PlacingOn: BasePart, Placing: BasePart, Player: Player): boolean
 	--clone building and set up ray for contant model tracking
 	local buildingToPlace: BasePart = Placing:Clone()
-	buildingToPlace.Parent = workspace[Player.Name].PlayerPlots.PlayerPlot
+	buildingToPlace.Parent = workspace.PlayersWorkspace[Player.Name].PlayerPlots.PlayerPlot
 
 	buildingToPlace.Transparency = 0.35
 	buildingToPlace.CanCollide = false
@@ -291,8 +314,7 @@ local function PlaceBasePart(PlacingOn: BasePart, Placing: BasePart, Player: Pla
 				--Spanw model in location
 				buildingToPlace.Transparency = 0
 				buildingToPlace.CanCollide = true
-
-				buildingToPlace.CFrame = CFrame.new(buildingPosition)
+				buildingToPlace.CFrame = CFrame.new(buildingPosition)	
 				buildingPlaced = true
 				endLoop = true
 			end
@@ -354,7 +376,7 @@ Controls:
 returns boolean - Returns true if the building was successfully placed. Returns false if an error occurred or the building was not placed due to user cancellation.
 --]]
 function PlaceBuilding:PlaceBuilding(PlacingOn: BasePart, Placing: BasePart | Model, Player: Player): boolean
-	if not PlacingOn:HasTag("PlayeprPlot") then
+	if not PlacingOn:HasTag("PlayerPlot") then
 		warn("Part to place on did not contain PlayerPlot tag: " .. PlacingOn.Name)
 		return false
 	end
