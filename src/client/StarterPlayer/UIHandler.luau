@@ -21,7 +21,7 @@ local Player: Player = Players.LocalPlayer
 
 -- Functions
 
-function UIHandler.new(Name: string, Data: {}): ()
+function UIHandler.new(Name: string, Data: {}?): {[any]: any}
 	local self = Object.new(Name)
 	setmetatable(self, UIHandler)
 	self.__UI = Player.PlayerGui:WaitForChild("PlayerUI")

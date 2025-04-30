@@ -10,8 +10,11 @@ local BackpackHandler = require(ServerScriptService.Server.Player.BackpackHandle
 --Instances
 local backpackHandlerInst = BackpackHandler.new("BackpackHandlerInstEvents") --backpack handler needs ot be updated to use new properly
 
-local RemovePlayerBackpackItem = BridgeNet2.ReferenceBridge("RemovePlayerBackpackItem")
+--Events
+local events = ReplicatedStorage.Events
+local RemovePlayerBackpackItem = events:WaitForChild("RemovePlayerBackpackItem")
 
-RemovePlayerBackpackItem:Connect(function(Player, Args)
-    backpackHandlerInst:DestroyItem(Player, Args.ItemName, Args.DestroyAmount)
-end)
+RemovePlayerBackpackItem.OnServerInvoke = function(Player, ItemName, DestroyAmount)
+	backpackHandlerInst:DestroyItem(Player, ItemName, DestroyAmount)
+    return true--Success
+end
