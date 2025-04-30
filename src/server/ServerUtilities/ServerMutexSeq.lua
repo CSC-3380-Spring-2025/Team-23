@@ -5,6 +5,7 @@ It is the users responsibility to avoid dead locks.
 WARNING: This class is not intended to be used on true parrel threade actors. Instead see ServerMutexPar. 
 --]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
 local ServerMutex = {}
 Object:Supersedes(ServerMutex)
@@ -16,7 +17,7 @@ Constructor of a new mutex lock
     @param Key (any) a key that can be used to refrence the mutex by any script
     @return (instance) instance of the given object
 --]]
-function ServerMutex.new(Key: any) : ()
+function ServerMutex.new(Key: any) : ExtType.ObjectInstance
     local self = Object.new(Key)
     setmetatable(self, ServerMutex)
     self.__lock = {}

@@ -8,22 +8,26 @@ local player: Player = Players.LocalPlayer
 local playerScripts = player.PlayerScripts
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
+local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local ItemUtils = require(ReplicatedStorage.Shared.Items.ItemsUtils)
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
 local StatsHandlerInterfaceObject = require(playerScripts.StatsHandlerInterface)
 
 --Events
-local events = ReplicatedStorage.Events
-local RemovePlayerBackpackItem = events:WaitForChild("RemovePlayerBackpackItem")
+local events: Folder = ReplicatedStorage.Events
+local RemovePlayerBackpackItem: RemoteFunction = events:WaitForChild("RemovePlayerBackpackItem") :: RemoteFunction
 
 --Instances
-local itemHandlerUtilsInst = ItemUtils.new("ItemHandlerUtilsInst")
-local statsHandlerInterface = StatsHandlerInterfaceObject.new("ItemsHandlerStatsHandler")
+local itemHandlerUtilsInst: ExtType.ObjectInstance = ItemUtils.new("ItemHandlerUtilsInst")
+local statsHandlerInterface: ExtType.ObjectInstance = StatsHandlerInterfaceObject.new("ItemsHandlerStatsHandler")
 
-local function Food(Item)
+--[[
+This function defines the behaivore of a food item
+	@param Item (Tool) any "Tool" that acts as food.
+--]]
+local function Food(Item: Tool) : ()
 	Item.Activated:Connect(function()
-		print("FOOD ACTIVATED!")
-		local foodInfo = itemHandlerUtilsInst:GetItemInfo(Item.Name)
+		local foodInfo: ExtType.InfoMod = itemHandlerUtilsInst:GetItemInfo(Item.Name)
 		if not foodInfo then
 			--Invalid food item
 			return
@@ -37,10 +41,13 @@ local function Food(Item)
 	end)
 end
 
-local function Drink(Item)
+--[[
+This function defines the behaivore of a Drink item
+	@param Item (Tool) any "Tool" that acts as a drink.
+--]]
+local function Drink(Item: Tool) : ()
 	Item.Activated:Connect(function()
-		print("Drink ACTIVATED!")
-		local drinkInfo = itemHandlerUtilsInst:GetItemInfo(Item.Name)
+		local drinkInfo: ExtType.InfoMod = itemHandlerUtilsInst:GetItemInfo(Item.Name)
 		if not drinkInfo then
 			--Invalid food item
 			return
@@ -54,19 +61,22 @@ local function Drink(Item)
 	end)
 end
 
+--[[
+Guides a tool into the correct type of tool for determining its intent and behaivore.
+	@param Item (Tool) any "Tool" that acts as a drink.
+--]]
 local function EquippedHandler(Item: Tool): ()
 	--Determine what type of item it is and do behaivore of that item
 	if CollectionService:HasTag(Item, "Food") then
 		--Food item
-		print("FOOD WAS EQUIPPED!")
 		Food(Item)
 	elseif CollectionService:HasTag(Item, "Drink") then
-		print("DRINK WAS EQUIPPED!")
+		--Drink item
 		Drink(Item)
 	end
 end
 
---Detect when a tool is activated
+--Detect when a tool is Equipped
 player.CharacterAdded:Connect(function(Character)
 	Character.ChildAdded:Connect(function(Child)
 		if Child:IsA("Tool") then

@@ -6,22 +6,23 @@ is in the process of respawning.
 --]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
 local StatsHandlerInterface = {}
 Object:Supersedes(StatsHandlerInterface)
 
 --Events
-local bindableEvents = ReplicatedFirst:WaitForChild("BindableEvents")
-local statBindEvents = bindableEvents:WaitForChild("Stats")
-local FeedPlayerEvent = statBindEvents:WaitForChild("FeedPlayer")
-local HydratePlayerEvent = statBindEvents:WaitForChild("HydratePlayer")
+local bindableEvents: Folder = ReplicatedFirst:WaitForChild("BindableEvents")
+local statBindEvents: Folder = bindableEvents:WaitForChild("Stats") :: Folder
+local FeedPlayerEvent: BindableEvent = statBindEvents:WaitForChild("FeedPlayer") :: BindableEvent
+local HydratePlayerEvent: BindableEvent = statBindEvents:WaitForChild("HydratePlayer") :: BindableEvent
 
 
 --[[
 Constructor for a StatsHandler instance
 	@param Name (string) the name of the instance
 --]]
-function StatsHandlerInterface.new(Name: string)
+function StatsHandlerInterface.new(Name: string) : ExtType.ObjectInstance
 	local self = Object.new(Name)
 	setmetatable(self, StatsHandlerInterface)
 	return self

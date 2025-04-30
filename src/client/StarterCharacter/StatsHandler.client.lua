@@ -10,25 +10,26 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local player: Player = Players.LocalPlayer
 local playerScripts = player.PlayerScripts
+local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
 local UIHandler = require(playerScripts:WaitForChild("UIHandler"))
 local ClientMutexSeq = require(playerScripts.ClientUtilities.ClientMutexSeq)
 
 --Instances
-local statsUIHandler: any = UIHandler.new("StatsUIHandler")
-local hungerMutex = ClientMutexSeq.new("HungerMutex")
-local thirstMutex = ClientMutexSeq.new("ThirstMutex")
+local statsUIHandler: ExtType.ObjectInstance = UIHandler.new("StatsUIHandler")
+local hungerMutex: ExtType.ObjectInstance = ClientMutexSeq.new("HungerMutex")
+local thirstMutex: ExtType.ObjectInstance = ClientMutexSeq.new("ThirstMutex")
 --Events
-local StatsDmgPlayer = BridgeNet2.ReferenceBridge("StatsDmgPlayer")
-local bindableEvents = ReplicatedFirst:WaitForChild("BindableEvents")
-local statBindEvents = bindableEvents:WaitForChild("Stats")
-local FeedPlayerEvent = statBindEvents:WaitForChild("FeedPlayer")
-local HydratePlayerEvent = statBindEvents:WaitForChild("HydratePlayer")
+local StatsDmgPlayer: ExtType.Bridge = BridgeNet2.ReferenceBridge("StatsDmgPlayer")
+local bindableEvents: Folder = ReplicatedFirst:WaitForChild("BindableEvents")
+local statBindEvents: Folder = bindableEvents:WaitForChild("Stats") :: Folder
+local FeedPlayerEvent: BindableEvent = statBindEvents:WaitForChild("FeedPlayer") :: BindableEvent
+local HydratePlayerEvent: BindableEvent = statBindEvents:WaitForChild("HydratePlayer") :: BindableEvent
 
-local tasks: { thread } = {} --table of executing tasks
-local connections: { RBXScriptConnection } = {} --Table of conections
+local tasks: {[string]: thread?} = {} --table of executing tasks
+local connections: {[string]: RBXScriptConnection?} = {} --Table of conections
 
-local statsConfig: { any } = {
+local statsConfig: ExtType.StrDict = {
 	--Handles config for stats
 	MaxFood = 100, --Max hunger of the player
 	MaxHydration = 100, --MaxHydration of the player
@@ -42,7 +43,7 @@ local statsConfig: { any } = {
 	ThirstDmgRate = 5, --rate in seconds that damage is dealt during a thirst
 }
 
-local stats: { number } = {
+local stats: ExtType.StrDict = {
 	--The stat values
 	Food = statsConfig.MaxFood,
 	Hydration = statsConfig.MaxHydration,
@@ -79,11 +80,10 @@ tasks.Hunger = task.spawn(function()
 			newStat = 0 --Prevent negative stat
 		end
 
-		if newStat ~= lastStat then
-			--Update UI for new hunger stat
-			local newPrcnt: number = (newStat / statsConfig.MaxFood)
-			statsUIHandler:AdjustBarUI("Hunger", newPrcnt, false)
-		end
+		--Update UI for new hunger stat
+		local newPrcnt: number = (newStat / statsConfig.MaxFood)
+		statsUIHandler:AdjustBarUI("Hunger", newPrcnt, false)
+
 		stats.Food = newStat
 		--Check if starved
 		if newStat <= 0 then
@@ -125,12 +125,10 @@ tasks.Hydration = task.spawn(function()
 			newStat = 0 --Prevent negative stat
 		end
 
-		if newStat ~= lastStat then
-			--Update UI for new Hydration stat
-			local newPrcnt: number = (newStat / statsConfig.MaxHydration)
-			statsUIHandler:AdjustBarUI("Water", newPrcnt, false)
-		end
-		stats.Hydration = newStat
+		--Update UI for new Hydration stat
+		local newPrcnt: number = (newStat / statsConfig.MaxHydration)
+		statsUIHandler:AdjustBarUI("Water", newPrcnt, false)
+
 		--Check if starved
 		if newStat <= 0 then
 			--Start damaging player because of thirst
@@ -169,7 +167,7 @@ This function increases the players hunger stat by FoodRegen amount
 local function FeedPlayer(FoodRegen: number): ()
 	--Up food stat by regen amount or max amount if greater than max amount
 	hungerMutex:Lock()
-	local newStat = stats.Food + FoodRegen
+	local newStat: number = stats.Food + FoodRegen
 	if newStat <= statsConfig.MaxFood then
 		stats.Food = newStat
 	else
@@ -189,7 +187,7 @@ This function increases the players hydration stat by HydrationRegen amount
 local function HydratePlayer(HydrationRegen: number): ()
 	--Up water stat by regen amount or max amount if greater than max amount
 	thirstMutex:Lock()
-	local newStat = stats.Hydration + HydrationRegen
+	local newStat: number = stats.Hydration + HydrationRegen
 	if newStat <= statsConfig.MaxHydration then
 		stats.Hydration = newStat
 	else
@@ -202,11 +200,9 @@ local function HydratePlayer(HydrationRegen: number): ()
 end
 
 FeedPlayerEvent.Event:Connect(function(FoodRegen)
-	print("Recieved Food Regen event!")
 	FeedPlayer(FoodRegen)
 end)
 
 HydratePlayerEvent.Event:Connect(function(HydrationRegen)
-	print("Recieved drink Regen event!")
 	HydratePlayer(HydrationRegen)
 end)
