@@ -32,4 +32,9 @@ Example: ItemInfo mod scripts
 --]]
 export type InfoMod = StrDict
 
+--[[
+Defines the type for any instance of the RaycastHitboxV4.new
+--]]
+export type RaycastHitbox = {[any]: any}
+
 return nil--Prevents script from being used as a module script
