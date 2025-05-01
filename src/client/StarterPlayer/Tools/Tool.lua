@@ -3,9 +3,9 @@ This script defines an abstract interface required for all player tools.
 Any tool child simply manipulates and uses the given tool instance.
 The user is responsible for cloning and handing a given tool instance to the constructor.
 --]]
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players: Players = game:GetService("Players")
+local player: Player = Players.LocalPlayer
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local AbstractInterface = require(ReplicatedStorage.Shared.Utilities.Object.AbstractInterface)
 local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
@@ -51,7 +51,7 @@ function Tool.new(Name: string, PhysTool: Tool) : ExtType.ObjectInstance
             self.__Animations[animation.Name] = track
         end
     end
-    self.__Connection = {}--Table of all connections for the Tool
+    self.__Connections = {}--Table of all connections for the Tool
     self.__Tasks = {}--Table of all tasks for a tool
 	return self
 end

@@ -12,6 +12,7 @@ local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local ItemUtils = require(ReplicatedStorage.Shared.Items.ItemsUtils)
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
 local StatsHandlerInterfaceObject = require(playerScripts.StatsHandlerInterface)
+local SwordObject = require(script.Parent.Tools.Weapons.Sword)
 
 --Events
 local events: Folder = ReplicatedStorage.Events
@@ -62,10 +63,50 @@ local function Drink(Item: Tool) : ()
 end
 
 --[[
+Handles all Swords
+	@param Sword (Tool) the tool to be used as a sword
+--]]
+local function Sword(Sword: Tool)
+	--Create sword instance for tool
+	local swordInstance: ExtType.ObjectInstance? = SwordObject.new(Sword.Name, Sword)
+	if swordInstance == nil then
+		return--Error
+	end
+	Sword.Activated:Connect(function()
+		swordInstance:Activate()
+	end)
+end
+
+--[[
+Handles all weapons
+	@param Weapon (Tool) the tool that is the weapon
+--]]
+local function Weapon(Weapon: Tool)
+	if CollectionService:HasTag(Weapon, "Sword") then
+		Sword(Weapon)
+	end
+end
+
+--[[
 Guides a tool into the correct type of tool for determining its intent and behaivore.
 	@param Item (Tool) any "Tool" that acts as a drink.
 --]]
 local function EquippedHandler(Item: Tool): ()
+	--Set up Motor6d of tool if it exists
+	local motor6d: Motor6D? = Item:FindFirstChild("Motor6d", true) :: Motor6D?
+	if motor6d ~= nil then
+		--Has motor6d to set up
+		local motorParent1: BasePart? = Item:FindFirstChild("MotorParent1", true) :: BasePart?
+		if motorParent1 == nil then
+			warn('Attempt to equip Item "' .. Item.Name .. '" but tool has no part named MotorParent1')
+			return
+		end
+
+		local character: Model = player.Character :: Model--Assumed to be existent as this script is called by adding to character
+		local rightHand: BasePart = character:FindFirstChild("RightHand") :: BasePart
+		motor6d.Part1 = motorParent1
+		motor6d.Part0 = rightHand
+	end
 	--Determine what type of item it is and do behaivore of that item
 	if CollectionService:HasTag(Item, "Food") then
 		--Food item
@@ -73,6 +114,8 @@ local function EquippedHandler(Item: Tool): ()
 	elseif CollectionService:HasTag(Item, "Drink") then
 		--Drink item
 		Drink(Item)
+	elseif CollectionService:HasTag(Item, "Weapon") then
+		Weapon(Item)
 	end
 end
 

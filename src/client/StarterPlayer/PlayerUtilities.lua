@@ -1,15 +1,15 @@
 --[[
 This class is used to manipulate aspects of the player like who they can target
 --]]
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService: CollectionService = game:GetService("CollectionService")
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
 local PlayerUtilities = {}
 Object:Supersedes(PlayerUtilities)
 
 --Vars
-local canAggro = {} --Defines the list of tags that a player is allowed to target
+local canAggro: {string} = {"EnemyNPC", "EnemyPlayer"} --Defines the list of tags that a player is allowed to target
 
 --[[
 The constructor for the PlayerUtilities class
