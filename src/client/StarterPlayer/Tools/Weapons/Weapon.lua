@@ -3,7 +3,7 @@ This script defines an abstract interface required for all weapon tools.
 Any tool child simply manipulates and uses the given tool instance.
 The user is responsible for cloning and handing a given tool instance to the constructor.
 --]]
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local RaycastHitboxV4 = require(ReplicatedStorage.RaycastHitboxV4)
 local Tool = require(script.Parent.Parent.Tool)
@@ -13,6 +13,7 @@ Tool:Supersedes(Weapon)
 --[[
 Prepares a weapons hit box if it exists
     @param WeaponRef ({[string]: any}) a refrence to the item in self.__Backpack
+    @param Self (ExtType.ObjectInstance) instance of this class
     @return (ExtType.RaycastHitbox?) a RaycastHitbox if hitbox exists or nil otherwise
 --]]
 local function PrepHitbox(Weapon: Tool, Self: ExtType.ObjectInstance) : ExtType.RaycastHitbox?

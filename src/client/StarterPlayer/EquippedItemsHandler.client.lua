@@ -33,7 +33,7 @@ local toolInstances: {ExtType.StrDict} = {}
 All tool based connections must be inserted into this table for clean up
 Rather than disconnecting signals they must be disconnected by using ClearToolConnect()
 --]]
-local toolConnections = {}
+local toolConnections: {RBXScriptConnection} = {}
 
 --[[
 BOTH disconnects the given connection AND removes it from toolConnections
@@ -75,7 +75,7 @@ local function FindToolInstance(PhysTool: Tool) : ExtType.ObjectInstance?
 			continue--ToolInstance not added or does not exist
 		end
 		if tool == PhysTool then
-			local toolInstance = value["Instance"]
+			local toolInstance: ExtType.ObjectInstance = value["Instance"]
 			if toolInstance then
 				return toolInstance
 			end
@@ -101,7 +101,7 @@ local function RemoveToolInstance(Refrence: ExtType.ObjectInstance | Tool) : ()
 			end
 			if tool == Refrence then
 				--Remove tool instance
-				local toolInstance = value["Instance"]
+				local toolInstance: ExtType.ObjectInstance = value["Instance"]
 				table.remove(toolInstances, index)
 				if toolInstance then
 					toolInstance:DestroyInstance()
@@ -168,9 +168,9 @@ end
 Handles all Swords
 	@param Sword (Tool) the tool to be used as a sword
 --]]
-local function Sword(Sword: Tool)
+local function Sword(Sword: Tool) : ()
 	--Check if an instance already exists
-	local swordInstance = FindToolInstance(Sword)
+	local swordInstance: ExtType.ObjectInstance? = FindToolInstance(Sword)
 	--Create sword instance for tool if does not exist yet
 	if swordInstance == nil then
 		swordInstance = SwordObject.new(Sword.Name, Sword)
@@ -180,11 +180,11 @@ local function Sword(Sword: Tool)
 	end
 
 	InsertToolInstance(swordInstance, Sword)
-	local activated = Sword.Activated:Connect(function()
+	local activated: RBXScriptConnection = Sword.Activated:Connect(function()
 		swordInstance:Activate()
 	end)
 	table.insert(toolConnections, activated)--Insert for clean up on player death
-	local unequipped
+	local unequipped: RBXScriptConnection
 	--Handle unequipped
 	unequipped = Sword.Unequipped:Connect(function()
 		--Clean up to prevent mem leaks
@@ -198,7 +198,7 @@ end
 Handles all weapons
 	@param Weapon (Tool) the tool that is the weapon
 --]]
-local function Weapon(Weapon: Tool)
+local function Weapon(Weapon: Tool) : ()
 	if CollectionService:HasTag(Weapon, "Sword") then
 		Sword(Weapon)
 	end
@@ -240,31 +240,31 @@ end
 Helper function used to clean up all tool instances during a player death
 	Not calling this function may result in memory leaks
 --]]
-local function HandlePlayerDeath()
+local function HandlePlayerDeath() : ()
 	--Purge all tool instances
 	while #toolInstances > 0 do
-		local refrenceSet = table.remove(toolInstances)
-		local toolInstance = refrenceSet["Instance"]
+		local refrenceSet: ExtType.StrDict = table.remove(toolInstances) :: ExtType.StrDict
+		local toolInstance: ExtType.ObjectInstance = refrenceSet["Instance"]
 		if toolInstance then
 			toolInstance:DestroyInstance()
 		end
 	end
 
 	while #toolConnections > 0 do
-		local connection = table.remove(toolConnections)
+		local connection: RBXScriptConnection = table.remove(toolConnections) :: RBXScriptConnection
 		connection:Disconnect()
 	end
 end
 
 --Detect when a tool is Equipped
 player.CharacterAdded:Connect(function(Character)
-	local newChild = Character.ChildAdded:Connect(function(Child)
+	local newChild: RBXScriptConnection = Character.ChildAdded:Connect(function(Child)
 		if Child:IsA("Tool") then
 			--A tool was equipped
 			EquippedHandler(Child)
 		end
 	end)
-	local humanoid = Character:WaitForChild("Humanoid")
+	local humanoid: Humanoid = Character:WaitForChild("Humanoid")
 	--Handle death
 	humanoid.Died:Once(function()
 		newChild:Disconnect()

@@ -16,22 +16,24 @@ Weapon:Supersedes(Sword)
 local DmgTarget: ExtType.Bridge = BridgeNet2.ReferenceBridge("DamageTargetCombat")
 
 --Instances
-local playerUtilities = PlayerUtilitiesObject.new("PlayerUtilitiesSword")
+local playerUtilities: ExtType.ObjectInstance = PlayerUtilitiesObject.new("PlayerUtilitiesSword")
 
 --Vars
-local swordCoolDown = 3 --Time it takes for sword to cool down if less than swingAnim time
-local swordCount = 0 --The number of swords equipped so far
+local swordCoolDown: number = 3 --Time it takes for sword to cool down if less than swingAnim time
+local swordCount: number = 0 --The number of swords equipped so far
 
-local function HandleHits(Self)
-	local hitbox = Self.__Hitbox
-	local damage = Self.__Damage
+--[[
+Helper function that manages what happens when a sword hits somthing
+    @param Self (ExtType.ObjectInstance) Instance of this class
+--]]
+local function HandleHits(Self: ExtType.ObjectInstance) : ()
+	local hitbox: ExtType.RaycastHitbox = Self.__Hitbox
+	local damage: number = Self.__Damage
 	Self.__Connections["Hit"] = hitbox.OnHit:Connect(function(HitPart: BasePart, HitHum: Humanoid)
-		print("Hit a target!")
-		local character = HitHum.Parent
+		local character: Model = HitHum.Parent :: Model
 		if playerUtilities:CanAttack(character) then
 			--tell server to damage player
-			print("CAN DAMAGE TARGET! AHHHHH")
-			local dmgTargetArgs = {
+			local dmgTargetArgs: ExtType.StrDict = {
 				Damage = damage,
 				DmgHum = HitHum,
 			}
@@ -46,7 +48,7 @@ Given the swingAnim set for the sword, the cooldown time is comapred to the defa
     @param SwingAnim (AnimationTrack) the swing animation track
 --]]
 local function MakeCoolDown(SwingAnim: AnimationTrack): number
-	local animationTime = SwingAnim.Length
+	local animationTime: number = SwingAnim.Length
 	if animationTime <= swordCoolDown then
 		return swordCoolDown
 	else
@@ -89,7 +91,11 @@ local function EndAttack(Self: ExtType.ObjectInstance, Animation: AnimationTrack
 	Hitbox:HitStop()
 end
 
-local function CoolDown(Self)
+--[[
+Helper function that manages the cool down of the sword
+    @param Self (ExtType.ObjectInstance) the instance of this class
+--]]
+local function CoolDown(Self: ExtType.ObjectInstance) : ()
 	Self.__Tasks["CoolDown"] = task.spawn(function()
 		Self.__CoolDownLock:Lock()
 		Self.__OnCoolDown = true
@@ -101,9 +107,14 @@ local function CoolDown(Self)
 	end)
 end
 
-local function IsOnCoolDown(Self): boolean
+--[[
+Determines of this sword instance is on cool down or not
+    @param Self (ExtType.ObjectInstance) the instance of this class
+    @return (boolean) true if on cooldown or false otherwise
+--]]
+local function IsOnCoolDown(Self: ExtType.ObjectInstance): boolean
 	Self.__CoolDownLock:Lock()
-	local coolDown = Self.__OnCoolDown
+	local coolDown: boolean = Self.__OnCoolDown
 	Self.__CoolDownLock:Unlock()
 	return coolDown
 end
@@ -112,7 +123,6 @@ end
 Activates the tool given in the constructor
 --]]
 function Sword:Activate(): ()
-	print("SWORD WAS ACTIVATED!")
 	if not self.__Hitbox then
 		warn("Attempt to activate sword but sword was missing Hitbox for RaycastHitboxV4")
 		return
@@ -123,7 +133,7 @@ function Sword:Activate(): ()
 	CoolDown(self)--Handle cooldown
 	local swingAnim: AnimationTrack = self.__Animations["Swing"]
 	HandleHits(self)
-	local hitbox = self.__Hitbox
+	local hitbox: ExtType.RaycastHitbox = self.__Hitbox
 	hitbox:HitStart()
 	swingAnim:Play()
 	EndAttack(self, swingAnim, hitbox)
@@ -138,7 +148,9 @@ Cleans up the given tool instance.
 --]]
 function Sword:DestroyInstance(): ()
 	--Clean up connections
-	self.__Connections["Hit"]:Disconnect()
+    if self.__Connections["Hit"] then
+        self.__Connections["Hit"]:Disconnect()
+    end
 end
 
 return Sword
