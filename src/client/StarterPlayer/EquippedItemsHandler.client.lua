@@ -22,6 +22,108 @@ local RemovePlayerBackpackItem: RemoteFunction = events:WaitForChild("RemovePlay
 local itemHandlerUtilsInst: ExtType.ObjectInstance = ItemUtils.new("ItemHandlerUtilsInst")
 local statsHandlerInterface: ExtType.ObjectInstance = StatsHandlerInterfaceObject.new("ItemsHandlerStatsHandler")
 
+--Vars
+--[[
+Table of tool instances and their phys tool
+Used to prevent needing to create new instances every time a tool is equipped
+Follows format: {["Instance"] = Instance, ["Tool"] = PhysTool}
+--]]
+local toolInstances: {ExtType.StrDict} = {}
+--[[
+All tool based connections must be inserted into this table for clean up
+Rather than disconnecting signals they must be disconnected by using ClearToolConnect()
+--]]
+local toolConnections = {}
+
+--[[
+BOTH disconnects the given connection AND removes it from toolConnections
+	@param Connection (RBXScriptConnection) any tool specific connections
+--]]
+local function ClearToolConnect(Connection: RBXScriptConnection)
+	--Remove from table
+	for index, curConnection in ipairs(toolConnections) do
+		if curConnection == Connection then
+			table.remove(toolConnections, index)
+		end
+	end
+	Connection:Disconnect() --Disconnect to prevent mem leaks
+end
+
+--[[
+Helper function that inserts any given tool instance
+	@param ToolInstance (ExtType.ObjectInstance) any created tool instance
+	@param PhysTool (Tool) the physical tool associated with the ToolInstance
+--]]
+local function InsertToolInstance(ToolInstance: ExtType.ObjectInstance, PhysTool: Tool) : ()
+	local tableValue: ExtType.StrDict = {
+		Instance = ToolInstance,
+		Tool = PhysTool
+	}
+	table.insert(toolInstances, tableValue)
+end
+
+--[[
+Helper function used to retrieve the ToolInstance based on the given PhysTool associated with it
+	as long as the ToolInstance is stored using InsertToolInstance()
+	@param PhysTool (Tool) the physical tool of the suspected instance.
+	@return (ExtType.ObjectInstance?) ExtType.ObjectInstance if it exists or false otherwise
+--]]
+local function FindToolInstance(PhysTool: Tool) : ExtType.ObjectInstance?
+	for _, value in pairs(toolInstances) do
+		local tool: Tool? = value["Tool"]
+		if not tool then
+			continue--ToolInstance not added or does not exist
+		end
+		if tool == PhysTool then
+			local toolInstance = value["Instance"]
+			if toolInstance then
+				return toolInstance
+			end
+		end
+	end
+	return nil--does not exist
+end
+
+--[[
+Removes a ToolInstance by supplying either the ToolInstance or PhysTool refrence
+	@param Refrence (ExtType.ObjectInstance | Tool) either a tool instance or 
+	physical Tool associated with the given instance.
+	:DestroyInstance() is called for all tool instances.
+	If :DestroyInstance() is not implemented by the given tool
+	then an error will occur.
+--]]
+local function RemoveToolInstance(Refrence: ExtType.ObjectInstance | Tool) : ()
+	if Refrence:IsA("Tool") then
+		for index, value in ipairs(toolInstances) do
+			local tool: Tool? = value["Tool"]
+			if not tool then
+				continue--ToolInstance not added or does not exist
+			end
+			if tool == Refrence then
+				--Remove tool instance
+				local toolInstance = value["Instance"]
+				table.remove(toolInstances, index)
+				if toolInstance then
+					toolInstance:DestroyInstance()
+				end
+			end
+		end
+	else
+		--Is a ExtType.ObjectInstance
+		for index, value in ipairs(toolInstances) do
+			local toolInstance: ExtType.ObjectInstance? = value["Tool"]
+			if not toolInstance then
+				continue--ToolInstance not added or does not exist
+			end
+			if toolInstance == Refrence then
+				--Remove tool instance
+				table.remove(toolInstances, index)
+				toolInstance:DestroyInstance()
+			end
+		end
+	end
+end
+
 --[[
 This function defines the behaivore of a food item
 	@param Item (Tool) any "Tool" that acts as food.
@@ -67,14 +169,29 @@ Handles all Swords
 	@param Sword (Tool) the tool to be used as a sword
 --]]
 local function Sword(Sword: Tool)
-	--Create sword instance for tool
-	local swordInstance: ExtType.ObjectInstance? = SwordObject.new(Sword.Name, Sword)
+	--Check if an instance already exists
+	local swordInstance = FindToolInstance(Sword)
+	--Create sword instance for tool if does not exist yet
+	if swordInstance == nil then
+		swordInstance = SwordObject.new(Sword.Name, Sword)
+	end
 	if swordInstance == nil then
 		return--Error
 	end
-	Sword.Activated:Connect(function()
+
+	InsertToolInstance(swordInstance, Sword)
+	local activated = Sword.Activated:Connect(function()
 		swordInstance:Activate()
 	end)
+	table.insert(toolConnections, activated)--Insert for clean up on player death
+	local unequipped
+	--Handle unequipped
+	unequipped = Sword.Unequipped:Connect(function()
+		--Clean up to prevent mem leaks
+		ClearToolConnect(activated)
+		ClearToolConnect(unequipped)
+	end)
+	table.insert(toolConnections, unequipped)--Add to list of tool connects
 end
 
 --[[
@@ -119,12 +236,38 @@ local function EquippedHandler(Item: Tool): ()
 	end
 end
 
+--[[
+Helper function used to clean up all tool instances during a player death
+	Not calling this function may result in memory leaks
+--]]
+local function HandlePlayerDeath()
+	--Purge all tool instances
+	while #toolInstances > 0 do
+		local refrenceSet = table.remove(toolInstances)
+		local toolInstance = refrenceSet["Instance"]
+		if toolInstance then
+			toolInstance:DestroyInstance()
+		end
+	end
+
+	while #toolConnections > 0 do
+		local connection = table.remove(toolConnections)
+		connection:Disconnect()
+	end
+end
+
 --Detect when a tool is Equipped
 player.CharacterAdded:Connect(function(Character)
-	Character.ChildAdded:Connect(function(Child)
+	local newChild = Character.ChildAdded:Connect(function(Child)
 		if Child:IsA("Tool") then
 			--A tool was equipped
 			EquippedHandler(Child)
 		end
+	end)
+	local humanoid = Character:WaitForChild("Humanoid")
+	--Handle death
+	humanoid.Died:Once(function()
+		newChild:Disconnect()
+		HandlePlayerDeath()
 	end)
 end)

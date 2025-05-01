@@ -12,14 +12,8 @@ local DmgTarget: ExtType.Bridge = BridgeNet2.ReferenceBridge("DamageTargetCombat
 --[[
 This event connection defines what happens when a player wants to damage a target in combat
 --]]
-DmgTarget:Connect(function(Player, Damage)
-    local character: Model? = Player.Character
-    if not character then
-        return
-    end
-    local humanoid: Humanoid? = character:FindFirstChild("Humanoid") :: Humanoid?
-    if not humanoid then
-        return
-    end
-    humanoid:TakeDamage(Damage)
+DmgTarget:Connect(function(Player, Args)
+    local humanoid = Args.DmgHum
+    local damage = Args.Damage
+    humanoid:TakeDamage(damage)
 end)

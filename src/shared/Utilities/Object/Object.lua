@@ -4,6 +4,8 @@ All base classes MUST inherit from this.
 In addition, it provides multiple utilities for an Object below.
 All objects inherit these utilities.
 --]]
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local Object: any = {}
 Object.__index = Object --Set Object has lookup.
 
@@ -12,7 +14,7 @@ Base constructor of all Objects
     @param Name (string) required name of the instance you are creating 
     @return (instance) instance of the object.
 --]]
-function Object.new(Name: string) : any
+function Object.new(Name: string) : ExtType.ObjectInstance
     local self: any = setmetatable({}, Object)
     self.Name = Name or error("Class did not define \"Name\" when instantiated", 5)
     return self

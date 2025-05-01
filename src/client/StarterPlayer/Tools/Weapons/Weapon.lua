@@ -41,7 +41,7 @@ function Weapon.new(Name: string, PhysTool: Tool) : ExtType.ObjectInstance
         warn("Attempt to set up Weapon instance but damage attribute was not set")
         return self
     end
-    self.__Damage = PhysTool
+    self.__Damage = PhysTool:GetAttribute("Damage")
 	return self
 end
 
