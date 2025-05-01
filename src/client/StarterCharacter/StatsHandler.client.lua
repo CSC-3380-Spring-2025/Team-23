@@ -5,9 +5,9 @@ All subsequent deaths after a player joins will have an entirely new stats for H
 DANGER: This script sues Mutex Locks. All exit paths MUST ensure that locks are released when used.
 If a related script pauses execution it is highly likely that this script ran into a dead lock.
 --]]
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local Players: Players = game:GetService("Players")
+local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ReplicatedFirst: ReplicatedFirst = game:GetService("ReplicatedFirst")
 local player: Player = Players.LocalPlayer
 local playerScripts = player.PlayerScripts
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
@@ -33,8 +33,8 @@ local statsConfig: ExtType.StrDict = {
 	--Handles config for stats
 	MaxFood = 100, --Max hunger of the player
 	MaxHydration = 100, --MaxHydration of the player
-	FdDeteriorationRate = 5, --time in seconds between when food stat gos down
-	HydDeteriorationRate = 6, --time in seconds between when hydration stat gos down
+	FdDeteriorationRate = 120, --time in seconds between when food stat gos down
+	HydDeteriorationRate = 120, --time in seconds between when hydration stat gos down
 	FdDecrement = 30, --The amount that the food stat is decremented by every FdDeteriorationRate
 	HydDecrement = 30, --The amount that the hydration stat is decremented by every HydDeteriorationRate
 	StarveDmg = 20, --The damage done to a player every StarveDmgRate

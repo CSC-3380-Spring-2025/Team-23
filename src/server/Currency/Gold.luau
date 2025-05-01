@@ -14,7 +14,7 @@ end
 The following functions are simply calling to the currency class and passing the nameOfcurrency parameter as "gold" so that it knows what currency to get/set.
 For more on these methods, check currency
 ]]
-function Gold:GetAmount(Player: Player): boolean
+function Gold:GetAmount(Player: Player): number
 	return Currency:GetAmount(Player, "gold")
 end
 

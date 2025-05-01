@@ -8,7 +8,9 @@ local Workspace = game:GetService("Workspace")
 local Runservice = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
 local ServerScriptService = game:GetService("ServerScriptService")
+local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local BackpackNPC = require(ServerScriptService.Server.NPC.BackpackNPC)
+local ServerMutexSeq = require(ServerScriptService.Server.ServerUtilities.ServerMutexSeq)
 local ToolNPC = {}
 BackpackNPC:Supersedes(ToolNPC)
 
@@ -118,10 +120,10 @@ end
 --[[
 Prepares the Motor6d of the tool for the NPC
 	@param Tool (Tool) the tool of the Motor6d
-	@param Self (any) an instance of the class
+	@param Self (ExtType.ObjectInstance) an instance of the class
 	@return (boolean) true on success or false otherwise
 --]]
-local function PrepToolMotor6d(Tool: Tool, Self: any): boolean
+local function PrepToolMotor6d(Tool: Tool, Self: ExtType.ObjectInstance): boolean
 	local animations: Folder? = Tool:FindFirstChild("Animations") :: Folder?
 	if animations == nil then
 		warn('Tool "' .. Tool.Name .. '" missing Animations folder')
@@ -175,12 +177,74 @@ local function PrepAnims(ToolRef: {[string]: any}, Self: {[string]: any}) : ()
 	if not animations then
 		return
 	end
-	ToolRef.Animations = {}
 	for _, animation in pairs(animations:GetChildren()) do
 		if animation:IsA("Animation") then
-			ToolRef.Animations[animation.Name] = Self:LoadAnimation(animation)
+			Self.__Animations[animation.Name] = Self:LoadAnimation(animation)
 		end
 	end
+end
+
+--[[
+Sets up the needed cool down info needed for an NPC tool
+	@param CoolDownTime (number) the time in seconds the weapon takes to cool down
+	@param ToolRef (ExtType.StrDict) the StrDict of the tool in the NPCs backpack
+	@param ActiveAnim (AnimationTrack) the main track of the tool that is played when activated
+--]]
+local function PrepCoolDown(CoolDownTime: number, ToolRef: ExtType.StrDict, ActiveAnim: AnimationTrack, Self: ExtType.ObjectInstance) : ()
+	local animationTime: number = ActiveAnim.Length
+	--Make sure cool down is not less than the main animation
+	if animationTime <= CoolDownTime then
+		ToolRef.CoolDownTime = CoolDownTime
+	else
+		ToolRef.CoolDownTime = animationTime
+	end
+	ToolRef.__OnCoolDown = false--Indicates if the tool is on cool down or not
+	ToolRef.__CoolDownLockKey = "SwordsmanCoolDown" .. Self:GetItemCount(ToolRef.ItemName)
+	ToolRef.__CoolDownLock = ServerMutexSeq.new(ToolRef.__CoolDownLockKey) --used to safely access OnCoolDown
+end
+
+--[[
+Puts a given tool on cool down
+	If tool is already on cool down then this may lead to undefined behaivore
+	@param ToolName (string) the name of the tool to cool down
+--]]
+function ToolNPC:CoolDownTool(ToolName: string) : ()
+	local toolRef: ExtType.StrDict = self.__Backpack[ToolName]
+	if not toolRef then
+		warn('Attempt to use CoolDownTool but ToolName "' .. ToolName .. '" was not in backpack of NPC')
+		return--vaciously false
+	end
+	if not toolRef.__CoolDownLockKey then
+		return--Tool has no cooldown
+	end
+	self.__Tasks["CoolDown"] = task.spawn(function()
+		toolRef.__CoolDownLock:Lock()
+		toolRef.OnCoolDown = true
+		toolRef.__CoolDownLock:Unlock()
+		task.wait(toolRef.CoolDownTime)
+		toolRef.__CoolDownLock:Lock()
+		toolRef.OnCoolDown = false
+		toolRef.__CoolDownLock:Unlock()
+	end)
+end
+
+--[[
+This function determines if a tool in the NPCs backpack is on cool down
+	@param ToolName (string) the name of the tool in the NPCs backpack
+--]]
+function ToolNPC:ToolOnCoolDown(ToolName: string) : boolean
+	local toolRef: ExtType.StrDict = self.__Backpack[ToolName]
+	if not toolRef then
+		warn('Attempt to check ToolOnCoolDown but ToolName "' .. ToolName .. '" was not in backpack of NPC')
+		return false--vaciously false
+	end
+	if not toolRef.__CoolDownLockKey then
+		return false--Tool has no cooldown
+	end
+	toolRef.__CoolDownLock:Lock()
+	local isOnCoolDown: boolean = toolRef.OnCoolDown
+	toolRef.__CoolDownLock:Unlock()
+	return isOnCoolDown
 end
 
 --[[
@@ -196,7 +260,7 @@ function ToolNPC:AddTool(Tool: Tool, Amount: number): boolean
 	if not collectSuccess then
 		return false --Collection failed
 	end
-	local toolItem: any = self.__Backpack[Tool.Name]
+	local toolItem: ExtType.StrDict = self.__Backpack[Tool.Name]
 
 	--Add tool specific behaivore
 
@@ -211,6 +275,21 @@ function ToolNPC:AddTool(Tool: Tool, Amount: number): boolean
 	toolItem.DropItem = toolClone
 	PrepAnims(toolItem, self)
 	toolClone.Parent = nil --Not equipped
+	--Set up cool down if it exists
+	local toolCoolDown: number? = toolClone:GetAttribute("CoolDown") :: number?
+	if toolCoolDown then
+		local mainAnimName: string? = toolClone:GetAttribute("ActivateAnimName") :: string?
+		if mainAnimName then
+			local mainAnim: AnimationTrack? = self.__Animations[mainAnimName]
+			if mainAnim == nil then
+				warn('Attempt to set up cool down for tool "' .. Tool.Name .. '" but tool ActivateAnimName does not exist in Animation folder')
+				toolClone:Destroy()
+				self.__Backpack[Tool.Name] = nil --Remove from backpack
+				return false
+			end
+			PrepCoolDown(toolCoolDown, toolItem, mainAnim, self)
+		end
+	end
 	return true --Success
 end
 

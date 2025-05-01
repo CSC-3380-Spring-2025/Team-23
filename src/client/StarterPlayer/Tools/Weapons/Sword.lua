@@ -65,7 +65,7 @@ function Sword.new(Name: string, PhysTool: Tool): ExtType.ObjectInstance?
 	local self = Weapon.new(Name, PhysTool)
 	setmetatable(self, Sword)
 	--Set up swing anim priority
-	local swingAnim: AnimationTrack? = self.__Animations["Swing"]
+	local swingAnim: AnimationTrack? = self.__Animations["SwordSwing"]
 	if swingAnim == nil then
 		warn("Attempt to make sword instance but sword was missing Animation Swing")
 		return nil
@@ -131,7 +131,7 @@ function Sword:Activate(): ()
 		return --on cool down so cant activate
 	end
 	CoolDown(self)--Handle cooldown
-	local swingAnim: AnimationTrack = self.__Animations["Swing"]
+	local swingAnim: AnimationTrack = self.__Animations["SwordSwing"]
 	HandleHits(self)
 	local hitbox: ExtType.RaycastHitbox = self.__Hitbox
 	hitbox:HitStart()
