@@ -13,6 +13,7 @@ local ItemUtils = require(ReplicatedStorage.Shared.Items.ItemsUtils)
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
 local StatsHandlerInterfaceObject = require(playerScripts.StatsHandlerInterface)
 local SwordObject = require(script.Parent.Tools.Weapons.Sword)
+local PickaxeObject = require(script.Parent.Tools.ResourceTools.Pickaxe)
 
 --Events
 local events: Folder = ReplicatedStorage.Events
@@ -174,12 +175,12 @@ local function Sword(Sword: Tool) : ()
 	--Create sword instance for tool if does not exist yet
 	if swordInstance == nil then
 		swordInstance = SwordObject.new(Sword.Name, Sword)
+		InsertToolInstance(swordInstance :: ExtType.ObjectInstance, Sword)
 	end
 	if swordInstance == nil then
 		return--Error
 	end
 
-	InsertToolInstance(swordInstance, Sword)
 	local activated: RBXScriptConnection = Sword.Activated:Connect(function()
 		swordInstance:Activate()
 	end)
@@ -201,6 +202,46 @@ Handles all weapons
 local function Weapon(Weapon: Tool) : ()
 	if CollectionService:HasTag(Weapon, "Sword") then
 		Sword(Weapon)
+	end
+end
+
+--[[
+Handles all pickaxe tools
+	@param Pickaxe (Tool) the tool that is a pickaxe
+--]]
+local function Pickaxe(Pickaxe: Tool) : ()
+	--Check if an instance already exists
+	local pickaxeInstance: ExtType.ObjectInstance? = FindToolInstance(Pickaxe)
+	--Create sword instance for tool if does not exist yet
+	if pickaxeInstance == nil then
+		pickaxeInstance = PickaxeObject.new(Pickaxe.Name, Pickaxe)
+		InsertToolInstance(pickaxeInstance :: ExtType.ObjectInstance, Pickaxe)
+	end
+	if pickaxeInstance == nil then
+		return--Error
+	end
+
+	local activated: RBXScriptConnection = Pickaxe.Activated:Connect(function()
+		pickaxeInstance:Activate()
+	end)
+	table.insert(toolConnections, activated)--Insert for clean up on player death
+	local unequipped: RBXScriptConnection
+	--Handle unequipped
+	unequipped = Pickaxe.Unequipped:Connect(function()
+		--Clean up to prevent mem leaks
+		ClearToolConnect(activated)
+		ClearToolConnect(unequipped)
+	end)
+	table.insert(toolConnections, unequipped)--Add to list of tool connects
+end
+
+--[[
+Handles all ResourceTools
+	@param ResourceTool (Tool) any tool that is a ResourceTool
+--]]
+local function ResourceTool(ResourceTool: Tool)
+	if CollectionService:HasTag(ResourceTool, "Pickaxe") then
+		Pickaxe(ResourceTool)
 	end
 end
 
@@ -233,6 +274,9 @@ local function EquippedHandler(Item: Tool): ()
 		Drink(Item)
 	elseif CollectionService:HasTag(Item, "Weapon") then
 		Weapon(Item)
+	elseif CollectionService:HasTag(Item, "ResourceTool") then
+		--ResourceTools
+		ResourceTool(Item)
 	end
 end
 
