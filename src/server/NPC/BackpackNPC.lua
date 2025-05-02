@@ -89,7 +89,6 @@ local function ConsumeFood(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread
 		end
 		return true --Ate
 	elseif Tasks.StvTask then
-		--print("No Food found! Cant eat and starving!")
 	end
 	return false --Could not eat
 end
@@ -110,7 +109,6 @@ local function Starve(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : 
 				Tasks.StvTask = nil
 				return--No longer starving
 			end
-			--print("Taking starve damage!")
 			Self.__Humanoid:TakeDamage(StatsConfig.StarveDmg)
 			task.wait(StatsConfig.StarveDmgRate)
 		end
@@ -127,20 +125,16 @@ Handles the food stat
 local function HandleFoodStat(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : ()
 	--For each loop if hungry then consume food until out
 	--If out of food then need to cancel starveTsk when given food
-	--local starveTsk = nil --The task for when a player is starving
-	--print("Handling food")
 	while true do
 		task.wait(StatsConfig.FdDeteriorationRate) --Wait between decrements
 		local newStat: number = Stats.Food - StatsConfig.FdDecrement
 		if newStat < 0 then
 			newStat = 0 --Prevent negative stat
 		end
-		--print("Decrementing food. Food is now: " .. newStat)
 		Stats.Food = newStat
 		--Check if starved
 		if newStat <= 0 and not Tasks.StvTask then
 			--Start damaging player and store task to cancel when given food
-			--print(Self.Name .. "Is starving")
 			--Attempt to consume food first
 			local didEat: boolean = ConsumeFood(Self, StatsConfig, Stats, Tasks)
 			if didEat then
@@ -219,8 +213,6 @@ local function ConsumeDrink(Self: any, StatsConfig: {}, Stats: {}, Tasks: {threa
 			Stats.Hydration = maxDrink
 		end
 		return true --Drinked
-	elseif Tasks.ThirstTask then
-		--print("No drink found! Cant drink and thirsting!")
 	end
 	return false --Could not drink
 end
@@ -241,7 +233,6 @@ local function Thirst(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : 
 				Tasks.ThirstTask = nil
 				return--No longer thirsting
 			end
-			print("Taking starve damage!")
 			Self.__Humanoid:TakeDamage(StatsConfig.ThirstDmg)
 			task.wait(StatsConfig.ThirstDmgRate)
 		end
@@ -258,19 +249,16 @@ Handles the drink stat
 local function HandleDrinkStat(Self: any, StatsConfig: {}, Stats: {}, Tasks: {thread}) : ()
 	--For each loop if thristy then consume drink until out
 	--If out of drink then need to cancel ThirstTask when given drink
-	print("Handling hydration")
 	while true do
 		task.wait(StatsConfig.FdDeteriorationRate) --Wait between decrements
 		local newStat: number = Stats.Hydration - StatsConfig.HydDecrement
 		if newStat < 0 then
 			newStat = 0 --Prevent negative stat
 		end
-		print("Decrementing hydration. Hydration is now: " .. newStat)
 		Stats.Hydration = newStat
 		--Check if thristy
 		if newStat <= 0 and not Tasks.ThirstTask then
 			--Start damaging player and store task to cancel when given drink
-			print(Self.Name .. "Is thristing")
 			--Attempt to consume drink first
 			local didDrink: boolean = ConsumeDrink(Self, StatsConfig, Stats, Tasks)
 			if didDrink then
@@ -288,7 +276,6 @@ Handles the NPC's stats like food and hydration
 	Should be used inside of a task.spawn
 --]]
 local function HandleStats(Self) : ()
-	print("Starting stats")
 	local statsConfig: {} = Self.__StatsConfig
 	local stats: {} = Self.__Stats
 	local tasks: {thread} = Self.__Tasks
@@ -299,7 +286,6 @@ local function HandleStats(Self) : ()
 	tasks.HydrationStat = task.spawn(function()
 		HandleDrinkStat(Self, statsConfig, stats, tasks)
 	end)
-	print("Finished seting up food stats handler")
 end
 
 --[[
@@ -308,7 +294,6 @@ Handles what happens when the NPC dies
 --]]
 local function HandleDeath(Self) : ()
 	Self.__Humanoid.Died:Once(function()
-		print("Backpack NPC died!")
 		--End tasks
 		for _, thread in pairs(Self.__Tasks) do
 			if task then
@@ -420,8 +405,6 @@ function BackpackNPC.new(
 	self.__Tasks.ThirstTask = nil
 	HandleStats(self)
 	--Handle death
-	print("Checking for humanoid")
-	print(self.__Humanoid)
 	if DeathHandler then
 		HandleDeath(self)
 	end
@@ -627,6 +610,7 @@ function BackpackNPC:CollectItem(ItemName: string, Amount: number): boolean
 		item.StackCount = 0
 		item.ItemType = itemInfo.ItemType
 		item.DropItem = itemInfo.DropItem
+		item.ItemName = ItemName
 		firstAdd = true
 	end
 	--Check weight

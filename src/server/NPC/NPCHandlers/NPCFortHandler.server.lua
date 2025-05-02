@@ -7,10 +7,11 @@ local CollectionService = game:GetService("CollectionService")
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 --Requires
+local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local SwordsmanObject = require(ServerScriptService.Server.NPC.CombatNPC.SwordsmanNPC)
 local NPCHandlerObject = require(ServerScriptService.Server.NPC.NPCHandlers.NPCHandler)
 --Instances
-local NPCHandler: { [any]: any } = NPCHandlerObject.new("NPCHandler Test")
+local NPCHandler: ExtType.ObjectInstance = NPCHandlerObject.new("NPCHandler Test")
 
 --Rigs needed
 local rigsFolder: Folder = ServerStorage.NPC.Rigs
@@ -18,6 +19,7 @@ local swordsmanRig: Model? = rigsFolder:FindFirstChild("SwordsmanNPC") :: Model?
 
 --Vars
 local barbarianEnemies: { string } = { "PlayerNPC", "Player" } --List of enemy tags barbarians aggro
+local lootModels: Folder = ServerStorage.LootModels
 
 --[[
 Returns a randomized child of the given parent
@@ -48,6 +50,14 @@ local function FindOpenIdlePoint(IdlePoints: Folder): BasePart?
 		end
 	end
 	return nil
+end
+
+--[[
+Gives the given barbarian NPC the EnemyNPC tag
+	@param NPCInstance (ExtType.ObjectInstance) the instance fo the barbarian NPC
+--]]
+local function MakeEnemy(NPCInstance: ExtType.ObjectInstance) : ()
+	NPCInstance:AddTag("EnemyNPC")
 end
 
 --[[
@@ -89,7 +99,52 @@ local function SpawnSwordsman(
 	newSwordsman:SetHomePoint(IdlePoint.Position)
 	newSwordsman:ReturnHome()
 	newSwordsman:SentryMode(15, 20)
+	MakeEnemy(newSwordsman)
 	return newSwordsman
+end
+
+--[[
+Makes a deep copy clone of any given Model
+	Copys both tags and attributes
+	@param (LootModel) any model from the LootModel folder
+	@return (Model) returns a full copy o the origional model
+--]]
+local function DeepCopyLoot(LootModel: Model) : Model
+	local clone: Model = LootModel:Clone()
+	for _, attributeName in pairs(LootModel:GetAttributes()) do
+		clone:SetAttribute(attributeName, LootModel:GetAttribute(attributeName))
+	end
+	for _, tag in pairs(CollectionService:GetTags(LootModel)) do
+		CollectionService:AddTag(clone, tag)
+	end
+	return clone
+end
+
+--[[
+Handles what happens when a barbarian fort is finished and destroyed
+--]]
+local function SpawnLoot(Fort: Model)
+	local lootSpawns: Folder? = Fort:FindFirstChild("LootSpawns", true) :: Folder?
+	if lootSpawns == nil then
+		Fort:Destroy()--No loot set
+		return
+	end
+	local lootFolder: Folder = Instance.new("Folder")
+	lootFolder.Parent = Fort.Parent
+	lootFolder.Name = "LootOf" .. Fort.Name
+	--Spawn all loot
+	for _, spawn in pairs(lootSpawns:GetChildren()) do
+		local lootModel: Model? = lootModels:FindFirstChild(spawn.Name, true) :: Model?
+		if lootModel == nil then
+			warn("LootSpawn point set for fort but no such model by name in LootModels folder in ServerStorage")
+			continue
+		end
+		local lootModelClone: Model = DeepCopyLoot(lootModel)
+		local lootPos: CFrame = spawn.CFrame
+		lootModelClone:PivotTo(lootPos)
+		lootModelClone.Parent = lootFolder
+	end
+	Fort:Destroy()
 end
 
 --[[
@@ -113,7 +168,7 @@ local function BarbarianDeathHandler(
 	--Check if forts NPCs is empty and if so then stop process and destroy building
 	if #FortNPCs == 0 then
 		if Fort then
-			Fort:Destroy()
+			SpawnLoot(Fort)
 		end
 		return --Fort is destroyed so return
 	end
@@ -122,7 +177,7 @@ local function BarbarianDeathHandler(
 	local idlePoint: BasePart? = FindOpenIdlePoint(IdlePoints)
 	--Choose correct type
 	if BarbarianType == "Swordsman" then
-		task.wait(10) --Cooldown before spawn
+		task.wait(15) --Cooldown before spawn
 		--Check if only NPC just in case other NPCs died during cooldown
 		if #FortNPCs == 0 or not idlePoint then
 			return
@@ -164,7 +219,6 @@ local function DeathHandlerEvent(
 	local hasDiedConnect: RBXScriptConnection
 	hasDiedConnect = BarbarianNPC.HasDied:Connect(function()
 		hasDiedConnect:Disconnect()
-		print("Fort was told that NPC has died!")
 		table.remove(FortNPCs, table.find(FortNPCs, BarbarianNPC))
 		BarbarianDeathHandler(Spawn, BarbarianName, IdlePoints, "Swordsman", Fort, FortNPCs, FortNPCsFolder)
 	end)
@@ -178,7 +232,7 @@ local function FortHandler(Fort: Model)
 	local fortNPCs: { { [any]: any } } = {}
 	--For each type of listed NPC spawn and given enough time for NPC to move away.
 	--Give fort some time to load in
-	task.wait(10)
+	task.wait(5)
 	local spawns: Folder? = Fort:FindFirstChild("Spawns") :: Folder?
 	if not spawns then
 		warn("Spawns folder and parts net set for fort")

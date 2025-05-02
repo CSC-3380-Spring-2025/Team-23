@@ -115,7 +115,7 @@ This function selects a weapon from the NPCs backpack
 function CombatNPC:SelectWeapon(WeaponName: string) : boolean
     if self:CheckForItem(WeaponName) then
         --item exists in backpack
-        if self.__Backpack[WeaponName].DropItem and self.__Backpack[WeaponName].DropItem:GetAttribute("Weapon") then
+        if self.__Backpack[WeaponName].DropItem and CollectionService:HasTag(self.__Backpack[WeaponName].DropItem, "Weapon") then
             --Valid choice
             self.__Weapon = self.__Backpack[WeaponName]
             --Prepare hitbox

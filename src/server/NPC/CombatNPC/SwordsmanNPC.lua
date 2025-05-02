@@ -5,25 +5,26 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local RaycastHitboxV4 = require(ReplicatedStorage.RaycastHitboxV4)
 local CombatNPC = require(ServerScriptService.Server.NPC.CombatNPC.CombatNPC)
 local NPCHandlerObject = require(ServerScriptService.Server.NPC.NPCHandlers.NPCHandler)
+local ServerMutexSeq = require(ServerScriptService.Server.ServerUtilities.ServerMutexSeq)
 local SwordsmanNPC = {}
 CombatNPC:Supersedes(SwordsmanNPC)
 
 --Instances
-local NPCHandler = NPCHandlerObject.new("NPCHandlerSwordsman")
+local NPCHandler: ExtType.ObjectInstance = NPCHandlerObject.new("NPCHandlerSwordsman")
 
 --Vars
-local attackRange = 5 --Distance in studs that the NPCs sword will activate
+local attackRange: number = 5 --Distance in studs that the NPCs sword will activate
 
 --[[
 Handles what happens when the NPC dies
-	@param Self (any) an instance of the class
+	@param Self (ExtType.ObjectInstance) an instance of the class
 --]]
-local function HandleDeath(Self) : ()
+local function HandleDeath(Self: ExtType.ObjectInstance) : ()
 	Self.__Humanoid.Died:Once(function()
-		print("Bswordsman NPC died!")
 		--End tasks
 		for _, thread in pairs(Self.__Tasks) do
 			if task then
@@ -81,7 +82,7 @@ function SwordsmanNPC.new(
 	DeathHandler: any,
 	StatsConfig: {}?,
 	AggroList: { string }?
-)
+) : ExtType.ObjectInstance
 	local self = CombatNPC.new(
 		Name,
 		Rig,
@@ -102,7 +103,6 @@ function SwordsmanNPC.new(
     if DeathHandler then
 		HandleDeath(self)
 	end
-	--Load animations
 	return self
 end
 
@@ -112,7 +112,7 @@ Handles what happens when a item is hit by the sword
     @param Self ({[any]: any}) the instance of the class
     @param Damage (number) the amount of damage done on hits
 --]]
-local function HandleHits(HitBox: { [any]: any }, Self: { [any]: any }, Damage: number): ()
+local function HandleHits(HitBox: ExtType.RaycastHitbox, Self: ExtType.ObjectInstance, Damage: number): ()
 	Self.__Connections["Hit"] = HitBox.OnHit:Connect(function(HitPart, HitHum)
 		local character = HitHum.Parent
 		if Self:CanTarget(character) then
@@ -135,20 +135,23 @@ end
 
 --[[
 Activates the given weapon
-    @param Self ({[any]: any}) the instance of the class
+    @param Self (ExtType.ObjectInstance) the instance of the class
 --]]
-local function ActivateWeapon(Self: { [any]: any })
+local function ActivateWeapon(Self: ExtType.ObjectInstance)
 	local weapon: { [string]: any } = Self.__Weapon
 	if not weapon then
 		warn("Attempt to attack with SwordsmanNPC but no weapon set")
 		return
 	end
-	local swingAnim: AnimationTrack? = weapon.Animations["Swing"]
+	if Self:ToolOnCoolDown(weapon.ItemName) then
+		return --on cool down so cant activate
+	end
+	local swingAnim: AnimationTrack? = Self.__Animations["SwordSwing"]
 	if not swingAnim then
 		warn('Swing animations not in Animations folder of weapon for NPC "' .. Self.Name .. '"')
 		return
 	end
-	local hitBox: { [any]: any } = weapon.Hitbox
+	local hitBox: ExtType.RaycastHitbox = weapon.Hitbox
 	if not hitBox then
 		warn('Hitbox not set for tool of NPC "' .. Self.Name .. '"')
 		return
@@ -161,6 +164,7 @@ local function ActivateWeapon(Self: { [any]: any })
 		warn('Damage attribute not set for tool of NPC "' .. Self.Name .. '"')
 		return
 	end
+	Self:CoolDownTool(physTool.Name)--Activate cool down
 	HandleHits(hitBox, Self, damage)
 	swingAnim:Play()
 	hitBox:HitStart()
