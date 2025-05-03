@@ -81,6 +81,28 @@ protFuncs.IsOnCoolDown = function(Self: ExtType.ObjectInstance)
 end
 
 --[[
+Checks if the player is within distance to use the given tool
+    @param Target (BasePart) the target being checked for distance
+    @param MaxDistance (number) the max distance allowed for the tool
+--]]
+protFuncs.WithinDistance = function(Target: BasePart, MaxDistance: number)
+    local character: Model? = player.Character
+	if not character then
+		return false
+	end
+
+	--Check target distance
+	local rootPart: any = character:FindFirstChild("HumanoidRootPart")
+	if rootPart then
+		if (rootPart.Position - Target.Position).Magnitude <= MaxDistance then
+			return true
+		end
+	end
+
+	return false
+end
+
+--[[
 The constructor for the Tools class
     @param Name (string) the name of this ObjectInstance
     @param PhysTool (Tool) the physical tool in workspace being used
