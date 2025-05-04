@@ -18,50 +18,12 @@ local function RunData()
 		DataInstance:LoadPlayerData(player)
 		local SessionDataManager = require(game.ServerScriptService.Server.DataServices.SessionDataManager)
 		local SessionDataManagerInstance = SessionDataManager.new("SessionDataManagerInstance") 
-		--[[comment this whole test table stuff out after presentaion]]
-		local testTable = {
-			Currency = {
-				gold = 69,
-			},
-			Base = {
-				{
-					buildingType = "model",
-					CFrame = {0, 0, 0, 0, 0, 0},
-					properties = {},
-					attributes = { 
-						BuildingTemplate = "HouseLevel3",
-					}
-				},
-				{
-					buildingType = "model",
-					CFrame = {-81.635, 0, -141.038, 0, 0, 0},
-					properties = {},
-					attributes = {
-						BuildingTemplate = "BarracksLevel1",
-						health = 69
-					}
-				},
-				{
-					buildingType = "model",
-					CFrame = {91.635, 0, -34, 0, 0, 0},
-					properties = {},
-					attributes = {
-						BuildingTemplate = "RefineryLevel1",
-						health = 69
-					}
-				},
-				{
-					buildingType = "model",
-					CFrame = {60.635, 0.093, 32.038, 0, 0, 0},
-					properties = {},
-					attributes = {
-						BuildingTemplate = "WheatFarmLevel1",
-					}
-				}
-			},
-			Backpack = {}
-		}
-		--SessionDataManagerInstance:SetPlayerData(player.UserId, testTable)
+		--[[set your player data table to one that works well for testing purposes ]]
+		local DefaultPlayerData = require(game.ServerScriptService.Server.DataServices.DefaultPlayerData)
+		local testTable = DefaultPlayerData.testTable
+		SessionDataManagerInstance:SetPlayerData(player.UserId, testTable)
+
+
 		AssignPlotInstance:AssignPlot(player)
 	end)
 	
