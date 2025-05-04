@@ -424,7 +424,7 @@ function OverheadCameraHandler:SetBlacklist(BlacklistTable : table) : {}
 end
 
 --[[
-@Description: Placeholder function for when icons are added.
+@Description: Adds icons to predetermined and tagged units based on their attributes when the camera is first activated.
 ]]
 function OverheadCameraHandler:SetupIcons() : {}
 	for i,v in pairs(self.__ActiveIcons) do
@@ -466,10 +466,16 @@ function OverheadCameraHandler:SetupIcons() : {}
 	end
 end
 
+--[[
+@Description: Populates the build menu GUI dynamically with all models that are children of the TargetFolder and allows them to be clicked on and placed.
+@Param: TargetFolder (Folder): The folder that the menu should dynamically populate from.
+]]
 function OverheadCameraHandler:PopulateBuildMenu(TargetFolder : Folder) : {}
 	local GUI : CanvasGroup = Player.PlayerGui.PlayerUI.Overhead
 	GUI.Selection.GroupTransparency = 0
 	GUI.Selection.Interactable = true
+	GUI.Selection.SelectionHolder.Active = true
+	GUI.Selection.SelectionHolder.Visible = true
 	for i,v in pairs(GUI.Selection.SelectionHolder:GetChildren()) do
 		if not v:IsA("UIListLayout") then
 			v:Destroy()
@@ -520,10 +526,15 @@ function OverheadCameraHandler:PopulateBuildMenu(TargetFolder : Folder) : {}
 	end
 end
 
+--[[
+@Description: Sets up the build menu when the player first enters the camera via making it visible and populating it with all of the categories present.
+]]
 function OverheadCameraHandler:SetupBuildMenu() : {}
 	local GUI : CanvasGroup = Player.PlayerGui.PlayerUI.Overhead
 	GUI.GroupTransparency = 0
 	GUI.Interactable = true
+	GUI.Holder.Active = true
+	GUI.Holder.Visible = true
 	for i,v in pairs(game:GetService("ReplicatedStorage").Buildings:GetChildren()) do
 		local C : TextButton = GUI.Templates.Selection:Clone()
 		C.Interactable = true
@@ -536,12 +547,19 @@ function OverheadCameraHandler:SetupBuildMenu() : {}
 	end
 end
 
+--[[
+@Description: Clears the build menu and makes it invisible when the player exits the overhead view.
+]]
 function OverheadCameraHandler:ClearBuildMenu() : {}
 	local GUI : CanvasGroup = Player.PlayerGui.PlayerUI.Overhead
 	GUI.GroupTransparency = 1
 	GUI.Selection.GroupTransparency = 1
 	GUI.Interactable = false
 	GUI.Selection.Interactable = false
+	GUI.Holder.Active = false
+	GUI.Holder.Visible = false
+	GUI.Selection.SelectionHolder.Active = false
+	GUI.Selection.SelectionHolder.Visible = false
 	for i,v in pairs(GUI.Holder:GetChildren()) do
 		if not v:IsA("UIListLayout") then
 			v:Destroy()
@@ -554,6 +572,9 @@ function OverheadCameraHandler:ClearBuildMenu() : {}
 	end
 end
 
+--[[
+@Description: Removes all active icons regardless of category or team.
+]]
 function OverheadCameraHandler:RemoveIcons() : {}
 	for i,v in pairs(self.__ActiveIcons) do
 		v:Destroy()
