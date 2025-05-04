@@ -112,7 +112,7 @@ The constructor for the Tools class
 function Tool.new(Name: string, PhysTool: Tool) : ExtType.ObjectInstance
     local self = Object.new(Name)
 	setmetatable(self, Tool)
-    self.__Tool = PhysTool
+    self.__Tool = PhysTool--A refrence to the physical tool passed in
     --Load animations
     local animations: Folder? = PhysTool:FindFirstChild("Animations") :: Folder?
     if not animations then
@@ -134,7 +134,7 @@ function Tool.new(Name: string, PhysTool: Tool) : ExtType.ObjectInstance
         warn("Attempt to make instance of Tool but player has no animator")
         return self
     end
-    self.__Animations = {}
+    self.__Animations = {}--Do not need to touch. This class automaticly sets up animations in the tools animation folder
     for _, animation in pairs(animations:GetChildren()) do
         if animation:IsA("Animation") then
             local track: AnimationTrack = animator:LoadAnimation(animation)
@@ -149,7 +149,7 @@ function Tool.new(Name: string, PhysTool: Tool) : ExtType.ObjectInstance
     --Set up cool down for tool if it exists for tool
     PrepCoolDown(PhysTool, self)
     --Optional functions that are protected by this class and children
-    self.__ProtFuncs = protFuncs
+    self.__ProtFuncs = protFuncs--Table of protected functions availible for use by lower classes
     toolCount = toolCount + 1
 	return self
 end
@@ -167,6 +167,8 @@ Cleans up the given tool instance.
     The physical tool is preserved.
     Not using this function with a given instance may lead to both memory leaks
     and also undefined behaivore.
+    You should cycle through the tables of self.__Tasks and self.__Connections and destroy them
+    using their own roblox defined way of doing so like :Disconnect() and task.cancel(thread)
 --]]
 function Tool:DestroyInstance() : ()
     AbstractInterface:AbstractError("DestroyInstance", "Tools")

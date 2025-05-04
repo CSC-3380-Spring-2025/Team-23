@@ -15,6 +15,7 @@ local StatsHandlerInterfaceObject = require(playerScripts.StatsHandlerInterface)
 local SwordObject = require(script.Parent.Tools.Weapons.Sword)
 local PickaxeObject = require(script.Parent.Tools.ResourceTools.Pickaxe)
 local AxeObject = require(script.Parent.Tools.ResourceTools.Axe)
+local BandageObject = require(script.Parent.Tools.MiscellaneousTools.Bandage)
 
 --Events
 local events: Folder = ReplicatedStorage.Events
@@ -267,6 +268,45 @@ local function Axe(Axe: Tool)
 end
 
 --[[
+Defines what happens for a bandage
+--]]
+local function Bandage(Bandage: Tool)
+	--Check if an instance already exists
+	local bandageInstance: ExtType.ObjectInstance? = FindToolInstance(Bandage)
+	--Create sword instance for tool if does not exist yet
+	if bandageInstance == nil then
+		bandageInstance = BandageObject.new(Bandage.Name, Bandage)
+		InsertToolInstance(bandageInstance :: ExtType.ObjectInstance, Bandage)
+	end
+	if bandageInstance == nil then
+		return--Error
+	end
+
+	local activated: RBXScriptConnection = Bandage.Activated:Connect(function()
+		bandageInstance:Activate()
+	end)
+	table.insert(toolConnections, activated)--Insert for clean up on player death
+	local unequipped: RBXScriptConnection
+	--Handle unequipped
+	unequipped = Bandage.Unequipped:Connect(function()
+		--Clean up to prevent mem leaks
+		ClearToolConnect(activated)
+		ClearToolConnect(unequipped)
+	end)
+	table.insert(toolConnections, unequipped)--Add to list of tool connects
+end
+
+--[[
+Handles all Miscellaneous tools
+	@param MiscellaneousTool (Tool) the physical tool
+--]]
+local function MiscellaneousTool(MiscellaneousTool: Tool)
+	if CollectionService:HasTag(Weapon, "Bandage") then
+		Bandage(MiscellaneousTool)
+	end
+end
+
+--[[
 Handles all ResourceTools
 	@param ResourceTool (Tool) any tool that is a ResourceTool
 --]]
@@ -310,6 +350,8 @@ local function EquippedHandler(Item: Tool): ()
 	elseif CollectionService:HasTag(Item, "ResourceTool") then
 		--ResourceTools
 		ResourceTool(Item)
+	elseif CollectionService:HasTag(Item, "MiscellaneousTool") then
+		MiscellaneousTool(Item)
 	end
 end
 
