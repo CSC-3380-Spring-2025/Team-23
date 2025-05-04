@@ -6,9 +6,13 @@ This includes mouse-based placement, keyboard/touchscreen controls, and raycasti
 
 --module scripts
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
+local BridgeNet2 = require(game.ReplicatedStorage.BridgeNet2)
+
 --services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local __PlaceBuildingBridge = BridgeNet2.ReferenceBridge("PlaceBuilding")
+local PlaceBuildingRemoteFunction : RemoteFunction =  ReplicatedStorage.Shared.Buildings:FindFirstChild("PlaceBuildingRemoteFunction")
 
 
 
@@ -87,8 +91,7 @@ returns boolean - Returns true if the building was successfully placed. Returns 
 local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): boolean
 	--clone building and set up ray for contant model tracking
 	local buildingToPlace: Model = Placing:Clone()
-	buildingToPlace.Parent = workspace.PlayersWorkspace[Player.Name].PlayerPlots.PlayerPlot
-	
+	buildingToPlace.Parent = PlacingOn.Parent
 	for _, child in ipairs(buildingToPlace:GetDescendants()) do
 		if child:IsA("BasePart") then
 			child.Transparency = 0.35
@@ -146,19 +149,24 @@ local function PlaceModel(PlacingOn: BasePart, Placing: Model, Player: Player): 
 				--check if other buildings exist at location as well as the height to place the building
 				local buildingPosition: Vector3 =
 					FindValidSpawnHeight(modelCFrame.X, modelCFrame.Z, PlacingOn, buildingToPlace)
-				if buildingPosition then
-					--Spawn model in location
-					for _, child in ipairs(buildingToPlace:GetDescendants()) do
-						if child:IsA("BasePart") then
-							child.Transparency = 0
-							child.CanCollide = true
-						end
+				if buildingPosition then			
+					local parentFolder = buildingToPlace.Parent
+					local serverArgs = {
+						BuildingName = buildingToPlace.Name,
+						PlacementPosition = buildingPosition,
+						ParentFolder = parentFolder,
+					}
+					--place schematic of building using gold currency
+					local placeSuccessful = PlaceBuildingRemoteFunction:InvokeServer(serverArgs)
+					if placeSuccessful then
+						buildingToPlace:Destroy()
+						print("destroyed client side building")
+						buildingPlaced = true
+						endLoop = true
+						canPlace = true
+					else
+						canPlace = false
 					end
-					local parentFolder = workspace.PlayersWorkspace[Player.Name].PlayerPlots.PlayerPlot
-					PlaceBuilding:Fire({BuildingName = buildingToPlace.Name, PlacementPosition = buildingPosition, ParentFolder = parentFolder})
-					buildingToPlace:Destroy()
-					buildingPlaced = true
-					endLoop = true
 				else
 					canPlace = false
 				end
