@@ -14,6 +14,7 @@ local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
 local StatsHandlerInterfaceObject = require(playerScripts.StatsHandlerInterface)
 local SwordObject = require(script.Parent.Tools.Weapons.Sword)
 local PickaxeObject = require(script.Parent.Tools.ResourceTools.Pickaxe)
+local AxeObject = require(script.Parent.Tools.ResourceTools.Axe)
 
 --Events
 local events: Folder = ReplicatedStorage.Events
@@ -236,12 +237,44 @@ local function Pickaxe(Pickaxe: Tool) : ()
 end
 
 --[[
+Handles all Axes
+	@param Axe (Tool) any Axe Tool
+--]]
+local function Axe(Axe: Tool)
+	--Check if an instance already exists
+	local axeInstance: ExtType.ObjectInstance? = FindToolInstance(Axe)
+	--Create sword instance for tool if does not exist yet
+	if axeInstance == nil then
+		axeInstance = AxeObject.new(Axe.Name, Axe)
+		InsertToolInstance(axeInstance :: ExtType.ObjectInstance, Axe)
+	end
+	if axeInstance == nil then
+		return--Error
+	end
+
+	local activated: RBXScriptConnection = Axe.Activated:Connect(function()
+		axeInstance:Activate()
+	end)
+	table.insert(toolConnections, activated)--Insert for clean up on player death
+	local unequipped: RBXScriptConnection
+	--Handle unequipped
+	unequipped = Axe.Unequipped:Connect(function()
+		--Clean up to prevent mem leaks
+		ClearToolConnect(activated)
+		ClearToolConnect(unequipped)
+	end)
+	table.insert(toolConnections, unequipped)--Add to list of tool connects
+end
+
+--[[
 Handles all ResourceTools
 	@param ResourceTool (Tool) any tool that is a ResourceTool
 --]]
 local function ResourceTool(ResourceTool: Tool)
 	if CollectionService:HasTag(ResourceTool, "Pickaxe") then
 		Pickaxe(ResourceTool)
+	elseif CollectionService:HasTag(ResourceTool, "Axe") then
+		Axe(ResourceTool)
 	end
 end
 
