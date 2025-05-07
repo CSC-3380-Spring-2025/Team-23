@@ -14,8 +14,30 @@ local GetWhitelistedStorage = NPCEvents:WaitForChild("GetWhitelistedStorage")
 local StartAutoHarvest = BridgeNet2.ReferenceBridge("NPCStartAutoHarvest")
 local HarvestNearestResource = BridgeNet2.ReferenceBridge("HarvestNearestResource")
 local AssignStorage = BridgeNet2.ReferenceBridge("NPCAssignStorage")
+local NPCEmptyToStorage = BridgeNet2.ReferenceBridge("NPCEmptyToStorage")
 
-local function ListStorageChoices(Self)
+local function ListStorageEmptyToOpts(Self, MenuName)
+    local functions = Self.__ProtFuncs
+    local InsertMenuOption = functions.InsertMenuOption
+    local choices: {[number]: Instance}? = GetWhitelistedStorage:InvokeServer(Self.__NPC)
+    if choices == nil then
+        return--Player has no storage devices
+    end
+    --Prepare options for all viable storage devices
+    for descriptor, instance in pairs(choices) do
+        local function storageChoice()
+            --Fire descriptor as choice for assigned storage for NPC
+            local storageArgs = {
+                Character = Self.__NPC,
+                StorageDevice = descriptor
+            }
+            NPCEmptyToStorage:Fire(storageArgs)--Tell server to assign the given storage device
+        end
+        InsertMenuOption(MenuName, instance.Name, storageChoice, Self, 2)
+    end
+end
+
+local function ListStorageChoices(Self, MenuName)
     local functions = Self.__ProtFuncs
     local InsertMenuOption = functions.InsertMenuOption
     local TransitionMenu = functions.TransitionMenu
@@ -34,14 +56,8 @@ local function ListStorageChoices(Self)
             }
             AssignStorage:Fire(storageArgs)--Tell server to assign the given storage device
         end
-        InsertMenuOption("StorageConfigMenu", instance.Name, storageChoice, Self, 2)
+        InsertMenuOption(MenuName, instance.Name, storageChoice, Self, 2)
     end
-
-    --Set up return button
-    local function returnToAutoHarvestMenu()
-        TransitionMenu("AutoHarvestMenu", Self)
-    end
-    InsertMenuOption("StorageConfigMenu", "Back", returnToAutoHarvestMenu, Self, 1)
 end
 
 local function MakeMenu(Self)
@@ -50,11 +66,26 @@ local function MakeMenu(Self)
     local TransitionMenu = functions.TransitionMenu
     local InsertMenu = functions.InsertMenu
 
+    local function backHomeMenu()
+        TransitionMenu("HomeMenu", Self)
+    end
+
     --Set up AutoHarvest menu. Most automated
     InsertMenu("AutoHarvestMenu", "Configure Auto Harvest", Self)
+    --Set up exit button
+    local function exitMenu()
+        Self:CloseMenu()
+    end
+    InsertMenuOption("AutoHarvestMenu", "Exit", exitMenu, Self, 1)
+    local function backAutomationMenu()
+        TransitionMenu("AutomationMenu", Self)
+    end
+    InsertMenuOption("AutoHarvestMenu", "Back", backAutomationMenu, Self, 1)
 
     --Set up automation options
     InsertMenu("AutomationMenu", "Automation Options", Self)
+    InsertMenuOption("AutomationMenu", "Exit", exitMenu, Self, 1)
+    InsertMenuOption("AutomationMenu", "Back", backHomeMenu, Self, 1)
     --Make option for HomeMenu to swap to Automation Menu
     local function swapToAutomationMenu()
         TransitionMenu("AutomationMenu", Self)
@@ -64,7 +95,13 @@ local function MakeMenu(Self)
 
     --Set up AssignStorage option/menu for Automation menu
     InsertMenu("StorageConfigMenu", "Choose Return Storage", Self)
-    ListStorageChoices(Self)--Set up StorageConfig choices
+    InsertMenuOption("StorageConfigMenu", "Exit", exitMenu, Self, 1)
+    ListStorageChoices(Self, "StorageConfigMenu")--Set up StorageConfig choices
+    --Set up return button
+    local function returnToAutoHarvestMenu()
+        TransitionMenu("AutoHarvestMenu", Self)
+    end
+    InsertMenuOption("StorageConfigMenu", "Back", returnToAutoHarvestMenu, Self, 1)
     local function openStorageConfig()
         TransitionMenu("StorageConfigMenu", Self)
     end
@@ -86,8 +123,21 @@ local function MakeMenu(Self)
     end
     local harvestNearestResourceText = "Harvest nearest resource"
     InsertMenuOption("AutomationMenu", harvestNearestResourceText, harvestNearestResource, Self, 4)
-    --InsertMenuOption("AutomationMenu", _, _, _, _)
     
+    --Set up Transfer Inventory to Storage
+    InsertMenu("TransferStorageMenu", "Select Storage", Self)
+    InsertMenuOption("TransferStorageMenu", "Exit", exitMenu, Self, 1)
+    --Set up options for storage
+    ListStorageEmptyToOpts(Self, "TransferStorageMenu")
+    InsertMenuOption("TransferStorageMenu", "Back", backHomeMenu, Self, 1)
+
+    --Add option to HomeMenu
+    local function toStorageMenu()
+        TransitionMenu("TransferStorageMenu", Self)
+    end
+    local transferText = "Transfer Inventory to Storage"
+    InsertMenuOption("HomeMenu", transferText, toStorageMenu, Self)
+
 
     TransitionMenu("HomeMenu", Self)--Refresh menu
 end

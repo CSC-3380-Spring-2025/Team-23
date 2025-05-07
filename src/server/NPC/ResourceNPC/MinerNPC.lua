@@ -273,37 +273,33 @@ local function HandleResource(Target: any, Tool: Tool, Self: any): boolean
 	return finished
 end
 
---[[
-Used to harvest a ore item target in workspace
-	@param ResourceItem (any) any item in workspace that may be considerd a resource item
-	@return (boolean) true on success or false otherwise
---]]
-function MinerNPC:HarvestResource(ResourceObject: any): boolean
-	if not self:IsResource(ResourceObject) then
-		warn('NPC "' .. self.Name .. '" Attempted to harvest object that is not a resource')
+--HArvestResource but without the task.spawn
+local function HarvestResourceHelp(ResourceObject, Self)
+	if not Self:IsResource(ResourceObject) then
+		warn('NPC "' .. Self.Name .. '" Attempted to harvest object that is not a resource')
 		return false
 	end
-	if not self:IsOre(ResourceObject) then
-		warn('Miner NPC "' .. self.Name .. "Attempted to harvest object that is not a Ore")
+	if not Self:IsOre(ResourceObject) then
+		warn('Miner NPC "' .. Self.Name .. "Attempted to harvest object that is not a Ore")
 		return false
 	end
-	if not self:WhitelistedResource(ResourceObject.Name) then
-		warn('Miner NPC "' .. self.Name .. "Attempted to harvest resource that is not whitelisted")
+	if not Self:WhitelistedResource(ResourceObject.Name) then
+		warn('Miner NPC "' .. Self.Name .. "Attempted to harvest resource that is not whitelisted")
 		return false
 	end
-	if not self.__Pickaxe then
-		warn('Miner NPC "' .. self.Name .. "Attempted to harvest a resource but has no pickaxe")
+	if not Self.__Pickaxe then
+		warn('Miner NPC "' .. Self.Name .. "Attempted to harvest a resource but has no pickaxe")
 		return false
 	end
 	if not ResourceObject:GetAttribute("Integrity") then
-		warn('Miner NPC "' .. self.Name .. "Attempted to harvest a resource that has no integrity set")
+		warn('Miner NPC "' .. Self.Name .. "Attempted to harvest a resource that has no integrity set")
 		return false
 	end
 
 	local target: any = ResourceObject
 
 	--Equip tool
-	local tool: Tool = self.__Pickaxe.DropItem
+	local tool: Tool = Self.__Pickaxe.DropItem
 	local animations: Folder? = tool:FindFirstChild("Animations") :: Folder?
 	if not animations then
 		warn('Tool "' .. tool.Name .. '" missing Animations Folder')
@@ -315,26 +311,26 @@ function MinerNPC:HarvestResource(ResourceObject: any): boolean
 		return false
 	end
 	if not tool:GetAttribute("Effectiveness") then
-		warn('Miner NPC "' .. self.Name .. "Attempted to use pickaxe with no attribute Effectiveness")
+		warn('Miner NPC "' .. Self.Name .. "Attempted to use pickaxe with no attribute Effectiveness")
 		return false
 	end
 
 	--Check NPC distance
-	if not WithinDistance(target, harvestRadious, self.__NPC) then
+	if not WithinDistance(target, harvestRadious, Self.__NPC) then
 		--Go to resource
-		if not TraverseToResource(self, ResourceObject) then
+		if not TraverseToResource(Self, ResourceObject) then
 			return false
 		end
 	end
 
 	if CollectionService:HasTag(target, "DropItem") then
 		--Already mined and on ground
-		Harvest(ResourceObject, self)
+		Harvest(ResourceObject, Self)
 		return true
 	end
 
-	self:EquipTool(tool.Name) --Unequip after use
-	local animTrack: AnimationTrack? = PlayAnimation(swingAnimation, target, self.__NPC, self)
+	Self:EquipTool(tool.Name) --Unequip after use
+	local animTrack: AnimationTrack? = PlayAnimation(swingAnimation, target, Self.__NPC, Self)
 	if not animTrack then
 		return false
 	end
@@ -343,7 +339,7 @@ function MinerNPC:HarvestResource(ResourceObject: any): boolean
 	local finished: boolean = false
 	animTrack.Stopped:Connect(function()
 		--Determine behaivore by ore type
-		finished = HandleResource(target, tool, self)
+		finished = HandleResource(target, tool, Self)
 		if not finished then
 			animTrack:Play() --Repeat animation because not finished
 		else
@@ -356,11 +352,24 @@ function MinerNPC:HarvestResource(ResourceObject: any): boolean
 	end
 
 	--Finished so clean up
-	Harvest(ResourceObject, self)
+	Harvest(ResourceObject, Self)
 
-	self:UnequipTool()
+	Self:UnequipTool()
 
 	return true
+end
+
+--[[
+Used to harvest a ore item target in workspace
+	@param ResourceItem (any) any item in workspace that may be considerd a resource item
+	@return (boolean) true on success or false otherwise
+--]]
+function MinerNPC:HarvestResource(ResourceObject: any): ()
+	self.__HarvestTask = task.spawn(function()
+		HarvestResourceHelp(ResourceObject, self)
+	end)
+	self.__Tasks["HarvestTask"] = self.__HarvestTask
+	self.__ActionTasks["HarvestTask"] = self.__HarvestTask--Save to be canceld by player
 end
 
 --[[
@@ -426,41 +435,49 @@ end
 --[[
 Finds the nearest whitelisted resource to harvest automaticly
 --]]
-function ResourceNPC:HarvestNearestResource()
+function MinerNPC:HarvestNearestResource()
 	--Harvest given resource
-	local chosenOre = GetNearestOre(self)
-	if chosenOre then
-		self:HarvestResource(chosenOre)
-	end
+	self.__HarvestTask = task.spawn(function()
+		local chosenOre = GetNearestOre(self)
+		if chosenOre then
+			HarvestResourceHelp(chosenOre, self)
+		end
+	end)
+	self.__Tasks["HarvestTask"] = self.__HarvestTask
 end
 
 --[[
 Tells the NPC to keep harvesting the nearest resource and then
 	loads it into the asigned chest the player chooses
 --]]
-function ResourceNPC:AutoHarvest()
+function MinerNPC:AutoHarvest()
 	--Create cycle of going to get resource, deliver it to the assigned storage, and then repeat
-	while true do
-		print("Restarting loop")
-		--Harvest resource until full
-		local chosenOre = GetNearestOre(self)
-		local name = chosenOre.Name
-		while chosenOre and self:ValidItemCollection(chosenOre.Name, 1) do
-			--Atleast 1 of this ore will fit
-			self:HarvestResource(chosenOre)
-			chosenOre = GetNearestOre(self)
+	self.__HarvestTask = task.spawn(function()
+		while true do
+			--Harvest resource until full
+			local chosenOre = GetNearestOre(self)
+			while chosenOre and self:ValidItemCollection(chosenOre.Name, 1) do
+				--Atleast 1 of this ore will fit
+				HarvestResourceHelp(chosenOre, self)
+				chosenOre = GetNearestOre(self)
+			end
+			--Return home since finished
+			self:ReturnHome()
+			while self:IsTraversing() do
+				task.wait(2)
+			end
+			--Empty into storage
+			self:EmptyInventoryToStorage(self.__AssignedStorage)
 		end
-		--Return home since finished
-		self:ReturnHome()
-		while self:IsTraversing() do
-			task.wait(2)
-		end
-		--Empty into storage
-		print("Puting contents into storage")
-		print("Item count before is:" .. self:GetItemCount(name))
-		self:EmptyInventoryToStorage(self.__AssignedStorage)
-		print("Finish emptieing!")
-		print("Item count after is:" .. self:GetItemCount(name))
+	end)
+	self.__Tasks["HarvestTask"] = self.__HarvestTask
+	self.__ActionTasks["HarvestTask"] =self.__HarvestTask--Save to be canceld by player
+end
+
+--Cancels any harvest task going on
+function MinerNPC:CancelHarvest()
+	if self.__HarvestTask then
+		task.cancel(self.__HarvestTask)
 	end
 end
 

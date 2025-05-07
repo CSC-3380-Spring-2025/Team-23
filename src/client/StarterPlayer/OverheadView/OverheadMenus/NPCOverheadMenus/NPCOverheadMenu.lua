@@ -12,6 +12,7 @@ OverheadMenu:Supersedes(NPCOverheadMenu)
 --Events
 local NPCSetwaypoint = BridgeNet2.ReferenceBridge("NPCSetwaypoint")
 local NPCTraverseWaypoints = BridgeNet2.ReferenceBridge("NPCTraverseWaypoints")
+local NPCCancelActions = BridgeNet2.ReferenceBridge("NPCCancelActions")
 
 local function MakeMenu(Self)
     local NPC: Model = Self.__NPC
@@ -36,14 +37,25 @@ local function MakeMenu(Self)
     InsertMenuOption("HomeMenu", setWayPointText, setWayPoint, Self, 1)
     --Set linked waypoint button
     --Traverse waypoints button
-    --[[
-    traverses the established waypoints
-    --]]
+    --traverses the established waypoints
     local function traverseWaypoints()
         NPCTraverseWaypoints:Fire(NPC)
     end
     local traverseWaypointsText = "Traverse Waypoints"
     InsertMenuOption("HomeMenu", traverseWaypointsText, traverseWaypoints, Self, 2)
+
+    --Set up canel actions button to cancel NPC tasks
+    local function cancelActions()
+        NPCCancelActions:Fire(Self.__NPC)
+    end
+    InsertMenuOption("HomeMenu", "Cancel Actions", cancelActions, Self)
+
+    --Set up exit button
+    local function exitMenu()
+        Self:CloseMenu()
+    end
+    InsertMenuOption("HomeMenu", "Exit", exitMenu, Self, 1)
+    
     SetHomeMenu("HomeMenu", Self)
     TransitionMenu("HomeMenu", Self)
 end

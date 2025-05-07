@@ -72,42 +72,8 @@ function ResourceNPC.new(
 	setmetatable(self, ResourceNPC)
 	self.__ResourceWhiteList = ResourceWhiteList or {}
 	self.__NPC:SetAttribute("ResourceNPC", true)
-	self.__AssignedStorage = nil--The storage designated for this resource NPC during AutoCollect
-	self.__AssignedStoragePos = nil--The Vector3 of the position of where the assigned storage is at
 	self.__IsHarvesting = false--Determines if an NPC is harvesting or not
 	return self
-end
-
-local function GetStoragePos(StorageDescriptor)
-	local instance = storageHandler:GetInstanceFromDescriptor(StorageDescriptor)
-	if instance:IsA("Model") then
-		return instance:FindFirstChild("NPCPoint").Position
-	else
-		return instance.Position
-	end
-end
-
---[[
-Assigns a given storage device to an NPC for automation
---]]
-function ResourceNPC:AssignStorage(StorageDevice: number | Instance)
-	--Find storage device and assign its storage descriptor to the NPC
-	if type(StorageDevice) == "number" then
-		--Is the storage descriptor directly
-		self.__AssignedStorage = StorageDevice
-		self.__AssignedStoragePos = GetStoragePos(StorageDevice)
-		self:SetHomePoint(self.__AssignedStoragePos)--Set home point as storage location
-	else
-		--Is the instance so need to find the descriptor
-		local storageDescriptor = storageHandler:FindStorageByInstance(StorageDevice)
-		if storageDescriptor ~= -1 then
-			self.__AssignedStorage = storageDescriptor
-			self.__AssignedStoragePos = GetStoragePos(storageDescriptor)
-			self:SetHomePoint(self.__AssignedStoragePos)--Set home point as storage location
-		else
-			warn("Attempt to AssignStorage but storage device is not valid")
-		end
-	end
 end
 
 --[[

@@ -61,6 +61,7 @@ function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Sp
 	self.__Animations = {} --Loaded animations track
 	--Detect when an NPC dies for object clean up
 	self.__Tasks = {}
+	self.__ActionTasks = {} --Table reserved for all actions that can be canceld by a player
 	if DeathHandler then
 		self.__Humanoid.Died:Once(function()
 			print("Normal NPC died!")
@@ -77,6 +78,14 @@ function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Sp
 	--Reserve NPC with npc tag
 	CollectionService:AddTag(self.__NPC, "NPC")
 	return self
+end
+
+function NPC:CancelActionTasks()
+	for _, thread in pairs(self.__ActionTasks) do
+		if thread then
+			task.cancel(thread)
+		end
+	end
 end
 
 --[[
@@ -295,6 +304,7 @@ function NPC:TraverseWaypoints(): ()
 		self.__Waypoints = {}
 		self.__PathFindingTask = nil
 	end)
+	self.__ActionTasks["PathFinding"] =self.__PathFindingTask--Save to be canceld by player
 end
 
 --[[
@@ -405,6 +415,7 @@ function NPC:Follow(Object: BasePart): ()
 	self.__PathFindingTask = task.spawn(function()
 		FollowLoop(self, Object)
 	end)
+	self.__ActionTasks["PathFinding"] = self.__PathFindingTask--Save to be canceld by player
 end
 
 --[[

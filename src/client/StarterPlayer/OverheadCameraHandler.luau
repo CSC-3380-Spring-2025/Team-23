@@ -135,6 +135,7 @@ local function MinerNPCMenu(MinerNPC, Self)
 	local minerMenu: ExtType.ObjectInstance = GetNPCMenu(MinerNPC, Self)
 	if minerMenu == nil then
 		minerMenu = MinerNPCOverheadMenu.new("MinerNPC", MinerNPC)
+		Self.__NPCMenus[MinerNPC] = minerMenu
 	end
 	--Move menu to where player clicked
 	minerMenu:PlaceMenu(MinerNPC:GetPivot().Position)
@@ -181,17 +182,61 @@ local function ResourceMenus(Resource, Self)
 	end
 end
 
+local function ExternalMinerNPCMenu(Self, HitPos, Target, MinerNPC)
+	--Determine what was clicked on to act accordingly
+	if CollectionService:HasTag(Target, "PlaceHolder") then
+	else
+		--Nothing meaningful was clicked so means trying to open normal menu of NPC away from it
+		local minerMenu: ExtType.ObjectInstance = GetNPCMenu(MinerNPC, Self)
+		if minerMenu == nil then
+			minerMenu = MinerNPCOverheadMenu.new("MinerNPC", MinerNPC)
+			Self.__NPCMenus[MinerNPC] = minerMenu
+		end
+		--Move menu to where player clicked
+		minerMenu:PlaceMenu(HitPos)
+		--Open the menu
+		minerMenu:OpenMenu()
+	end
+end
+
+--[[
+Defines what happens when an NPC is selected but player opened menu 
+after clicking somewhere other than the NPC
+--]]
+local function ExternalNPCMenus(Self, HitPos, Target, SelectedNPC)
+	--Determine what External NPCMenu to use
+	if CollectionService:HasTag(SelectedNPC, "MinerNPC") then
+		ExternalMinerNPCMenu(Self, HitPos, Target, SelectedNPC)
+	end
+end
+
 --[[
 Helper function that determines what happens when Shift is clicked with mouse 3
 	Reserved for displaying a list of options fro the object clicked on
 --]]
 local function ShiftMouse3(Self)
-	local target = Self.__Selected
+	local target = playersMouse.Target
 	local hitPos = playersMouse.Hit.Position
+	--Check if player has a single target selected
+	--If single target selected then place menu on ground where clicked
+
 	if CollectionService:HasTag(target, "Resource") then
 		ResourceMenus(target)
-	elseif CollectionService:HasTag(target, "NPC") then
-		--NPCMenus(target, Self, hitPos)
+	else
+		--External menu
+		--Check for if multiple npcs are selected or only one
+		local NPCCount = 0
+		local lastNPC = nil
+		for _, item in pairs(Self.__Selected) do
+			if CollectionService:HasTag(item, "NPC") then
+				NPCCount = NPCCount + 1
+				lastNPC = item
+			end
+		end
+		if NPCCount == 1 then
+			--Single npc external menu
+			ExternalNPCMenus(Self, hitPos, target, lastNPC)
+		end
 	end
 end
 
@@ -263,7 +308,7 @@ function OverheadCameraHandler:HandleKeyPressed(Input: InputObject): ()
 		elseif UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
 			--This keybind is reserved for poping up a menu for an objects option set
 			--If the object has only one option then it defaults to doing that one option
-			--ShiftMouse3(self)
+			ShiftMouse3(self)
 		else
 			--only click so traverse
 			table.insert(wayPointTable, playersMouse.Hit.Position)
@@ -562,6 +607,7 @@ function OverheadCameraHandler:SetupIcons(): {}
 				--use NPCMenu Pop up
 				print("Found menu target: " .. v.Name)
 				HighlightTag(self.__ActiveIcons[v])
+				table.insert(self.__Selected, v)
 				NPCMenus(v, self)
 			end)
 		end
@@ -684,5 +730,9 @@ function OverheadCameraHandler:RemoveIcons(): {}
 	table.clear(self.__UnitTags)
 	table.clear(self.__HostileTags)
 	table.clear(self.__FriendlyTags)
+	--Close all pop up menus
+	for _, menu in pairs(self.__NPCMenus) do
+		menu:CloseMenu()
+	end
 end
 return OverheadCameraHandler

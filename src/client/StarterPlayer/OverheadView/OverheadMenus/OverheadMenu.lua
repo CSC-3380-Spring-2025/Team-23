@@ -191,6 +191,7 @@ function OverheadMenu.new(MenuName: string): ExtType.ObjectInstance
 	MenusFolderLock:Unlock()
 	parentPart.Name = "MenuPartOf" .. menu.Name
 	parentPart.Parent = overHeadMenusFolder
+	menu.Adornee = parentPart--Tells it to follow the parent part in workspace
 	self.__ParentPart = parentPart --Used to move around the menu
 	self.__ProtFuncs = protFuncs --Set of protected functions
 	self.__Tasks = {} --Dictionary of all tasks
