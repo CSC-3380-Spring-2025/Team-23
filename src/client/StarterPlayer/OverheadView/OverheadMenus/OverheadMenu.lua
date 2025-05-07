@@ -4,7 +4,7 @@ This class provides the base inheritance of all overhead pop up menus
 local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ReplicatedFirst: ReplicatedFirst = game:GetService("ReplicatedFirst")
 local Players: Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+local Workspace: Workspace = game:GetService("Workspace")
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local ClientMutexSeq = require(script.Parent.Parent.Parent.ClientUtilities.ClientMutexSeq)
 local Object = require(ReplicatedStorage.Shared.Utilities.Object.Object)
@@ -15,10 +15,10 @@ Object:Supersedes(OverheadMenu)
 local overheadMenuTemplate: BillboardGui = ReplicatedFirst:WaitForChild("BillboardGuis"):WaitForChild("OverheadMenu")
 local optionTemplates: Folder = overheadMenuTemplate:WaitForChild("Templates") :: Folder
 local optionButtonTemplate: TextButton = optionTemplates:WaitForChild("OptionButton") :: TextButton
-local MenusFolderLock = ClientMutexSeq.new("OverheadMenusFolder") --used to prevent race conditions of folder duplicates
+local MenusFolderLock: ExtType.ObjectInstance = ClientMutexSeq.new("OverheadMenusFolder") --used to prevent race conditions of folder duplicates
 local player: Player = Players.LocalPlayer
 
-local protFuncs = {}
+local protFuncs: ExtType.StrDict = {}
 
 --[[
 Protected function that inserts a Menu into the Menu list to be accessed by other menus
@@ -140,7 +140,7 @@ Sets a home menu for when the player closes the menu
 	@param Self (ExtType.ObjectInstance) instance of this class
 --]]
 protFuncs.SetHomeMenu = function(MenuName: string, Self: ExtType.ObjectInstance) : ()
-	local menu = Self.__CoMenus[MenuName]
+	local menu: ExtType.StrDict = Self.__CoMenus[MenuName]
 	if not menu then
 		warn("Attempt to set home menu for menu \"" .. MenuName .. "\" but menu does not exist")
 		return
@@ -231,7 +231,7 @@ function OverheadMenu:Destroy() : ()
 	self.__MenuFrame:Destroy()
 	--Disconect all connections in options
 	for _, menuStruct in pairs(self.__CoMenus) do
-		local options = menuStruct.Options
+		local options: {ExtType.StrDict} = menuStruct.Options
 		for _, optionStruct in pairs(options) do
 			local connection = optionStruct.Connection
 			if connection then

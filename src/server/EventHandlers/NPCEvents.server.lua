@@ -1,9 +1,9 @@
-local ServerScriptService = game:GetService("ServerScriptService")
-local ServerStorage = game:GetService("ServerStorage")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService: ServerScriptService = game:GetService("ServerScriptService")
+local ServerStorage: ServerStorage = game:GetService("ServerStorage")
+local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
-local BuyMinerEvent = BridgeNet2.ReferenceBridge("BuyMiner")
+local BuyMinerEvent: ExtType.Bridge = BridgeNet2.ReferenceBridge("BuyMiner")
 local MinerNPCObject = require(ServerScriptService.Server.NPC.ResourceNPC.MinerNPC)
 local NPCHandlerObject = require(ServerScriptService.Server.NPC.NPCHandlers.NPCHandler)
 local StorageHandlerObject = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
@@ -22,23 +22,24 @@ local NPCCancelActions: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCCancelAc
 local NPCEmptyToStorage: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCEmptyToStorage")
 local NPCAttack: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCAttack")
 local NPCSentryMode: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCSentryMode")
+local NPCCollectResource: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCCollectResource")
 
 --Instances
 local storageHandler: ExtType.ObjectInstance = StorageHandlerObject.new("NPCEventsStorageHandler")
 local NPCHandler: ExtType.ObjectInstance = NPCHandlerObject.new("NPCHandlerEvents")
 
 --Rigs
-local rigs = ServerStorage.NPC.Rigs
-local minerNPCRig = rigs.MinerNPC
+local rigs: Folder = ServerStorage.NPC.Rigs
+local minerNPCRig: Model = rigs.MinerNPC
 
 
-BuyMinerEvent:Connect(function(Player, Args)
+BuyMinerEvent:Connect(function(Player: Player, Args: ExtType.StrDict)
 	local playerID = Player.UserId
 	--Attempt to remove money to "purchase"
 	--Make NPC and add it to the NPC Pool
-	local nameNPC = Player.Name .. "'s Miner"
-    local spawnPos = Vector3.new(0, 10, 0)
-	local newMiner = MinerNPCObject.new(
+	local nameNPC: string = Player.Name .. "'s Miner"
+    local spawnPos: Vector3 = Vector3.new(0, 10, 0)
+	local newMiner: ExtType.ObjectInstance = MinerNPCObject.new(
 		nameNPC,
 		minerNPCRig,
 		100,
@@ -59,24 +60,24 @@ BuyMinerEvent:Connect(function(Player, Args)
     NPCHandler:AddNPCToPlayerPool(newMiner, playerID)
 end)
 
-NPCSetwaypoint:Connect(function(Player, Args)
-	local NPCharacter = Args.Character
-	local waypoint =  Args.Waypoint
-	local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
+NPCSetwaypoint:Connect(function(Player: Player, Args: ExtType.StrDict)
+	local NPCharacter: Model = Args.Character
+	local waypoint: Vector3 =  Args.Waypoint
+	local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
 	NPCInstance:SetWaypoint(waypoint)
 end)
 
-NPCTraverseWaypoints:Connect(function(Player, NPCharacter)
-	local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
+NPCTraverseWaypoints:Connect(function(Player: Player, NPCharacter: Model)
+	local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
 	NPCInstance:TraverseWaypoints()
 end)
 
 
 
-TraverseNPCs:Connect(function(Player, Args)
-	local NPCs = Args.NPCs
-	local waypoints = Args.Waypoints
-	local realNPCs = {}
+TraverseNPCs:Connect(function(Player: Player, Args: ExtType.StrDict)
+	local NPCs: {Model} = Args.NPCs
+	local waypoints: {Vector3} = Args.Waypoints
+	local realNPCs: ExtType.ObjectInstance = {}
 	for _, character in pairs(NPCs) do
 		table.insert(realNPCs, NPCHandler:GetPlayerNPCByCharacter(character, Player.UserId))
 	end
@@ -100,9 +101,9 @@ end)
 Event that handles handles a reqst for a MinerNPC to harvest an Ore
 --]]
 MinerNPCsCollect:Connect(function(Player, Args)
-	local minerNPCs = Args.MinerNPCs
-	local resourceTarget = Args.Resource
-	local realNPCs = {}
+	local minerNPCs: {Model} = Args.MinerNPCs
+	local resourceTarget: BasePart = Args.Resource
+	local realNPCs: ExtType.ObjectInstance = {}
 	for _, character in pairs(minerNPCs) do
 		table.insert(realNPCs, NPCHandler:GetPlayerNPCByCharacter(character, Player.UserId))
 	end
@@ -122,8 +123,8 @@ end)
 Event for making an NPC collect the nearest resource
 Assumes that the NPC is a ResourceNPC
 --]]
-HarvestNearestResource:Connect(function(Player, NPCharacter)
-	local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
+HarvestNearestResource:Connect(function(Player: Player, NPCharacter: Model)
+	local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
 	NPCInstance:HarvestNearestResource()
 end)
 
@@ -132,8 +133,8 @@ Returns a number key dictionary where the key is the storageDescriptor and the v
 	@return ({[number]: Instance}?) the dictionary on success or nil otherwise
 --]]
 GetWhitelistedStorage.OnServerInvoke =  function(Player: Player, NPCharacter) :  {[number]: Instance}?
-	local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
-	local resourceWhitelist = NPCInstance:GetResourceWhitelist()
+	local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
+	local resourceWhitelist: {string} = NPCInstance:GetResourceWhitelist()
 	if resourceWhitelist == nil then
 		return nil--No whitelist set
 	end
@@ -168,38 +169,48 @@ end
 --[[
 Assigns a storage device to a given resource NPC
 --]]
-AssignStorage:Connect(function(Player, Args)
-	local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(Args.Character, Player.UserId)
+AssignStorage:Connect(function(Player: Player, Args: ExtType.StrDict)
+	local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(Args.Character, Player.UserId)
 	NPCInstance:AssignStorage(Args.StorageDevice)
 end)
 
-StartAutoHarvest:Connect(function(Player, NPCharacter)
-	local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
+StartAutoHarvest:Connect(function(Player: Player, NPCharacter: ExtType.StrDict)
+	local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
 	NPCInstance:AutoHarvest()
 end)
 
-NPCCancelActions:Connect(function(Player, NPCharacter)
-	local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
+NPCCancelActions:Connect(function(Player: Player, NPCharacter: ExtType.StrDict)
+	local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
 	NPCInstance:CancelActionTasks()
 end)
 
-NPCEmptyToStorage:Connect(function(Player, Args)
-	local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(Args.Character, Player.UserId)
+NPCEmptyToStorage:Connect(function(Player: Player, Args: ExtType.StrDict)
+	local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(Args.Character, Player.UserId)
 	NPCInstance:AssignStorage(Args.StorageDevice)
 	NPCInstance:TraverseEmptyToStorage()
 end)
 
-NPCAttack:Connect(function(Player, Args)
+NPCAttack:Connect(function(Player: Player, Args: ExtType.StrDict)
 	local target = Args.Target
 	local friendlyNPCs = Args.FriendlyNPCs
 	--Loop through all friendly NPCs and have them attack the target
 	for _, NPC in pairs(friendlyNPCs) do
-		local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(NPC, Player.UserId)
+		local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPC, Player.UserId)
 		NPCInstance:Attack(target)
 	end
 end)
 
-NPCSentryMode:Connect(function(Player, NPCharacter)
-	local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
+NPCSentryMode:Connect(function(Player: Player, NPCharacter: Model)
+	local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
 	NPCInstance:SentryMode(30, 40)
+end)
+
+NPCCollectResource:Connect(function(Player: Player, Args: ExtType.StrDict)
+	local resourceObject = Args.ResourceObject
+	local resourceNPCs = Args.ResourceNPCs
+	--Loop through all resource NPCs and have them collect the given resource
+	for _, NPC in pairs(resourceNPCs) do
+		local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPC, Player.UserId)
+		NPCInstance:HarvestResource(resourceObject)
+	end
 end)

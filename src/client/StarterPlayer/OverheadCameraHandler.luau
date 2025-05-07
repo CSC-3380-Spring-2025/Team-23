@@ -12,7 +12,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedFirst: ReplicatedFirst = game:GetService("ReplicatedFirst")
 local TS: TweenService = game:GetService("TweenService")
 local RS: RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService: CollectionService = game:GetService("CollectionService")
 local UIS: UserInputService = game:GetService("UserInputService")
 
@@ -20,14 +20,16 @@ local UIS: UserInputService = game:GetService("UserInputService")
 local OverheadCameraHandler: any = {}
 
 --Objects
-local overheadMenus = script.Parent.OverheadView.OverheadMenus
-local NPCOverheadMenus = overheadMenus.NPCOverheadMenus
-local ResourceNPCOverheadMenus = NPCOverheadMenus.ResourceNPCOverheadMenus
+local overheadMenus: Folder = script.Parent.OverheadView.OverheadMenus
+local NPCOverheadMenus: Folder = overheadMenus.NPCOverheadMenus
+local ResourceNPCOverheadMenus: Folder = NPCOverheadMenus.ResourceNPCOverheadMenus
 local MinerNPCOverheadMenu = require(ResourceNPCOverheadMenus.MinerNPCOverheadMenu)
-local EnemyOverheadMenus = overheadMenus.EnemyOverheadMenus
+local EnemyOverheadMenus: Folder = overheadMenus.EnemyOverheadMenus
 local EnemyOverheadMenu = require(EnemyOverheadMenus.EnemyOverheadMenu)
-local NPCCombatMenus = NPCOverheadMenus.CombatNPCOverheadMenus
+local NPCCombatMenus: Folder = NPCOverheadMenus.CombatNPCOverheadMenus
 local SwordsmanNPCOverheadMenu = require(NPCCombatMenus.SwordmanNPCOverheadMenu)
+local resourceOverheadMenus: Folder = overheadMenus.ResourceOverheadMenus
+local OreOverheadMenu = require(resourceOverheadMenus.OreOverheadMenu)
 
 local Player: Player = Players.LocalPlayer
 local playersMouse = Player:GetMouse()
@@ -37,15 +39,15 @@ local Controls: any = require(Player.PlayerScripts.PlayerModule):GetControls()
 local BridgeNet2: {} = require(game.ReplicatedStorage.BridgeNet2)
 local Object: any = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
-local RaycastParams = RaycastParams.new()
+local RaycastParams: RaycastParams = RaycastParams.new()
 RaycastParams.FilterType = Enum.RaycastFilterType.Exclude
 Object:Supersedes(OverheadCameraHandler)
 
 --Events
-local TraverseNPCs = BridgeNet2.ReferenceBridge("TraverseNPCs")
-local MinerNPCsCollect = BridgeNet2.ReferenceBridge("MinerNPCsCollect")
+local TraverseNPCs: ExtType.Bridge = BridgeNet2.ReferenceBridge("TraverseNPCs")
+local MinerNPCsCollect: ExtType.Bridge = BridgeNet2.ReferenceBridge("MinerNPCsCollect")
 
-local tags = ReplicatedFirst:WaitForChild("UI"):WaitForChild("Tags")
+local tags: Folder = ReplicatedFirst:WaitForChild("UI"):WaitForChild("Tags")
 local IconTable: { string } = {
 	["Axe"] = tags.AxemanTag,
 	["Pickaxe"] = tags.PickaxeManTag,
@@ -102,7 +104,7 @@ end
 --[[
 @Description: Sets up the keybind connections needed for opening the map and other functions.
 ]]
-function OverheadCameraHandler:Enable(): {}
+function OverheadCameraHandler:Enable(): ()
 	self.__PressKeyHandler = UIS.InputBegan:Connect(function(Input: InputObject, GME: boolean)
 		--print("Key pressed")
 		if GME then
@@ -127,14 +129,14 @@ end
 
 --Table of selected waypoints for a sequence of the player clicking on the ground
 --Clears if next click is not on the ground
-local wayPointTable = {}
+local wayPointTable: {Vector3} = {}
 
 local function GetNPCMenu(NPCharacter, Self): ExtType.ObjectInstance
 	local menu = Self.__NPCMenus[NPCharacter]
 	return menu
 end
 
-local function MinerNPCMenu(MinerNPC, Self)
+local function MinerNPCMenu(MinerNPC: Model, Self: ExtType.ObjectInstance) : ()
 	local minerMenu: ExtType.ObjectInstance = GetNPCMenu(MinerNPC, Self)
 	if minerMenu == nil then
 		minerMenu = MinerNPCOverheadMenu.new("MinerNPC", MinerNPC)
@@ -146,7 +148,7 @@ local function MinerNPCMenu(MinerNPC, Self)
 	minerMenu:OpenMenu()
 end
 
-local function SwordsmanNPCMenu(SwordsmanNPC, Self)
+local function SwordsmanNPCMenu(SwordsmanNPC: Model, Self: ExtType.ObjectInstance) : ()
 	local swordsmanMenu: ExtType.ObjectInstance = GetNPCMenu(SwordsmanNPC, Self)
 	if swordsmanMenu == nil then
 		swordsmanMenu = SwordsmanNPCOverheadMenu.new("MinerNPC", SwordsmanNPC)
@@ -159,7 +161,7 @@ local function SwordsmanNPCMenu(SwordsmanNPC, Self)
 end
 
 --Helper function used to handle all NPCMenus within ShiftMouse3
-local function NPCMenus(NPC, Self)
+local function NPCMenus(NPC: Model, Self: ExtType.ObjectInstance) : ()
 	--Figure out what type of NPC it is
 	if CollectionService:HasTag(NPC, "MinerNPC") then
 		MinerNPCMenu(NPC, Self)
@@ -168,36 +170,46 @@ local function NPCMenus(NPC, Self)
 	end
 end
 
-local function CollectOreOption(Ore, Self, HitPos)
-	--Attempt to have NPC harvest the ore
-	local minerNPCs = {}
-	for _, item in pairs(Self.__Selected) do
-		if CollectionService:HasTag(item, "MinerNPC") then
-			table.insert(minerNPCs, item)
-		end
-	end
-	local eventArgs = {
-		Ore = Ore,
-		MinerNPCs = minerNPCs,
-	}
-	MinerNPCsCollect:Fire(eventArgs)
-end
-
 --[[
 Displays the list of
 --]]
-local function OreMenus(Ore, Self, HitPos) end
+local function OreMenu(Ore: BasePart, Self: ExtType.ObjectInstance)  : ()
+	--Get a list of all friendly combat NPCs
+	local minerNPCs: {ExtType.ObjectInstance} = {}
+	for _, item in pairs(Self.__Selected) do
+		local isNPC: boolean = CollectionService:HasTag(item, "NPC")
+		local isMinerNPC: boolean = CollectionService:HasTag(item, "MinerNPC")
+		local isEnemyNPC: boolean = CollectionService:HasTag(item, "EnemyNPC")
+		if not isNPC or not isMinerNPC or isEnemyNPC then
+			continue --Not friendly combat NPC
+		end
+		table.insert(minerNPCs, item)
+	end
 
-local function ResourceMenus(Resource, Self)
+	--Determine what was clicked on to act accordingly
+	--Nothing meaningful was clicked so means trying to open normal menu of NPC away from it
+	local oreMenu: ExtType.ObjectInstance = GetNPCMenu(Ore, Self)
+	if oreMenu == nil then
+		oreMenu = OreOverheadMenu.new("OreMenu", Ore, minerNPCs)
+		Self.__NPCMenus[Ore] = oreMenu
+	end
+	--Move menu to where barbarian is
+	oreMenu:PlaceMenu(Ore.Position)
+	--Open the menu
+	oreMenu:OpenMenu()
+end
+
+local function ResourceMenus(Resource: BasePart, Self: ExtType.ObjectInstance) : ()
 	--Determine what type of resource it is
 	if CollectionService:HasTag(Resource, "Lumber") then
 		--Lumber
 	elseif CollectionService:HasTag(Resource, "Ore") then
 		--Ores
+		OreMenu(Resource, Self)
 	end
 end
 
-local function ExternalMinerNPCMenu(Self, HitPos, Target, MinerNPC)
+local function ExternalMinerNPCMenu(Self: ExtType.ObjectInstance, HitPos: Vector3, Target: BasePart, MinerNPC: Model)
 	--Determine what was clicked on to act accordingly
 	if CollectionService:HasTag(Target, "PlaceHolder") then
 	else
@@ -218,7 +230,7 @@ end
 Defines what happens when an NPC is selected but player opened menu 
 after clicking somewhere other than the NPC
 --]]
-local function ExternalNPCMenus(Self, HitPos, Target, SelectedNPC)
+local function ExternalNPCMenus(Self: ExtType.ObjectInstance, HitPos: Vector3, Target: BasePart, SelectedNPC: Model)
 	--Determine what External NPCMenu to use
 	if CollectionService:HasTag(SelectedNPC, "MinerNPC") then
 		ExternalMinerNPCMenu(Self, HitPos, Target, SelectedNPC)
@@ -229,22 +241,22 @@ end
 Helper function that determines what happens when Shift is clicked with mouse 3
 	Reserved for displaying a list of options fro the object clicked on
 --]]
-local function ShiftMouse3(Self)
+local function ShiftMouse3(Self: ExtType.ObjectInstance)
 	if not UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
 		return
 	end
-	local target = playersMouse.Target
-	local hitPos = playersMouse.Hit.Position
+	local target: BasePart = playersMouse.Target
+	local hitPos: Vector3 = playersMouse.Hit.Position
 	--Check if player has a single target selected
 	--If single target selected then place menu on ground where clicked
 
 	if CollectionService:HasTag(target, "Resource") then
-		ResourceMenus(target)
+		ResourceMenus(target, Self)
 	else
 		--External menu
 		--Check for if multiple npcs are selected or only one
-		local NPCCount = 0
-		local lastNPC = nil
+		local NPCCount: number = 0
+		local lastNPC: Model = nil
 		for _, item in pairs(Self.__Selected) do
 			if CollectionService:HasTag(item, "NPC") and not CollectionService:HasTag(item, "EnemyNPC") then
 				NPCCount = NPCCount + 1
@@ -331,13 +343,13 @@ function OverheadCameraHandler:HandleKeyPressed(Input: InputObject): ()
 			--only click so traverse
 			table.insert(wayPointTable, playersMouse.Hit.Position)
 			--Send message to server to traverse with all NPCs and waypoint
-			local argsNPCs = {}
+			local argsNPCs: {Model} = {}
 			for _, item in pairs(self.__Selected) do
 				if item:GetAttribute("NPC") and not CollectionService:HasTag(item, "EnemyNPC") then
 					table.insert(argsNPCs, item)
 				end
 			end
-			local eventArgs = {
+			local eventArgs: ExtType.StrDict = {
 				Waypoints = table.clone(wayPointTable),
 				NPCs = argsNPCs,
 			}
@@ -354,7 +366,7 @@ end
 @Description: Handles the scrollwheel zooming in and out when the handler has been properly enabled.
 @Param Input (InputObject): Input object that holds all of the data for determing which key has been pressed.
 ]]
-function OverheadCameraHandler:InputChanged(Input: InputObject): {}
+function OverheadCameraHandler:InputChanged(Input: InputObject): ()
 	if Input.UserInputType == Enum.UserInputType.MouseWheel and self.__Active then
 		local Direction: number = Input.Position.Z < 0 and 2 or -2
 		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
@@ -369,7 +381,7 @@ end
 --[[
 @Description: Disables the camera handler and disconnects all events and key handlers.
 ]]
-function OverheadCameraHandler:Disable(): {}
+function OverheadCameraHandler:Disable(): ()
 	self.__PressKeyHandler:Disconnect()
 	self.__ReleaseKeyHandler:Disconnect()
 	self.__HeldKeyHandler:Disconnect()
@@ -380,7 +392,7 @@ end
 @Description: Handles moving the camera to the overhead position, disabling the player's movement, and running a loop to move it to the points specified elsewhere.
 @Param SetPosition (Vector3): The camera will zoom out to the position instead of above the character if it is supplied.
 ]]
-function OverheadCameraHandler:Activate(SetPosition: Vector3): {}
+function OverheadCameraHandler:Activate(SetPosition: Vector3): ()
 	if self.__Active or self.__Debounce then
 		return
 	end
@@ -389,10 +401,10 @@ function OverheadCameraHandler:Activate(SetPosition: Vector3): {}
 	Controls:Disable()
 	self:UpdateTransparency()
 	Camera.CameraType = Enum.CameraType.Scriptable
-	local TargetPosition = SetPosition
+	local TargetPosition:Vector3 = SetPosition
 		or Vector3.new(Character.HumanoidRootPart.Position.X, self.__ZoomLevel, Character.HumanoidRootPart.Position.Z)
 	self.__CamPosition = TargetPosition
-	local Tween = TS:Create(
+	local Tween: Tween = TS:Create(
 		Camera,
 		TweenInfo.new(2),
 		{ CFrame = CFrame.new(TargetPosition) * CFrame.Angles(math.rad(-90), 0, math.rad(self.__CamRotation)) }
@@ -463,7 +475,7 @@ function OverheadCameraHandler:Deactivate(): {}
 	end
 	self:RemoveIcons()
 	self:ClearBuildMenu()
-	local Tween = TS:Create(
+	local Tween: Tween = TS:Create(
 		Camera,
 		TweenInfo.new(2),
 		{ CFrame = CFrame.new(Character.HumanoidRootPart.Position) * CFrame.new(0, 1, 5) }
@@ -478,11 +490,12 @@ function OverheadCameraHandler:Deactivate(): {}
 
 	Camera.CameraType = Enum.CameraType.Custom
 end
+
 --[[
 @Description: Checks for items tagged "MinimapInvisible" and the blacklist and sets their transparency to 1.
 ]]
-function OverheadCameraHandler:UpdateTransparency(): {}
-	local List: table = CollectionService:GetTagged("MinimapInvisible")
+function OverheadCameraHandler:UpdateTransparency(): ()
+	local List: {Instance} = CollectionService:GetTagged("MinimapInvisible")
 
 	for i, v in pairs(List) do
 		self.__Blacklist[v] = v.Transparency
@@ -496,7 +509,7 @@ end
 --[[
 @Description: Makes all items on the blacklist visible at their original transparency.
 ]]
-function OverheadCameraHandler:DisableTransparency(): {}
+function OverheadCameraHandler:DisableTransparency(): ()
 	for i, v in pairs(self.__Blacklist) do
 		i.Transparency = v
 	end
@@ -536,7 +549,7 @@ end
 @Description: addsa an item from the blacklist and makes it invisible, if it's not on the list.
 @Param: Item (BasePart): The item to be added to the blacklist.
 ]]
-function OverheadCameraHandler:AddItemToBlacklist(Item: BasePart): {}
+function OverheadCameraHandler:AddItemToBlacklist(Item: BasePart): ()
 	if not self.__Blacklist[Item] then
 		self.__Blacklist[Item] = Item.Transparency
 		self:UpdateTransparency()
@@ -547,7 +560,7 @@ end
 @Description: Removes an item from the blacklist and makes it visible, if it's on the list.
 @Param: Item (BasePart): The item to be removed from the blacklist.
 ]]
-function OverheadCameraHandler:RemoveItemFromBlacklist(Item: BasePart): {}
+function OverheadCameraHandler:RemoveItemFromBlacklist(Item: BasePart): ()
 	if self.__Blacklist[Item] then
 		self:DisableTransparency()
 		self.__Blacklist[Item] = nil
@@ -559,7 +572,7 @@ end
 @Description: Gets the camera's current position.
 @Param: BlacklistTable (Array): The array to replace the current blacklist array, should be formatted Array[Item] = Item.Transparency
 ]]
-function OverheadCameraHandler:SetBlacklist(BlacklistTable: table): {}
+function OverheadCameraHandler:SetBlacklist(BlacklistTable: {}): ()
 	self.__Blacklist = BlacklistTable
 	self:DisableTransparency()
 	self:UpdateTransparency()
@@ -568,17 +581,17 @@ end
 --[[
 Highlights a given tags background
 --]]
-local function HighlightTag(Tag)
+local function HighlightTag(Tag:{ Background: { BorderColor3: Color3 } })
 	Tag.Background.BorderColor3 = Color3.fromRGB(255, 255, 255)
 end
 
-local function BarbarianMenus(Barbarian, Self)
+local function BarbarianMenus(Barbarian: Model, Self: ExtType.ObjectInstance)
 	--Get a list of all friendly combat NPCs
-	local combatNPCs = {}
+	local combatNPCs: {Model} = {}
 	for _, item in pairs(Self.__Selected) do
-		local isNPC = CollectionService:HasTag(item, "NPC")
-		local isCombatNPC = CollectionService:HasTag(item, "CombatNPC")
-		local isEnemyNPC = CollectionService:HasTag(item, "EnemyNPC")
+		local isNPC: boolean = CollectionService:HasTag(item, "NPC")
+		local isCombatNPC: boolean = CollectionService:HasTag(item, "CombatNPC")
+		local isEnemyNPC: boolean = CollectionService:HasTag(item, "EnemyNPC")
 		if not isNPC or not isCombatNPC or isEnemyNPC then
 			continue --Not friendly combat NPC
 		end
@@ -643,7 +656,6 @@ local function PrepIcons(Self, WorldItem)
 		--Add suport for pop up menus for NPCs
 		Self.__ActiveIcons[WorldItem].TextButton.MouseButton2Click:Connect(function()
 			--use NPCMenu Pop up
-			print("Found menu target: " .. WorldItem.Name)
 			HighlightTag(Self.__ActiveIcons[WorldItem])
 			table.insert(Self.__Selected, WorldItem)
 			NPCMenus(WorldItem, Self)
