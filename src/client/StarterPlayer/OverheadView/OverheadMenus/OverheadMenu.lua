@@ -134,6 +134,29 @@ protFuncs.TransitionMenu = function(MenuName: string, Self: ExtType.ObjectInstan
 end
 
 --[[
+Sets a home menu for when the player closes the menu
+	if the menu is closed then the menu sets back to this home menu
+	@param MenuName (string) the name of the menu to set to
+	@param Self (ExtType.ObjectInstance) instance of this class
+--]]
+protFuncs.SetHomeMenu = function(MenuName: string, Self: ExtType.ObjectInstance) : ()
+	local menu = Self.__CoMenus[MenuName]
+	if not menu then
+		warn("Attempt to set home menu for menu \"" .. MenuName .. "\" but menu does not exist")
+		return
+	end
+	Self.__HomeMenuName = MenuName
+end
+
+--[[
+Removes the home menu
+	@param Self (ExtType.ObjectInstance) an instance of this class
+--]]
+protFuncs.RemoveHomeMenu = function(Self: ExtType.ObjectInstance) : ()
+	Self.__HomeMenuName = nil
+end
+
+--[[
 Constructor for the default menu of the OverheadMenu
 	@param MenuName (string) name of the menu instance
 	NOT the name of a menu or title
@@ -172,6 +195,8 @@ function OverheadMenu.new(MenuName: string): ExtType.ObjectInstance
 	self.__ProtFuncs = protFuncs --Set of protected functions
 	self.__Tasks = {} --Dictionary of all tasks
 	self.__Connections = {} --Dictionary of all tasks not stored somewhere else
+	self.__HomeMenuName = nil--Name of the home menu if set
+	self.__MenuPos = nil --The current position of the menu
 	return self
 end
 
@@ -181,6 +206,7 @@ Places the Menu at a certain position
 --]]
 function OverheadMenu:PlaceMenu(MenuPos: Vector3) : ()
 	self.__ParentPart.Position = MenuPos
+	self.__MenuPos = MenuPos
 end
 
 --[[
@@ -195,6 +221,8 @@ Closes the menu
 --]]
 function OverheadMenu:CloseMenu() : ()
 	self.__MenuFrame.Enabled = false
+	--If set then change back to home menu
+	protFuncs.TransitionMenu(self.__HomeMenuName, self)
 end
 
 function OverheadMenu:Destroy() : ()

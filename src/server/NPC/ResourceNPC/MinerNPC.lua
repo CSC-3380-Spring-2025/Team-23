@@ -73,6 +73,11 @@ function MinerNPC.new(
 	)
 	setmetatable(self, MinerNPC)
 	self.__NPC:SetAttribute("Type", "Pickaxe")
+	CollectionService:AddTag(self.__NPC, "MinerNPC")
+	--Give pickaxe
+	local tools = ReplicatedStorage.Tools
+	local pickaxe = tools.Resource.Pickaxes.Pickaxe
+	self:AddPickaxe(pickaxe, 1)
 	return self
 end
 
@@ -140,22 +145,24 @@ Decreases integrity and gives reward on last strike
 	@param OreCollectedSoundID (number) the id number of the core collection sound
 	@return (boolean) true on last strike false otherwise
 --]]
-local function HandleIntegrity(Target: BasePart, Effectiveness: number, OreCollectedSoundID: number): boolean
+local function HandleIntegrity(Target: BasePart, Effectiveness: number): boolean
 	local integrity: number = Target:GetAttribute("Integrity") :: number
 	local newIntegrity: number = integrity - Effectiveness
 	if newIntegrity <= 0 then
 		--Give Coal if last strike
 		--Hide ore while sound then destroy to prevent audio issues
 		--Target.Transparency = 1
-		local sound: Sound = Instance.new("Sound")
-		sound.SoundId = "rbxassetid://" .. OreCollectedSoundID
-		sound.Parent = Target
-		sound:Play()
-		print("Played audio!")
-		--Destroy to prevent memory leaks
-		sound.Ended:Once(function()
-			sound:Destroy()
-		end)
+		local collectSoundId = Target:GetAttribute("CollectSoundID")
+		if collectSoundId then
+			local sound: Sound = Instance.new("Sound")
+			sound.SoundId = "rbxassetid://" .. collectSoundId
+			sound.Parent = Target
+			sound:Play()
+			--Destroy to prevent memory leaks
+			sound.Ended:Once(function()
+				sound:Destroy()
+			end)
+		end
 		return true
 	else
 		--Lower integrity
@@ -200,6 +207,7 @@ local function HandleCount(Item: any, Self: any): number
 		--Safe to put full amount in backpack
 		Self:CollectItem(Item.Name, count)
 		Item:SetAttribute("Count", 0)
+		Item:Destroy()
 		return 0
 	else
 		--Not enough space to put full thing in backpack
@@ -257,9 +265,11 @@ Handles any given resource
 --]]
 local function HandleResource(Target: any, Tool: Tool, Self: any): boolean
 	local oreInfo: ModuleScript = Self:GetItemInfo(Target:GetAttribute("Resource"))
-	StrikeSound(oreInfo.Sounds.Strike, Target)
-	local finished: boolean =
-		HandleIntegrity(Target, Tool:GetAttribute("Effectiveness") :: number, oreInfo.Sounds.Collect)
+	local strikeSoundId = Target:GetAttribute("StrikeSoundID")
+	if strikeSoundId then
+		StrikeSound(strikeSoundId, Target)
+	end
+	local finished: boolean = HandleIntegrity(Target, Tool:GetAttribute("Effectiveness") :: number)
 	return finished
 end
 
@@ -317,6 +327,12 @@ function MinerNPC:HarvestResource(ResourceObject: any): boolean
 		end
 	end
 
+	if CollectionService:HasTag(target, "DropItem") then
+		--Already mined and on ground
+		Harvest(ResourceObject, self)
+		return true
+	end
+
 	self:EquipTool(tool.Name) --Unequip after use
 	local animTrack: AnimationTrack? = PlayAnimation(swingAnimation, target, self.__NPC, self)
 	if not animTrack then
@@ -366,6 +382,85 @@ function MinerNPC:HasPickaxe(): boolean
 		return false
 	else
 		return true
+	end
+end
+
+local function SortByDistance(FirstOreStruct, SecondOreStruct)
+	if FirstOreStruct.Distance < SecondOreStruct.Distance then
+		return false
+	else
+		return true
+	end
+end
+
+--[[
+Helper function that finds the nearest ore
+--]]
+local function GetNearestOre(Self): BasePart?
+	--Cycle through all ore tags and find the nearest whitelisted one
+	local ores = CollectionService:GetTagged("Ore")
+	local whitelistedOre = {}
+	local NPCPos = Self.__RootPart.Position
+	for _, ore in pairs(ores) do
+		local oreType = ore:GetAttribute("Ore")
+		if not oreType or not ore:IsDescendantOf(Workspace) then
+			continue --Missing ore attribute or not in workspace
+		end
+		if Self:WhitelistedResource(oreType) then
+			local oreStruct = {
+				Ore = ore,
+				Distance = (NPCPos - ore.Position).Magnitude,
+			}
+			table.insert(whitelistedOre, oreStruct)
+		end
+	end
+	--Sort values
+	table.sort(whitelistedOre, SortByDistance)
+	local chosenOre = table.remove(whitelistedOre)
+	if chosenOre == nil then
+		return nil --Nothing found that can be harvested
+	end
+	return chosenOre.Ore
+end
+
+--[[
+Finds the nearest whitelisted resource to harvest automaticly
+--]]
+function ResourceNPC:HarvestNearestResource()
+	--Harvest given resource
+	local chosenOre = GetNearestOre(self)
+	if chosenOre then
+		self:HarvestResource(chosenOre)
+	end
+end
+
+--[[
+Tells the NPC to keep harvesting the nearest resource and then
+	loads it into the asigned chest the player chooses
+--]]
+function ResourceNPC:AutoHarvest()
+	--Create cycle of going to get resource, deliver it to the assigned storage, and then repeat
+	while true do
+		print("Restarting loop")
+		--Harvest resource until full
+		local chosenOre = GetNearestOre(self)
+		local name = chosenOre.Name
+		while chosenOre and self:ValidItemCollection(chosenOre.Name, 1) do
+			--Atleast 1 of this ore will fit
+			self:HarvestResource(chosenOre)
+			chosenOre = GetNearestOre(self)
+		end
+		--Return home since finished
+		self:ReturnHome()
+		while self:IsTraversing() do
+			task.wait(2)
+		end
+		--Empty into storage
+		print("Puting contents into storage")
+		print("Item count before is:" .. self:GetItemCount(name))
+		self:EmptyInventoryToStorage(self.__AssignedStorage)
+		print("Finish emptieing!")
+		print("Item count after is:" .. self:GetItemCount(name))
 	end
 end
 

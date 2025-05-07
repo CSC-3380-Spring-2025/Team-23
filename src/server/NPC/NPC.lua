@@ -74,6 +74,8 @@ function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Sp
 	self.__Humanoid.Died:Connect(function()
 		hasDiedEvent:Fire(self) --Let everyone know that this NPC has died for those listening
 	end)
+	--Reserve NPC with npc tag
+	CollectionService:AddTag(self.__NPC, "NPC")
 	return self
 end
 

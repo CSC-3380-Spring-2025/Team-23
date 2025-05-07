@@ -6,8 +6,12 @@ local CollectionService = game:GetService("CollectionService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ToolNPC = require(ServerScriptService.Server.NPC.ToolNPC)
 local AbstractInterface = require(ReplicatedStorage.Shared.Utilities.Object.AbstractInterface)
+local StorageHandlerObject = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
 local ResourceNPC = {}
 ToolNPC:Supersedes(ResourceNPC)
+
+--Instances
+local storageHandler = StorageHandlerObject.new("ResourceNPCStorageHandler")
 
 --[[
 Constructor for the ResourceNPC class
@@ -68,7 +72,42 @@ function ResourceNPC.new(
 	setmetatable(self, ResourceNPC)
 	self.__ResourceWhiteList = ResourceWhiteList or {}
 	self.__NPC:SetAttribute("ResourceNPC", true)
+	self.__AssignedStorage = nil--The storage designated for this resource NPC during AutoCollect
+	self.__AssignedStoragePos = nil--The Vector3 of the position of where the assigned storage is at
+	self.__IsHarvesting = false--Determines if an NPC is harvesting or not
 	return self
+end
+
+local function GetStoragePos(StorageDescriptor)
+	local instance = storageHandler:GetInstanceFromDescriptor(StorageDescriptor)
+	if instance:IsA("Model") then
+		return instance:FindFirstChild("NPCPoint").Position
+	else
+		return instance.Position
+	end
+end
+
+--[[
+Assigns a given storage device to an NPC for automation
+--]]
+function ResourceNPC:AssignStorage(StorageDevice: number | Instance)
+	--Find storage device and assign its storage descriptor to the NPC
+	if type(StorageDevice) == "number" then
+		--Is the storage descriptor directly
+		self.__AssignedStorage = StorageDevice
+		self.__AssignedStoragePos = GetStoragePos(StorageDevice)
+		self:SetHomePoint(self.__AssignedStoragePos)--Set home point as storage location
+	else
+		--Is the instance so need to find the descriptor
+		local storageDescriptor = storageHandler:FindStorageByInstance(StorageDevice)
+		if storageDescriptor ~= -1 then
+			self.__AssignedStorage = storageDescriptor
+			self.__AssignedStoragePos = GetStoragePos(storageDescriptor)
+			self:SetHomePoint(self.__AssignedStoragePos)--Set home point as storage location
+		else
+			warn("Attempt to AssignStorage but storage device is not valid")
+		end
+	end
 end
 
 --[[
@@ -102,6 +141,37 @@ function ResourceNPC:WhitelistedResource(ResourceName: string): boolean
 	else
 		return false
 	end
+end
+
+
+--[[
+Returns the NPCs resource white
+	@return ({string}?) table of whitelisted resource names or nil if non set
+--]]
+function ResourceNPC:GetResourceWhitelist() : {string}?
+	local returnList: {string} = {}
+	for _, listItem in pairs(self.__ResourceWhiteList) do
+		table.insert(returnList, listItem)
+	end
+	if #returnList == 0 then
+		return nil --No white list set
+	end
+	return returnList
+end
+
+--[[
+Finds the nearest whitelisted resource to harvest automaticly
+--]]
+function ResourceNPC:HarvestNearestResource()
+	AbstractInterface:AbstractError("HarvestNearestResource", "ResourceNPC")
+end
+
+--[[
+Tells the NPC to keep harvesting the nearest resource and then
+	loads it into the asigned chest the player chooses
+--]]
+function ResourceNPC:AutoHarvest()
+	AbstractInterface:AbstractError("AutoHarvest", "ResourceNPC")
 end
 
 return ResourceNPC

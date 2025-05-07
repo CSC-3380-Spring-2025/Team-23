@@ -967,13 +967,21 @@ This function can be used to empty all items whitelsited by the storage device y
 	that a storage can take and dumps as much as possible into it.
 	@param StorageDevice (Instance) any instance used as a storage device
 --]]
-function BackpackNPC:EmptyInventoryToStorage(StorageDevice: Instance) : ()
+function BackpackNPC:EmptyInventoryToStorage(StorageDevice: Instance | number) : ()
 	local contents: {string}? = self:SeekBackpackContents()
 	if not contents then
 		--backpack empty
 		return
 	end
-	local storDesc: number = storageHandler:FindStorageByInstance(StorageDevice) 
+	local storDesc: number
+	if type(StorageDevice) == "number" then
+		if not storageHandler:ValidDescriptor(StorageDevice) then
+			return
+		end
+		storDesc = StorageDevice
+	else
+		storDesc = storageHandler:FindStorageByInstance(StorageDevice) 
+	end
 	if storDesc == -1 then
 		return--No such storage device
 	end
