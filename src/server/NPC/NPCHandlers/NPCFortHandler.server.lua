@@ -58,6 +58,11 @@ Gives the given barbarian NPC the EnemyNPC tag
 --]]
 local function MakeEnemy(NPCInstance: ExtType.ObjectInstance) : ()
 	NPCInstance:AddTag("EnemyNPC")
+	NPCInstance:SetAttribute("AttachTo", "Head")
+	NPCInstance:SetAttribute("NPC", true)
+	NPCInstance:SetAttribute("Owner", "Barbarians")
+	NPCInstance:SetAttribute("Type", "Sword")
+	NPCInstance:AddTag("OverheadUnit")
 end
 
 --[[

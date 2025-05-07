@@ -575,15 +575,17 @@ Initializes a storage device and returns its Storage Descriptor
         }
     } 
     @param StorageDevice (Instance) any instance representing the storage device
+    @param PlayerId (number) optional argument that allows for retrieving the storage device owned by a player
     @return (number) the storageDescriptor for access
 --]]
-function StorageHandler:AddStorageDevice(StorageConfig: {{string}}?, StorageDevice: Instance) : number
+function StorageHandler:AddStorageDevice(StorageConfig: {{string}}?, StorageDevice: Instance, PlayerId: number?) : number
     storageMutex:Lock()
     local curDescriptor: number = storageDescriptor
     local storageValue: {[string]: any} = {
         Config = StorageConfig,
         Device = StorageDevice,
-        Inventory = {} --Table of contents of this device
+        Inventory = {}, --Table of contents of this device
+        PlayerId = PlayerId 
     }
     storageTable[curDescriptor] = storageValue
     storageDescriptor = storageDescriptor + 1
@@ -618,6 +620,47 @@ function StorageHandler:FindStorageByInstance(Instance: Instance) : number
         end
     end
     return -1--Failed to find an instance with the descriptor
+end
+
+--[[
+Used to get the instance for a storage descriptor
+--]]
+function StorageHandler:GetInstanceFromDescriptor(StorageDescriptor: number) : Instance?
+    if not self:ValidDescriptor(StorageDescriptor) then
+        warn("Attempted to get instance device from storage descriptor that is not valid")
+        return nil
+    end
+
+    for descriptor, descriptorInfo in pairs(storageTable) do
+        if descriptor == StorageDescriptor then
+            return descriptorInfo.Device
+        end
+    end
+    return nil--Device not found
+end
+
+--[[
+Returns a table of all storage devices owned by a player
+    @param PlayerId (number) the id of the player
+    @return ({number}?) a table of storageDescriptors or nil if non were
+    found for the player
+--]]
+function StorageHandler:GetPlayersStorageDevices(PlayerId: number) : {number}?
+    local playerStorages: {number} = {}
+    for descriptor, storageInfo in pairs(storageTable) do
+        if not storageInfo.PlayerId then
+            continue--Not owned by a player
+        end
+        --Check for if players id
+        if storageInfo.PlayerId == PlayerId then
+            table.insert(playerStorages, descriptor)
+        end
+    end
+
+    if #playerStorages == 0 then
+        return nil--No storage was found for given player
+    end
+    return playerStorages
 end
 
 --[[

@@ -1,5 +1,4 @@
 ----[[
---[[
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -12,6 +11,8 @@ local ResourceNPC = require(ServerScriptService.Server.NPC.ResourceNPC.ResourceN
 local MinerNPC = require(ServerScriptService.Server.NPC.ResourceNPC.MinerNPC)
 local NPCHandlerObject = require(ServerScriptService.Server.NPC.NPCHandlers.NPCHandler)
 local NPCHandler = NPCHandlerObject.new("NPCHandler Test")
+local StorageHandlerObject = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
+local storageHandler = StorageHandlerObject.new("TestStorageHandler")
 --]]
 --[[
 local NPC1 = NPC.new("NPC 1", rigsFolder.DefaultNPC, 100, 0, nil, Vector3.new(0, 10, 0))
@@ -317,7 +318,6 @@ print("Storage contains this amount of coal: " .. storageHandler:GetItemCount("C
 --NPC1:Kill()
 --]]
 
-
 --Stats test
 --[[
 local NPC1 = MinerNPC.new(
@@ -342,3 +342,61 @@ NPC1:CollectItem("Water", 10)
 
 print("Checking NPC1 name: " .. NPC1.Name)
 --]]
+
+local overheadNPC = MinerNPC.new(
+	"Overhead Miner",
+	rigsFolder.DefaultNPC,
+	100,
+	Vector3.new(0, 0, 0),
+	16,
+	10,
+	100,
+	70,
+	100,
+	{ "Coal", "Iron", "Pickaxe", "Bread", "Water" },
+	nil,
+	nil,
+	{ "Coal" },
+	true
+)
+
+local me: Player = Players:WaitForChild("claytakiler")
+NPCHandler:AddNPCToPlayerPool(overheadNPC, me.UserId)
+
+--Set up storage
+local crate = Workspace:WaitForChild("Coal Crate")
+local storageConfig = {
+	MaxStack = 1000,
+	ItemsConfig = {
+		Ore = { "AllItems" },
+	},
+}
+local storageDesc = storageHandler:AddStorageDevice(storageConfig, crate, me.UserId)
+
+--Spawn a sword NPC
+local swordsManObject = require(ServerScriptService.Server.NPC.CombatNPC.SwordsmanNPC)
+local newSwordsman = swordsManObject.new(
+	"Player Swordsman",
+	rigsFolder.DefaultNPC,
+	100,
+	Vector3.new(0, 0, 10),
+	16,
+	10,
+	100,
+	70,
+	100,
+	{ "Sword" },
+	nil,
+	nil,
+	true,
+	nil,
+	{"EnemyNPC"}
+)
+
+newSwordsman:SetAttribute("AttachTo", "Head")
+newSwordsman:SetAttribute("NPC", true)
+newSwordsman:SetAttribute("Owner", "claytakiler")
+newSwordsman:SetAttribute("Type", "Sword")
+newSwordsman:AddTag("OverheadUnit")
+NPCHandler:AddNPCToPlayerPool(newSwordsman, me.UserId)
+

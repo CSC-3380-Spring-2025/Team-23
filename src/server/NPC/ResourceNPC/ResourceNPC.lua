@@ -6,8 +6,12 @@ local CollectionService = game:GetService("CollectionService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ToolNPC = require(ServerScriptService.Server.NPC.ToolNPC)
 local AbstractInterface = require(ReplicatedStorage.Shared.Utilities.Object.AbstractInterface)
+local StorageHandlerObject = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
 local ResourceNPC = {}
 ToolNPC:Supersedes(ResourceNPC)
+
+--Instances
+local storageHandler = StorageHandlerObject.new("ResourceNPCStorageHandler")
 
 --[[
 Constructor for the ResourceNPC class
@@ -68,6 +72,7 @@ function ResourceNPC.new(
 	setmetatable(self, ResourceNPC)
 	self.__ResourceWhiteList = ResourceWhiteList or {}
 	self.__NPC:SetAttribute("ResourceNPC", true)
+	self.__IsHarvesting = false--Determines if an NPC is harvesting or not
 	return self
 end
 
@@ -102,6 +107,37 @@ function ResourceNPC:WhitelistedResource(ResourceName: string): boolean
 	else
 		return false
 	end
+end
+
+
+--[[
+Returns the NPCs resource white
+	@return ({string}?) table of whitelisted resource names or nil if non set
+--]]
+function ResourceNPC:GetResourceWhitelist() : {string}?
+	local returnList: {string} = {}
+	for _, listItem in pairs(self.__ResourceWhiteList) do
+		table.insert(returnList, listItem)
+	end
+	if #returnList == 0 then
+		return nil --No white list set
+	end
+	return returnList
+end
+
+--[[
+Finds the nearest whitelisted resource to harvest automaticly
+--]]
+function ResourceNPC:HarvestNearestResource()
+	AbstractInterface:AbstractError("HarvestNearestResource", "ResourceNPC")
+end
+
+--[[
+Tells the NPC to keep harvesting the nearest resource and then
+	loads it into the asigned chest the player chooses
+--]]
+function ResourceNPC:AutoHarvest()
+	AbstractInterface:AbstractError("AutoHarvest", "ResourceNPC")
 end
 
 return ResourceNPC
