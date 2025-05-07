@@ -357,6 +357,11 @@ function NPC:ReturnHome()
 	end
 end
 
+local function CalculateSpacingPos(CurrentObjPos, Self)
+	local direction = (CurrentObjPos - Self.__RootPart.Position).Unit
+	return CurrentObjPos - (direction * 3) --Stop 3 studs from enemy to prevent overlap
+end
+
 --[[
 Helper function for taversing the waypoints set during follow
     @param Self (instance) instance of the class
@@ -364,7 +369,8 @@ Helper function for taversing the waypoints set during follow
 --]]
 local function TraverseFollowPoints(Self: any, CurrentObjPos: Vector3): ()
 	Self.__Waypoints = {} --Reset waypoints
-	local success: boolean = PrepWaypoint(Self.__RootPart.Position, CurrentObjPos, Self, true)
+	local followPos = CalculateSpacingPos(CurrentObjPos, Self)
+	local success: boolean = PrepWaypoint(Self.__RootPart.Position, followPos, Self, true)
 	--If valid path start following player
 	if success then
 		--Traverse waypoints in each set of waypoints

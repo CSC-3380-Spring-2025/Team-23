@@ -62,7 +62,7 @@ end
 
 --[[
 --]]
-function NPCOverheadMenu.new(MenuName, NPC: Model)
+function NPCOverheadMenu.new(MenuName, NPC: Model) : ExtType.ObjectInstance
     local self = OverheadMenu.new(MenuName)
     setmetatable(self, NPCOverheadMenu)
     self.__NPC = NPC

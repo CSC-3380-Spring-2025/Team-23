@@ -130,7 +130,7 @@ protFuncs.TransitionMenu = function(MenuName: string, Self: ExtType.ObjectInstan
 	InsertOptions(menuStruct, Self)
 	local menuFrame: BillboardGui = Self.__MenuFrame
 	local menuNameText: TextLabel = menuFrame:WaitForChild("MenuName") :: TextLabel
-	menuNameText.Text = MenuName
+	menuNameText.Text = menuStruct.Title
 end
 
 --[[

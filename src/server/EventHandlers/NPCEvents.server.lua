@@ -9,17 +9,19 @@ local NPCHandlerObject = require(ServerScriptService.Server.NPC.NPCHandlers.NPCH
 local StorageHandlerObject = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
 
 --Events
-local NPCEvents = ReplicatedStorage.Events.NPCEvents
-local GetWhitelistedStorage = NPCEvents:WaitForChild("GetWhitelistedStorage")
-local TraverseNPCs = BridgeNet2.ReferenceBridge("TraverseNPCs")
-local MinerNPCsCollect = BridgeNet2.ReferenceBridge("MinerNPCsCollect")
-local NPCSetwaypoint = BridgeNet2.ReferenceBridge("NPCSetwaypoint")
-local NPCTraverseWaypoints = BridgeNet2.ReferenceBridge("NPCTraverseWaypoints")
-local HarvestNearestResource = BridgeNet2.ReferenceBridge("HarvestNearestResource")
-local AssignStorage = BridgeNet2.ReferenceBridge("NPCAssignStorage")
-local StartAutoHarvest = BridgeNet2.ReferenceBridge("NPCStartAutoHarvest")
-local NPCCancelActions = BridgeNet2.ReferenceBridge("NPCCancelActions")
-local NPCEmptyToStorage = BridgeNet2.ReferenceBridge("NPCEmptyToStorage")
+local NPCEvents: Folder = ReplicatedStorage.Events.NPCEvents
+local GetWhitelistedStorage: RemoteFunction = NPCEvents:WaitForChild("GetWhitelistedStorage") :: RemoteFunction
+local TraverseNPCs: ExtType.Bridge = BridgeNet2.ReferenceBridge("TraverseNPCs")
+local MinerNPCsCollect: ExtType.Bridge = BridgeNet2.ReferenceBridge("MinerNPCsCollect")
+local NPCSetwaypoint: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCSetwaypoint")
+local NPCTraverseWaypoints: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCTraverseWaypoints")
+local HarvestNearestResource: ExtType.Bridge = BridgeNet2.ReferenceBridge("HarvestNearestResource")
+local AssignStorage: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCAssignStorage")
+local StartAutoHarvest: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCStartAutoHarvest")
+local NPCCancelActions: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCCancelActions")
+local NPCEmptyToStorage: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCEmptyToStorage")
+local NPCAttack: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCAttack")
+local NPCSentryMode: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCSentryMode")
 
 --Instances
 local storageHandler: ExtType.ObjectInstance = StorageHandlerObject.new("NPCEventsStorageHandler")
@@ -185,4 +187,19 @@ NPCEmptyToStorage:Connect(function(Player, Args)
 	local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(Args.Character, Player.UserId)
 	NPCInstance:AssignStorage(Args.StorageDevice)
 	NPCInstance:TraverseEmptyToStorage()
+end)
+
+NPCAttack:Connect(function(Player, Args)
+	local target = Args.Target
+	local friendlyNPCs = Args.FriendlyNPCs
+	--Loop through all friendly NPCs and have them attack the target
+	for _, NPC in pairs(friendlyNPCs) do
+		local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(NPC, Player.UserId)
+		NPCInstance:Attack(target)
+	end
+end)
+
+NPCSentryMode:Connect(function(Player, NPCharacter)
+	local NPCInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
+	NPCInstance:SentryMode(30, 40)
 end)

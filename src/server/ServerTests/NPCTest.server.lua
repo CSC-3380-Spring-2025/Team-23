@@ -353,11 +353,11 @@ local overheadNPC = MinerNPC.new(
 	100,
 	70,
 	100,
-	{ "Coal", "Iron", "Pickaxe", "Bread", "Water"},
+	{ "Coal", "Iron", "Pickaxe", "Bread", "Water" },
 	nil,
 	nil,
 	{ "Coal" },
-    true
+	true
 )
 
 local me: Player = Players:WaitForChild("claytakiler")
@@ -368,7 +368,35 @@ local crate = Workspace:WaitForChild("Coal Crate")
 local storageConfig = {
 	MaxStack = 1000,
 	ItemsConfig = {
-		Ore = {"AllItems"}
-	}
+		Ore = { "AllItems" },
+	},
 }
 local storageDesc = storageHandler:AddStorageDevice(storageConfig, crate, me.UserId)
+
+--Spawn a sword NPC
+local swordsManObject = require(ServerScriptService.Server.NPC.CombatNPC.SwordsmanNPC)
+local newSwordsman = swordsManObject.new(
+	"Player Swordsman",
+	rigsFolder.DefaultNPC,
+	100,
+	Vector3.new(0, 0, 10),
+	16,
+	10,
+	100,
+	70,
+	100,
+	{ "Sword" },
+	nil,
+	nil,
+	true,
+	nil,
+	{"EnemyNPC"}
+)
+
+newSwordsman:SetAttribute("AttachTo", "Head")
+newSwordsman:SetAttribute("NPC", true)
+newSwordsman:SetAttribute("Owner", "claytakiler")
+newSwordsman:SetAttribute("Type", "Sword")
+newSwordsman:AddTag("OverheadUnit")
+NPCHandler:AddNPCToPlayerPool(newSwordsman, me.UserId)
+

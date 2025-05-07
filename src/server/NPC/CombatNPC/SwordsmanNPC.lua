@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local RaycastHitboxV4 = require(ReplicatedStorage.RaycastHitboxV4)
 local CombatNPC = require(ServerScriptService.Server.NPC.CombatNPC.CombatNPC)
@@ -15,6 +16,7 @@ CombatNPC:Supersedes(SwordsmanNPC)
 
 --Instances
 local NPCHandler: ExtType.ObjectInstance = NPCHandlerObject.new("NPCHandlerSwordsman")
+local HitLock: ExtType.ObjectInstance = ServerMutexSeq.new("SwordsmanNPCHit")
 
 --Vars
 local attackRange: number = 5 --Distance in studs that the NPCs sword will activate
@@ -23,7 +25,7 @@ local attackRange: number = 5 --Distance in studs that the NPCs sword will activ
 Handles what happens when the NPC dies
 	@param Self (ExtType.ObjectInstance) an instance of the class
 --]]
-local function HandleDeath(Self: ExtType.ObjectInstance) : ()
+local function HandleDeath(Self: ExtType.ObjectInstance): ()
 	Self.__Humanoid.Died:Once(function()
 		--End tasks
 		for _, thread in pairs(Self.__Tasks) do
@@ -31,12 +33,12 @@ local function HandleDeath(Self: ExtType.ObjectInstance) : ()
 				task.cancel(thread)
 			end
 		end
-        --Clean up connections
-        for _, connection in pairs(Self.__Connections) do
-            if connection then
-                connection:Disconnect()
-            end
-        end
+		--Clean up connections
+		for _, connection in pairs(Self.__Connections) do
+			if connection then
+				connection:Disconnect()
+			end
+		end
 		task.wait(5)
 		Self:Destroy()
 	end)
@@ -82,7 +84,7 @@ function SwordsmanNPC.new(
 	DeathHandler: any,
 	StatsConfig: {}?,
 	AggroList: { string }?
-) : ExtType.ObjectInstance
+): ExtType.ObjectInstance
 	local self = CombatNPC.new(
 		Name,
 		Rig,
@@ -100,9 +102,14 @@ function SwordsmanNPC.new(
 		AggroList
 	)
 	setmetatable(self, SwordsmanNPC)
-    if DeathHandler then
+	if DeathHandler then
 		HandleDeath(self)
 	end
+	local tools = ReplicatedStorage.Tools
+	local sword: Tool = ReplicatedStorage.ItemDrops.Sword
+	self:AddTool(sword, 1)
+	self:SelectWeapon("Sword")
+	self:AddTag("SwordsmanNPC")
 	return self
 end
 
@@ -129,8 +136,24 @@ Cleans up the attack function
 --]]
 local function CleanUpAttack(HitBox: { [any]: any }, Animation: AnimationTrack, Self: { [any]: any })
 	Animation.Stopped:Wait()
-	Self.__Connections["Hit"]:Disconnect() --Disc hit connection
+	HitLock:Lock()
+	if Self.__Connections["Hit"] then
+		Self.__Connections["Hit"]:Disconnect() --Disc hit connection
+		Self.__Connections["Hit"] = nil
+	end
+	HitLock:Unlock()
 	HitBox:HitStop()
+end
+
+
+--[[
+--]]
+local function FaceTarget(Self, TargetPos)
+	local rootPart = Self.__RootPart
+	local endFrame: CFrame = CFrame.lookAt(rootPart.Position, TargetPos)
+	local tweenInfo: TweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local tween: Tween = TweenService:Create(rootPart, tweenInfo, { CFrame = endFrame })
+	tween:Play()
 end
 
 --[[
@@ -164,7 +187,7 @@ local function ActivateWeapon(Self: ExtType.ObjectInstance)
 		warn('Damage attribute not set for tool of NPC "' .. Self.Name .. '"')
 		return
 	end
-	Self:CoolDownTool(physTool.Name)--Activate cool down
+	Self:CoolDownTool(physTool.Name) --Activate cool down
 	HandleHits(hitBox, Self, damage)
 	swingAnim:Play()
 	hitBox:HitStart()
@@ -213,6 +236,8 @@ function SwordsmanNPC:Attack(Target: Instance): ()
 		while self.__IsAttacking do
 			if (self.__RootPart.Position - rootPart.Position).Magnitude <= attackRange then
 				--Targets in range to attack
+				--Turn to face target
+				FaceTarget(self, rootPart.Position)
 				ActivateWeapon(self)
 			end
 			RunService.Heartbeat:Wait()

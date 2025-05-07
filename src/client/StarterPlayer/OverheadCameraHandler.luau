@@ -24,6 +24,10 @@ local overheadMenus = script.Parent.OverheadView.OverheadMenus
 local NPCOverheadMenus = overheadMenus.NPCOverheadMenus
 local ResourceNPCOverheadMenus = NPCOverheadMenus.ResourceNPCOverheadMenus
 local MinerNPCOverheadMenu = require(ResourceNPCOverheadMenus.MinerNPCOverheadMenu)
+local EnemyOverheadMenus = overheadMenus.EnemyOverheadMenus
+local EnemyOverheadMenu = require(EnemyOverheadMenus.EnemyOverheadMenu)
+local NPCCombatMenus = NPCOverheadMenus.CombatNPCOverheadMenus
+local SwordsmanNPCOverheadMenu = require(NPCCombatMenus.SwordmanNPCOverheadMenu)
 
 local Player: Player = Players.LocalPlayer
 local playersMouse = Player:GetMouse()
@@ -42,11 +46,10 @@ local TraverseNPCs = BridgeNet2.ReferenceBridge("TraverseNPCs")
 local MinerNPCsCollect = BridgeNet2.ReferenceBridge("MinerNPCsCollect")
 
 local tags = ReplicatedFirst:WaitForChild("UI"):WaitForChild("Tags")
-
 local IconTable: { string } = {
 	["Axe"] = tags.AxemanTag,
 	["Pickaxe"] = tags.PickaxeManTag,
-	["Sword"] = tags.SwordmanTag,
+	["Sword"] = tags.SwordmanTag
 }
 -- Functions
 
@@ -57,7 +60,7 @@ local IconTable: { string } = {
 @Return OverheadCameraHandler (Array): The constructed camera handler.
 ]]
 
-function OverheadCameraHandler.new(Name, CamPosition, Whitelist, Blacklist) : ExtType.ObjectInstance
+function OverheadCameraHandler.new(Name, CamPosition, Whitelist, Blacklist): ExtType.ObjectInstance
 	local self = Object.new(Name or "OverheadMap")
 	setmetatable(self, OverheadCameraHandler)
 	self.__CamPosition = CamPosition or Vector3.new(0, 100, 0)
@@ -71,7 +74,7 @@ function OverheadCameraHandler.new(Name, CamPosition, Whitelist, Blacklist) : Ex
 	self.__Selected = {}
 	self.__Active = false
 	self.__Debounce = false
-	self.__NPCMenus = {}--List of all npc menus where the character of NPC is the key
+	self.__NPCMenus = {} --List of all npc menus where the character of NPC is the key
 	Character:WaitForChild("Humanoid")
 	self.__DeathConnection = Character.Humanoid.Died:Connect(function()
 		self:Deactivate()
@@ -126,7 +129,7 @@ end
 --Clears if next click is not on the ground
 local wayPointTable = {}
 
-local function GetNPCMenu(NPCharacter, Self) : ExtType.ObjectInstance
+local function GetNPCMenu(NPCharacter, Self): ExtType.ObjectInstance
 	local menu = Self.__NPCMenus[NPCharacter]
 	return menu
 end
@@ -143,11 +146,25 @@ local function MinerNPCMenu(MinerNPC, Self)
 	minerMenu:OpenMenu()
 end
 
+local function SwordsmanNPCMenu(SwordsmanNPC, Self)
+	local swordsmanMenu: ExtType.ObjectInstance = GetNPCMenu(SwordsmanNPC, Self)
+	if swordsmanMenu == nil then
+		swordsmanMenu = SwordsmanNPCOverheadMenu.new("MinerNPC", SwordsmanNPC)
+		Self.__NPCMenus[SwordsmanNPC] = swordsmanMenu
+	end
+	--Move menu to where player clicked
+	swordsmanMenu:PlaceMenu(SwordsmanNPC:GetPivot().Position)
+	--Open the menu
+	swordsmanMenu:OpenMenu()
+end
+
 --Helper function used to handle all NPCMenus within ShiftMouse3
 local function NPCMenus(NPC, Self)
 	--Figure out what type of NPC it is
 	if CollectionService:HasTag(NPC, "MinerNPC") then
 		MinerNPCMenu(NPC, Self)
+	elseif CollectionService:HasTag(NPC, "SwordsmanNPC") then
+		SwordsmanNPCMenu(NPC, Self)
 	end
 end
 
@@ -169,9 +186,7 @@ end
 --[[
 Displays the list of
 --]]
-local function OreMenus(Ore, Self, HitPos)
-	
-end
+local function OreMenus(Ore, Self, HitPos) end
 
 local function ResourceMenus(Resource, Self)
 	--Determine what type of resource it is
@@ -215,6 +230,9 @@ Helper function that determines what happens when Shift is clicked with mouse 3
 	Reserved for displaying a list of options fro the object clicked on
 --]]
 local function ShiftMouse3(Self)
+	if not UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+		return
+	end
 	local target = playersMouse.Target
 	local hitPos = playersMouse.Hit.Position
 	--Check if player has a single target selected
@@ -228,7 +246,7 @@ local function ShiftMouse3(Self)
 		local NPCCount = 0
 		local lastNPC = nil
 		for _, item in pairs(Self.__Selected) do
-			if CollectionService:HasTag(item, "NPC") then
+			if CollectionService:HasTag(item, "NPC") and not CollectionService:HasTag(item, "EnemyNPC") then
 				NPCCount = NPCCount + 1
 				lastNPC = item
 			end
@@ -315,7 +333,7 @@ function OverheadCameraHandler:HandleKeyPressed(Input: InputObject): ()
 			--Send message to server to traverse with all NPCs and waypoint
 			local argsNPCs = {}
 			for _, item in pairs(self.__Selected) do
-				if item:GetAttribute("NPC") then
+				if item:GetAttribute("NPC") and not CollectionService:HasTag(item, "EnemyNPC") then
 					table.insert(argsNPCs, item)
 				end
 			end
@@ -329,16 +347,6 @@ function OverheadCameraHandler:HandleKeyPressed(Input: InputObject): ()
 	elseif Input.KeyCode == Enum.KeyCode.LeftAlt and self.__Active then
 		--Cancel all waypoints
 		table.clear(wayPointTable)
-		--[[elseif Input.KeyCode == Enum.KeyCode.E and self.__Active then
-		while UIS:IsKeyDown(Enum.KeyCode.E) do
-			task.wait(0.01)
-				self.__CamRotation += 1
-		end
-	elseif Input.KeyCode == Enum.KeyCode.Q and self.__Active then
-		while UIS:IsKeyDown(Enum.KeyCode.Q) do
-			task.wait(0.01)
-			self.__CamRotation -= 1
-		end]]
 	end
 end
 
@@ -376,7 +384,6 @@ function OverheadCameraHandler:Activate(SetPosition: Vector3): {}
 	if self.__Active or self.__Debounce then
 		return
 	end
-	print("Activating")
 	self.__Debounce = true
 	self.__Active = true
 	Controls:Disable()
@@ -565,56 +572,102 @@ local function HighlightTag(Tag)
 	Tag.Background.BorderColor3 = Color3.fromRGB(255, 255, 255)
 end
 
+local function BarbarianMenus(Barbarian, Self)
+	--Get a list of all friendly combat NPCs
+	local combatNPCs = {}
+	for _, item in pairs(Self.__Selected) do
+		local isNPC = CollectionService:HasTag(item, "NPC")
+		local isCombatNPC = CollectionService:HasTag(item, "CombatNPC")
+		local isEnemyNPC = CollectionService:HasTag(item, "EnemyNPC")
+		if not isNPC or not isCombatNPC or isEnemyNPC then
+			continue --Not friendly combat NPC
+		end
+		table.insert(combatNPCs, item)
+	end
+
+	--Determine what was clicked on to act accordingly
+	--Nothing meaningful was clicked so means trying to open normal menu of NPC away from it
+	local barbarianMenu: ExtType.ObjectInstance = GetNPCMenu(Barbarian, Self)
+	if barbarianMenu == nil then
+		barbarianMenu = EnemyOverheadMenu.new("EnemyMenu", Barbarian, combatNPCs)
+		Self.__NPCMenus[Barbarian] = barbarianMenu
+	end
+	--Move menu to where barbarian is
+	barbarianMenu:PlaceMenu(Barbarian:GetPivot().Position)
+	--Open the menu
+	barbarianMenu:OpenMenu()
+end
+
+local function SetUpBarbarianActions(Barbarian, Button, Icon, Self)
+	--Set up what happens when a player clicks the button with right shift
+	Button.MouseButton2Click:Connect(function()
+		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+			--use NPCMenu Pop up
+			HighlightTag(Icon)
+			table.insert(Self.__Selected, Barbarian)
+			BarbarianMenus(Barbarian, Self)
+		end
+	end)
+end
+
+local function PrepIcons(Self, WorldItem)
+	if not IconTable[WorldItem:GetAttribute("Type")] then
+		return
+	end
+	Self.__ActiveIcons[WorldItem] = IconTable[WorldItem:GetAttribute("Type")]:Clone()
+	Self.__ActiveIcons[WorldItem].Parent = Player.PlayerGui
+	if WorldItem:IsA("BasePart") then
+		Self.__ActiveIcons[WorldItem].Adornee = WorldItem
+	elseif WorldItem:IsA("Model") then
+		Self.__ActiveIcons[WorldItem].Adornee = WorldItem:FindFirstChild(WorldItem:GetAttribute("AttachTo"))
+	end
+	if WorldItem:GetAttribute("Owner") ~= Player.Name then
+		Self.__ActiveIcons[WorldItem].Background.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+		table.insert(Self.__HostileTags, Self.__ActiveIcons[WorldItem])
+		SetUpBarbarianActions(WorldItem, Self.__ActiveIcons[WorldItem].TextButton, Self.__ActiveIcons[WorldItem], Self)
+	else
+		table.insert(Self.__FriendlyTags, Self.__ActiveIcons[WorldItem])
+		Self.__ActiveIcons[WorldItem].TextButton.MouseButton1Click:Connect(function()
+			if not UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
+				for c, d in pairs(Self.__ActiveIcons) do
+					d.Background.BorderColor3 = Color3.fromRGB(0, 0, 0)
+				end
+				table.clear(Self.__Selected)
+				table.insert(Self.__Selected, WorldItem)
+				Self.__ActiveIcons[WorldItem].Background.BorderColor3 = Color3.fromRGB(255, 255, 255)
+			else
+				table.insert(Self.__Selected, WorldItem)
+				Self.__ActiveIcons[WorldItem].Background.BorderColor3 = Color3.fromRGB(255, 255, 255)
+			end
+		end)
+		--Add suport for pop up menus for NPCs
+		Self.__ActiveIcons[WorldItem].TextButton.MouseButton2Click:Connect(function()
+			--use NPCMenu Pop up
+			print("Found menu target: " .. WorldItem.Name)
+			HighlightTag(Self.__ActiveIcons[WorldItem])
+			table.insert(Self.__Selected, WorldItem)
+			NPCMenus(WorldItem, Self)
+		end)
+	end
+	if WorldItem:GetAttribute("NPC") and not CollectionService:HasTag(WorldItem, "EnemyNPC") then
+		table.insert(Self.__UnitTags, Self.__ActiveIcons[WorldItem])
+	end
+end
+
 --[[
 @Description: Adds icons to predetermined and tagged units based on their attributes when the camera is first activated.
 ]]
-function OverheadCameraHandler:SetupIcons(): {}
-	for i, v in pairs(self.__ActiveIcons) do
+function OverheadCameraHandler:SetupIcons(): ()
+	for _, v in pairs(self.__ActiveIcons) do
 		v:Destroy()
 	end
 	local Tagged = CollectionService:GetTagged("OverheadUnit")
-	for i, v in pairs(Tagged) do
-		if not IconTable[v:GetAttribute("Type")] then
-			continue
-		end
-		self.__ActiveIcons[v] = IconTable[v:GetAttribute("Type")]:Clone()
-		self.__ActiveIcons[v].Parent = Player.PlayerGui
-		if v:IsA("BasePart") then
-			self.__ActiveIcons[v].Adornee = v
-		elseif v:IsA("Model") then
-			self.__ActiveIcons[v].Adornee = v:FindFirstChild(v:GetAttribute("AttachTo"))
-		end
-		if v:GetAttribute("Owner") ~= Player.Name then
-			self.__ActiveIcons[v].Background.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-			table.insert(self.__HostileTags, self.__ActiveIcons[v])
-		else
-			table.insert(self.__FriendlyTags, self.__ActiveIcons[v])
-			self.__ActiveIcons[v].TextButton.MouseButton1Click:Connect(function()
-				if not UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
-					for c, d in pairs(self.__ActiveIcons) do
-						d.Background.BorderColor3 = Color3.fromRGB(0, 0, 0)
-					end
-					table.clear(self.__Selected)
-					table.insert(self.__Selected, v)
-					self.__ActiveIcons[v].Background.BorderColor3 = Color3.fromRGB(255, 255, 255)
-				else
-					table.insert(self.__Selected, v)
-					self.__ActiveIcons[v].Background.BorderColor3 = Color3.fromRGB(255, 255, 255)
-				end
-			end)
-			--Add suport for pop up menus for NPCs
-			self.__ActiveIcons[v].TextButton.MouseButton2Click:Connect(function()
-				--use NPCMenu Pop up
-				print("Found menu target: " .. v.Name)
-				HighlightTag(self.__ActiveIcons[v])
-				table.insert(self.__Selected, v)
-				NPCMenus(v, self)
-			end)
-		end
-		if v:GetAttribute("NPC") then
-			table.insert(self.__UnitTags, self.__ActiveIcons[v])
-		end
+	for _, worldItem in pairs(Tagged) do
+		PrepIcons(self, worldItem)
 	end
+	CollectionService:GetInstanceAddedSignal("OverheadUnit"):Connect(function(WorldItem)
+		PrepIcons(self, WorldItem)
+	end)
 end
 
 --[[

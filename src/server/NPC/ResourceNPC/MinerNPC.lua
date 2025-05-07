@@ -456,7 +456,7 @@ function MinerNPC:AutoHarvest()
 		while true do
 			--Harvest resource until full
 			local chosenOre = GetNearestOre(self)
-			while chosenOre and self:ValidItemCollection(chosenOre.Name, 1) do
+			while chosenOre and self:ValqidItemCollection(chosenOre.Name, 1) do
 				--Atleast 1 of this ore will fit
 				HarvestResourceHelp(chosenOre, self)
 				chosenOre = GetNearestOre(self)
