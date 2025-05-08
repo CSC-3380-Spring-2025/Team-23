@@ -84,10 +84,10 @@ end
  *
  * @return - Returns nothing
 ]]
-local function UpdateCropModels(Target: Instance, CropName: string, To: Model): ()
+local function UpdateCropModels(Target: Instance, CropName: string, From: Model, To: Model): ()
 	local changedCrops: { Model } = {}
-	for _, cropModel in pairs(Target:GetDescendants()) do
-		if cropModel.Name == CropName then
+	for _, cropModel in pairs(Target:GetChildren()) do
+		if cropModel.Name == From.Name then
 			local fromPosition: Vector3 = cropModel:GetPivot().Position
 			local spawnHeight: number = (
 				(Target.Position.Y + (Target.Size.Y / 2)) + select(2, To:GetBoundingBox()).Y / 2
@@ -96,7 +96,6 @@ local function UpdateCropModels(Target: Instance, CropName: string, To: Model): 
 			cropModel:Destroy()
 			local replacementModel: Model = To:Clone()
 			replacementModel:PivotTo(CFrame.new(cropSpawnLocation))
-			replacementModel.Name = CropName
 			table.insert(changedCrops, replacementModel)
 		end
 	end
@@ -105,6 +104,7 @@ local function UpdateCropModels(Target: Instance, CropName: string, To: Model): 
 		changedModel.Parent = Target
 	end
 end
+
 
 --[[  
  * Plant - Handles the process of a crop growing over time, updating the crop's
@@ -130,7 +130,6 @@ function Crop:Plant(Target: Instance, CropName: string): boolean
 				)
 				local cropSpawnLocation: Vector3 = Vector3.new(Target.Position.X, spawnHeight, Target.Position.Z)
 				replacementModel:PivotTo(CFrame.new(cropSpawnLocation))
-				replacementModel.Name = CropName
 				replacementModel.Parent = Target
 			else
 				warn("Error: ", self.__EarlyCrop, " Was unable to clone")
@@ -142,7 +141,7 @@ function Crop:Plant(Target: Instance, CropName: string): boolean
 				Target:SetAttribute("TimePassed", timePassed)
 			end
 			if self.__MidCrop then
-				UpdateCropModels(Target, CropName, self.__MidCrop)
+				UpdateCropModels(Target, CropName,self.__EarlyCrop, self.__MidCrop)
 			else
 				warn("Error: ", self.__MidCrop, " Was unable to clone")
 				return false
@@ -154,13 +153,13 @@ function Crop:Plant(Target: Instance, CropName: string): boolean
 				Target:SetAttribute("TimePassed", timePassed)
 			end
 			if self.__MidCrop then
-				UpdateCropModels(Target, CropName, self.__FinishedCrop)
+				UpdateCropModels(Target, CropName, self.__MidCrop, self.__FinishedCrop)
 			else
 				warn("Error: ", self.__FinishedCrop, " Was unable to clone")
 				return false
 			end
 
-			CollectionService:RemoveTag("Sowed")
+			CollectionService:RemoveTag(Target, "Sowed")
 			CollectionService:AddTag(Target, "Harvest_Ready")
 			return true
 		end

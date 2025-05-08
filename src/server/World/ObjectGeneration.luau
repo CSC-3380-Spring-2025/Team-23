@@ -1,17 +1,15 @@
 --[[ObjectGeneration - Handles spawning items in terrain]]
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 
-local __SpawnLocation = workspace:FindFirstChild("SpawnLocation")  -- Retrieve SpawnLocation
-local __BasePlate = workspace:FindFirstChild("Baseplate")  -- Retrieve Baseplate
-
+local __BasePlate = workspace:FindFirstChild("Baseplate")
 
 local ObjectGeneration = {}
 Object:Supersedes(ObjectGeneration)
 
 --Constructor where the only parameter is the name of the instance
-function ObjectGeneration.new(Name) 
+function ObjectGeneration.new(Name)
 	local self = Object.new(Name)
-	setmetatable(self, ObjectGeneration)  
+	setmetatable(self, ObjectGeneration)
 	return self
 end
 
@@ -30,21 +28,38 @@ end
 
 --[[
  * IsPartAtPosition - Checks if any part of an object is at a given position, excluding certain objects
- * like the terrain where the item spawns on, the spawn location, and the base plate. This is useful to detect if other items 
+ * like the terrain where the item spawns on and the baseplate. Also checks if item will spawn in any of the player plots. This is useful to detect if other items 
  * like trees or buildings are present at the spawn position.
  * 
  * @position - The position (Vector3) where the check will be performed.
  * @terrain - The terrain (Instance) in which the item will spawn, which will be excluded from the check.
  * 
  * @return - boolean - Returns true if one or more parts are found at the position (excluding terrain, 
- *                     spawn location, and base plate), otherwise returns false.
+ *                     spawn location, and base plate), and if the position is within the area of where a playerplot spawns.Otherwise returns false.
 ]]
 local function IsPartAtPosition(Position: Vector3, Terrain: Instance): boolean
+	local playerPlots: BasePart = workspace.PlotRootParts:GetDescendants()
+	local playerPlotXSize: number = game.ServerStorage.PlayerPlot.PlayerPlotTemplate.Size.X
+	local playerPlotZSize: number = game.ServerStorage.PlayerPlot.PlayerPlotTemplate.Size.Z
+	for _, playerPlot: BasePart in ipairs(playerPlots) do
+		local xUpperBound: number = playerPlot.Position.X + playerPlotXSize / 2
+		local xLowerBound: number = playerPlot.Position.X - playerPlotXSize / 2
+		local zUpperBound: number = playerPlot.Position.Z + playerPlotZSize / 2
+		local zLowerBound: number = playerPlot.Position.Z - playerPlotZSize / 2
+		if
+			Position.X < xUpperBound
+			and Position.Z < zUpperBound
+			and Position.X > xLowerBound
+			and Position.Z > zLowerBound
+		then
+			return true
+		end
+	end
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
-	overlapParams.FilterDescendantsInstances = { Terrain, __SpawnLocation, __BasePlate }
+	overlapParams.FilterDescendantsInstances = { Terrain, __BasePlate }
 
-	local parts = workspace:GetPartBoundsInBox(CFrame.new(Position), Vector3.one * 0.1, overlapParams)
+	local parts = workspace:GetPartBoundsInBox(CFrame.new(Position), Vector3.one * 0.5, overlapParams)
 	return #parts > 0
 end
 
@@ -72,7 +87,7 @@ local function FindValidSpawnHeight(X: number, Z: number, Terrain: Instance): Ve
 		local spawnLocation: Vector3 = ray.Position
 		--if item exists at spawn location, regenerate new spawn location
 		if not IsPartAtPosition(spawnLocation, Terrain) then
-			return ray.Position 
+			return ray.Position
 		end
 	end
 	return nil
@@ -130,7 +145,7 @@ local function SpawnBasePartAtRandom(
 			for attempt = 1, 5 do
 				local x: number = math.random(CenterX - (AreaLength / 2), CenterX + (AreaLength / 2))
 				local z: number = math.random(CenterZ - (AreaWidth / 2), CenterZ + (AreaWidth / 2))
-				local spawnLocation: Vector3 | nil = FindValidSpawnHeight(x, z, Terrain)
+				local spawnLocation: Vector3? = FindValidSpawnHeight(x, z, Terrain)
 				if spawnLocation then
 					local spawnedItem: BasePart = ItemToSpawn:Clone()
 					spawnedItem.Position = spawnLocation
@@ -145,7 +160,6 @@ local function SpawnBasePartAtRandom(
 		end
 	end
 end
-	
 
 --[[
  * SpawnItemAtRandom - Spawns a given item at a random location within a specified area on the terrain floor.
@@ -206,16 +220,7 @@ function ObjectGeneration:SpawnItemAtRandom(
 			return false
 		end
 	elseif ItemToSpawn:IsA("BasePart") then
-		SpawnBasePartAtRandom(
-			CenterX,
-			CenterZ,
-			AreaLength,
-			AreaWidth,
-			ItemToSpawn,
-			Terrain,
-			SpawnDelay,
-			SpawnChance
-		)
+		SpawnBasePartAtRandom(CenterX, CenterZ, AreaLength, AreaWidth, ItemToSpawn, Terrain, SpawnDelay, SpawnChance)
 		return true
 	else
 		warn("Error: ", ItemToSpawn.Name, " needs to be a tool, model, or basepart in order to use SpawnItemAtRandom")
@@ -235,15 +240,14 @@ end
 ]]
 local function IsFarEnough(X: number, Z: number, SpawnPoints: table, MinRadius: number): boolean
 	for _, point in pairs(SpawnPoints) do
-		local dx = point.x - X
-		local dz = point.z - Z
+		local dx: number = point.x - X
+		local dz: number = point.z - Z
 		if math.sqrt(dx * dx + dz * dz) < MinRadius then
 			return false
 		end
 	end
 	return true
 end
-
 
 --[[
  * poisonDiscSampling - Generates spaced-out spawn locations within a given area.
@@ -260,20 +264,26 @@ end
  * Notes:
  * - The minRadius value is set at 6 but could be changed to space out the distance between points even more, although this isnt recommended and may lead to less points being found than intended.
 ]]
-local function PoisonDiscSampling(CenterX: number, CenterZ: number, AreaLength: number, AreaWidth: number, Terrain: Instance, NumOfItems: number): { Vector3 }?
-
-	local minRadius = 6  -- Minimum distance between spawn points
-	local spawnPoints = {} 
-	local maxAttempts = 100
-	local attempts = 0
+local function PoisonDiscSampling(
+	CenterX: number,
+	CenterZ: number,
+	AreaLength: number,
+	AreaWidth: number,
+	Terrain: Instance,
+	NumOfItems: number
+): { Vector3 }?
+	local minRadius: number = 6 -- Minimum distance between spawn points
+	local spawnPoints: {} = {}
+	local maxAttempts: number = 5000
+	local attempts: number = 0
 
 	while #spawnPoints < NumOfItems and attempts < maxAttempts do
 		attempts += 1
-		local randX = CenterX - AreaLength / 2 + math.random() * AreaLength
-		local randZ = CenterZ - AreaWidth / 2 + math.random() * AreaWidth
+		local randX: number = CenterX - AreaLength / 2 + math.random() * AreaLength
+		local randZ: number = CenterZ - AreaWidth / 2 + math.random() * AreaWidth
 
 		if IsFarEnough(randX, randZ, spawnPoints, minRadius) then
-			local spawnPoint = FindValidSpawnHeight(randX, randZ, Terrain)
+			local spawnPoint: Vector3? = FindValidSpawnHeight(randX, randZ, Terrain)
 			if spawnPoint then
 				table.insert(spawnPoints, spawnPoint)
 			end
@@ -281,7 +291,6 @@ local function PoisonDiscSampling(CenterX: number, CenterZ: number, AreaLength: 
 	end
 	return spawnPoints
 end
-
 
 --[[
  * SpawnItemsAtOnce - Spawns a given number of items across a terrain area using procedural generation.
@@ -320,24 +329,28 @@ function ObjectGeneration:SpawnItemsAtOnce(
 	if ItemToSpawn:IsA("Tool") or ItemToSpawn:IsA("Model") then
 		if ItemToSpawn.PrimaryPart then
 			local points: table = PoisonDiscSampling(CenterX, CenterZ, AreaLength, AreaWidth, Terrain, NumOfItems)
-			for _,point in pairs(points) do
+			for _, point in pairs(points) do
 				local spawnedItem: Model | Tool = ItemToSpawn:Clone()
-				spawnedItem:SetPrimaryPartCFrame(CFrame.new(point))
-				spawnedItem.Parent = workspace
+				local itemAngles: CFrame = spawnedItem:GetPrimaryPartCFrame() - spawnedItem.PrimaryPart.Position
+				local spawnedCFrame: CFrame = CFrame.new(point) * itemAngles
+				spawnedItem:SetPrimaryPartCFrame(spawnedCFrame)
+				spawnedItem.PrimaryPart.Anchored = true
+				spawnedItem.Parent = workspace.Terrain
 			end
 		else
 			warn("Error: ", ItemToSpawn.Name, " needs to posses a primary part in order to use SpawnItemsAtOnce")
 			return false
 		end
-		
 	elseif ItemToSpawn:IsA("BasePart") then
-		local points: table = PoisonDiscSampling(CenterX, CenterZ, AreaLength, AreaWidth, Terrain, NumOfItems)
-		for _,point in pairs(points) do
+		local points: {} = PoisonDiscSampling(CenterX, CenterZ, AreaLength, AreaWidth, Terrain, NumOfItems)
+		for _, point in pairs(points) do
 			local spawnedItem: BasePart = ItemToSpawn:Clone()
-			spawnedItem.Position = CFrame.new(point)
-			spawnedItem.Parent = workspace
+			local itemAngles: CFrame = spawnedItem:GetPrimaryPartCFrame() - spawnedItem.PrimaryPart.Position
+			local spawnedCFrame: CFrame = CFrame.new(point) * itemAngles
+			spawnedItem.CFrame = CFrame.new(spawnedCFrame)
+			spawnedItem.Anchored = true
+			spawnedItem.Parent = workspace.Terrain
 		end
-		
 	else
 		warn("Error: ", ItemToSpawn.Name, " needs to be a tool, model, or basepart in order to use SpawnItemsAtOnce")
 		return false

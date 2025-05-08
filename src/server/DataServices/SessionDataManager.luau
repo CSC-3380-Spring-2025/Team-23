@@ -93,6 +93,55 @@ function SessionDataManager:RemovePlayerData(UserID: number): boolean
 end
 
 
+--[[
+	* GetCustomPlayerData - Retrieves a specific subtable from a user's session data.
+	*
+	* @param Key (string) - The subtable name to retrieve. 
+	* Only "Currency", "Base", and "Backpack" are currently supported, but refer to the default player data file to view the structure and immediate children.
+	*
+	* @param UserID (number) - The user ID used to locate the player’s data in the global session data table.
+	*
+	* @return (table | nil) - Returns the requested subtable if it exists for the user,
+	* or nil if the subtable does not exist or the user has no data.
+]]
+function SessionDataManager:GetCustomPlayerData(Key: String, UserID: number): {}?
+	local customPlayerData = nil
+	self.__MutexLock:Lock()
+	if self.__SessionData[UserID][Key] then 
+		customPlayerData = self.__SessionData[UserID][Key]
+	end
+	self.__MutexLock:Unlock()
+	return customPlayerData
+end
+
+--[[
+	* SetCustomPlayerData - Updates only a specific section in a user's session data.
+	*
+	* @param Key (string) - The subtable name to set. 
+	* Only "Currency", "Base", and "Backpack" are currently supported.
+	*
+	* @param Value (table) - The new table to set for the given key. Must not be nil or an empty table.
+	* NOTE: You will not be allowed to set the value of these tables to nothing (nil or empty).
+	*
+	* @param UserID (number) - The user ID used to locate the player’s data in the global session data table.
+	*
+	* @return (boolean) - Returns true if the subtable was successfully updated, or false otherwise
+	*
+]]
+function SessionDataManager:SetCustomPlayerData(Key: String, Value: {}, UserID: number): {}
+	local setSuccsessful = false 
+	self.__MutexLock:Lock()
+	if self.__SessionData[UserID][Key] then 
+		if Value == nil or {} then
+			warn("Setting ", Key, " in data table for ", UserID, "to nil. This action is not allowed")	
+		else
+			self.__SessionData[UserID][Key] = Value
+			setSuccsessful = true
+		end
+	end
+	self.__MutexLock:Unlock()
+	return setSuccsessful
+end
 --Listen for PlayerDataManager to fire 
 __PlayerDataManagerBridge:Connect(function(Player: Player, RequestType: string)
 	if RequestType == "RequestPlayerData" then

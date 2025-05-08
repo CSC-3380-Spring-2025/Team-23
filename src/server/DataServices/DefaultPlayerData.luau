@@ -3,62 +3,62 @@
 local DefaultPlayerData = {}
 
 DefaultPlayerData.data = {
-    Currency = {
-        gold = 0,
-        silver = 0
-    },
-	Base = {
-		house = {},
-		barracks = {},
-		farms = {}
+	Currency = {
+		Gold = 10,
 	},
-    Backpack = {}
+	Base = {
+		{
+			buildingType = "model",
+			CFrame = { 0, 0, 0, 0, 0, 0 },
+			properties = {},
+			attributes = {
+				BuildingTemplate = "HouseLevel1",
+			},
+		},
+	},
+	Backpack = {},
 }
 
 --exists purely to set a players table to hold certain values to test scripts.
-local testTable = {
+DefaultPlayerData.testTable = {
 	Currency = {
-		gold = 0,
-		silver = 0
+		Gold = 69,
 	},
 	Base = {
-		House = {
-			{
-				buildingType = "basePart",
-				buildingName = "houseLevel1",
-				CFrame = {-70.237, 0.093, -66.48, 0, 0, 0},
-				properties = {
-					Color = {165, 32, 154}
-				},
-				attributes = { 
-					health = nil
-				}
-			}
-		},
-		Barracks = {
-			{
-				buildingType = "model",
-				buildingName = "barracksLevel1",
-				CFrame = {-61.635, 0.093, -141.038, -90, 0, 0},
-				properties = {
-					Color = nil
-				},
-				attributes = {
-					health = nil
-				}
+		{
+			buildingType = "model",
+			CFrame = { 0, 0, 0, 0, 0, 0 },
+			properties = {},
+			attributes = {
+				BuildingTemplate = "HouseLevel3",
 			},
-			{
-				buildingType = "model",
-				buildingName = "barracksLevel1",
-				CFrame = {-130.635, 0.093, -141.038, 0, 180, 0}, 
-				properties = {
-					Color = nil
-				},
-				attributes = {
-					health = nil
-				}
-			}
-		}
+		},
+		{
+			buildingType = "model",
+			CFrame = { -81.635, 0, -141.038, 0, 0, 0 },
+			properties = {},
+			attributes = {
+				BuildingTemplate = "BarracksLevel1",
+				health = 69,
+			},
+		},
+		{
+			buildingType = "model",
+			CFrame = { 91.635, 0, -34, 0, 0, 0 },
+			properties = {},
+			attributes = {
+				BuildingTemplate = "RefineryLevel1",
+				health = 69,
+			},
+		},
+		{
+			buildingType = "model",
+			CFrame = { 60.635, 0.093, 32.038, 0, 0, 0 },
+			properties = {},
+			attributes = {
+				BuildingTemplate = "WheatFarmLevel1",
+			},
+		},
 	},
 	Backpack = {}
 }
