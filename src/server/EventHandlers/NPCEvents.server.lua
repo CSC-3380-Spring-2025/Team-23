@@ -7,6 +7,7 @@ local MinerNPCObject = require(ServerScriptService.Server.NPC.ResourceNPC.MinerN
 local NPCHandlerObject = require(ServerScriptService.Server.NPC.NPCHandlers.NPCHandler)
 local StorageHandlerObject = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
 local GoldObject = require(ServerScriptService.Server.Currency.Gold)
+local BackpackHandler = require(ServerScriptService.Server.Player.BackpackHandler)
 local NPCs = ServerScriptService.Server.NPC
 local SwardsmanNPC = require(NPCs.CombatNPC.SwordsmanNPC)
 
@@ -26,6 +27,7 @@ local NPCAttack: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCAttack")
 local NPCSentryMode: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCSentryMode")
 local NPCCollectResource: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCCollectResource")
 local BuyNPCEvent = BridgeNet2.ReferenceBridge("BuyNPC")
+local MerchantPurchase = BridgeNet2.ReferenceBridge("MerchantPurchase")
 
 --Instances
 local storageHandler: ExtType.ObjectInstance = StorageHandlerObject.new("NPCEventsStorageHandler")
@@ -226,4 +228,23 @@ BuyNPCEvent:Connect(function(Player, Args)
 		newSwordsman:AddTag("OverheadUnit")
 		NPCHandler:AddNPCToPlayerPool(newSwordsman, Player.UserId)
 	end
+end)
+
+local function GetAmountOfItem(Player, ItemName)
+    local Contents = BackpackHandler:GetContents(Player)
+	local Amount = 0
+	for i,v in pairs(Contents) do
+		if v.Name == ItemName then
+			Amount += v.Stack
+		end
+	end
+	return Amount
+end
+
+MerchantPurchase:Connect(function(Player, Args)
+	local amount = Args.Amount
+	local price = Args.Price
+	local resource = Args.Resource
+	BackpackHandler:DestroyItem(Player, resource, amount)
+	GoldHandler:ModAmountBy(Player, (price * amount))
 end)
