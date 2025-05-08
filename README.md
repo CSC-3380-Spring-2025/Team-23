@@ -46,7 +46,7 @@ A Roblox account is needed to log in to Roblox Studio.
 
 Once downloaded to your local computer, go to “FILE” on the top left of Roblox Studio -> “Open from file” -> Locate your recently downloaded game within File Explorer  
 
-When the game is fully loaded, go to File->Game Settings->Security and enable all.
+When the game is fully loaded, go to File->Game Settings->Security and enable all. You will have to save the game to Roblox.
 
 Then click the Blue Button to play.
 
