@@ -58,4 +58,14 @@ Not applicable. The entire project is contained within Roblox/Roblox Studio, any
 
 Not applicable. The entire project is contained within Roblox/Roblox Studio and therefore can be played as a game.
 
+#Game Info:
+Items may be sold to the merchant in the middle of the map to the Merchant.
+NPCs may be bought from the NPC Adviser in the same area.
+Press M to open Overhead view.
+Left-click on icons to select.
+Use Shift Right Click on icons to open up a more detailed menu.
+Using Shift, right-click on Ore or an Enemy, with your miner NPCs selected or Swordsman NPCs selected, which will allow for a pop-up menu.
+Right-clicking on the ground with NPCs selected will move them.
+Ctrl Right click will set a linked waypoint.
+
 
