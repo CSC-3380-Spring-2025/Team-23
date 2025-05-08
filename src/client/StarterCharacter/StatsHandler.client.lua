@@ -25,9 +25,16 @@ local bindableEvents: Folder = ReplicatedFirst:WaitForChild("BindableEvents")
 local statBindEvents: Folder = bindableEvents:WaitForChild("Stats") :: Folder
 local FeedPlayerEvent: BindableEvent = statBindEvents:WaitForChild("FeedPlayer") :: BindableEvent
 local HydratePlayerEvent: BindableEvent = statBindEvents:WaitForChild("HydratePlayer") :: BindableEvent
+local SetGoldStat: ExtType.Bridge = BridgeNet2.ReferenceBridge("SetGoldStat")
+local dataEvents: Folder = ReplicatedStorage.Events.DataEvents
+local GetGoldStat: RemoteFunction = dataEvents:WaitForChild("GetGold") :: RemoteFunction
 
 local tasks: {[string]: thread?} = {} --table of executing tasks
 local connections: {[string]: RBXScriptConnection?} = {} --Table of conections
+
+--Set up gold stat
+local initGold: number = GetGoldStat:InvokeServer()
+UIHandler:AdjustMoney(initGold)
 
 local statsConfig: ExtType.StrDict = {
 	--Handles config for stats
@@ -205,4 +212,8 @@ end)
 
 HydratePlayerEvent.Event:Connect(function(HydrationRegen)
 	HydratePlayer(HydrationRegen)
+end)
+
+SetGoldStat:Connect(function(NewGold: number)
+	UIHandler:AdjustMoney(NewGold)
 end)
