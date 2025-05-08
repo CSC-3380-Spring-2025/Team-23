@@ -1,11 +1,15 @@
 --[[
 This class handles what happens for a bandage tool
 --]]
+
 local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local Tool = require(script.Parent.Parent.Tool)
-local Bandage = {}
+
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
+local BackpackHandler = require(game.ServerScriptService.Server.Player.BackpackHandler)
+local Bandage = {}
+
 Tool:Supersedes(Bandage)
 
 --Events
@@ -21,14 +25,19 @@ function Bandage.new(Name: string, PhysTool: Tool) : ExtType.ObjectInstance
     local self = Tool.new(Name, PhysTool)
 	setmetatable(self, Bandage)
     --Instance variable not already defined in the Tool class
+    self.__Connections = {}--Table of all connections for the Tool
+    self.__Tasks = {}--Table of all tasks for a tool
 	return self
 end
 
 --[[
 Defines the behaivore of a bandage when activated
 --]]
-function Tool:Activate() : ()
+function Bandage:Activate() : ()
+
     --fire event to heal player here with the amount to heal
+    HealPlayerEvent:Connect(20)
+    
 end
 
 --[[
@@ -40,7 +49,9 @@ Cleans up the given bandage instance.
     You should cycle through the tables of self.__Tasks and self.__Connections and destroy them
     using their own roblox defined way of doing so like :Disconnect() and task.cancel(thread)
 --]]
-function Tool:DestroyInstance() : ()
+function Bandage:DestroyInstance() : ()
+    BackpackHandler:DestroyItem(Player, "Bandage", 1)
+
     --Clean up self.__Tasks and self.__Connections tables defined from Tool class
 end
 
