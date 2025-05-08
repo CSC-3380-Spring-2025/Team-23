@@ -16,7 +16,6 @@ We are aiming to implement Object Oriented Programming to power the bots, and us
 The game has strategic elements and gives players the ability to switch point of views, control bots, or automate tasks to lessen hassle and improve immersion.
 
 ## Platforms Tested on
-- MacOS
 - Windows 10, 11
 # Important Links
 Kanban Board: https://imperium-studio.atlassian.net/jira/software/projects/ET/boards/2
