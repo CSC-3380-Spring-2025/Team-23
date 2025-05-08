@@ -72,6 +72,7 @@ function CombatNPC.new(
     self.__IsAttacking = false--Indicates if the NPC is attacking
     self.__AggroList = AggroList or {}
     self.__Target = nil --The current target of an NPC
+    CollectionService:AddTag(self.__NPC, "CombatNPC")
     return self
 end
 

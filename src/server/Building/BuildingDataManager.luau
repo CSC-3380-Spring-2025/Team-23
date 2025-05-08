@@ -12,7 +12,6 @@
 --module scripts
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
 local SessionDataManager = require(game.ServerScriptService.Server.DataServices.SessionDataManager)
-local BuildingInProgress = require(game.ServerScriptService.Server.Building.BuildingInProgress)
 --services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -21,7 +20,6 @@ local BuildingDataManager = {}
 Object:Supersedes(BuildingDataManager)
 
 local SessionDataManagerInstance: table = SessionDataManager.new()
-local BuildingInProgressInstance = BuildingInProgress.new("BuildingInProgressInstance")
 
 --Constructor that takes in no parameters
 function BuildingDataManager.new(Name)
@@ -339,12 +337,6 @@ local function LoadModel(PlayerPlot: BasePart, BuildingData: table): boolean
 		end
 	end
 
-	
-	--Check if building is complete or not using constructionParams subtable that lists values of resources used 
-	local constructionParams: string = BuildingData.constructionParams
-	if constructionParams then
-		BuildingInProgressInstance:SetBuildingToConstructionState(newBuilding, constructionParams)
-	end 
 
 	newBuilding.Parent = PlayerPlot.Parent
 	return true

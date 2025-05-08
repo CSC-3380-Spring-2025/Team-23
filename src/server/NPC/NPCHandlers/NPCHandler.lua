@@ -25,6 +25,7 @@ Inserts an NPC instance into the players NPC pool for easy access
     NOT the instance refrence
 --]]
 function NPCHandler:AddNPCToPlayerPool(NPCInstance: any, PlayerID: number) : ()
+	NPCInstance:AddTag("PlayerNPC")
 	local NPCCharacter = NPCInstance.__NPC
 	NPCCharacter:SetAttribute("NPC", true)
 	CollectionService:AddTag(NPCCharacter, "OverheadUnit")

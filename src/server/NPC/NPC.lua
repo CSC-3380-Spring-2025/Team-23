@@ -61,6 +61,7 @@ function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Sp
 	self.__Animations = {} --Loaded animations track
 	--Detect when an NPC dies for object clean up
 	self.__Tasks = {}
+	self.__ActionTasks = {} --Table reserved for all actions that can be canceld by a player
 	if DeathHandler then
 		self.__Humanoid.Died:Once(function()
 			print("Normal NPC died!")
@@ -74,7 +75,17 @@ function NPC.new(Name: string, Rig: Model, Health: number, SpawnPos: Vector3, Sp
 	self.__Humanoid.Died:Connect(function()
 		hasDiedEvent:Fire(self) --Let everyone know that this NPC has died for those listening
 	end)
+	--Reserve NPC with npc tag
+	CollectionService:AddTag(self.__NPC, "NPC")
 	return self
+end
+
+function NPC:CancelActionTasks()
+	for _, thread in pairs(self.__ActionTasks) do
+		if thread then
+			task.cancel(thread)
+		end
+	end
 end
 
 --[[
@@ -293,6 +304,7 @@ function NPC:TraverseWaypoints(): ()
 		self.__Waypoints = {}
 		self.__PathFindingTask = nil
 	end)
+	self.__ActionTasks["PathFinding"] =self.__PathFindingTask--Save to be canceld by player
 end
 
 --[[
@@ -345,6 +357,11 @@ function NPC:ReturnHome()
 	end
 end
 
+local function CalculateSpacingPos(CurrentObjPos, Self)
+	local direction = (CurrentObjPos - Self.__RootPart.Position).Unit
+	return CurrentObjPos - (direction * 3) --Stop 3 studs from enemy to prevent overlap
+end
+
 --[[
 Helper function for taversing the waypoints set during follow
     @param Self (instance) instance of the class
@@ -352,7 +369,8 @@ Helper function for taversing the waypoints set during follow
 --]]
 local function TraverseFollowPoints(Self: any, CurrentObjPos: Vector3): ()
 	Self.__Waypoints = {} --Reset waypoints
-	local success: boolean = PrepWaypoint(Self.__RootPart.Position, CurrentObjPos, Self, true)
+	local followPos = CalculateSpacingPos(CurrentObjPos, Self)
+	local success: boolean = PrepWaypoint(Self.__RootPart.Position, followPos, Self, true)
 	--If valid path start following player
 	if success then
 		--Traverse waypoints in each set of waypoints
@@ -403,6 +421,7 @@ function NPC:Follow(Object: BasePart): ()
 	self.__PathFindingTask = task.spawn(function()
 		FollowLoop(self, Object)
 	end)
+	self.__ActionTasks["PathFinding"] = self.__PathFindingTask--Save to be canceld by player
 end
 
 --[[

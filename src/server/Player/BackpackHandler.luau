@@ -40,6 +40,31 @@ local ItemUtil : {} = require(game.ReplicatedStorage.Shared.Items.ItemsUtils)
 @Param Amount (Number): How many of these items should be in the created stack.
 @Return CreatedItems (Table): Returns a table with all of the created item objects.
 ]]
+
+GetContents:Connect(function(Player : Player) : {}
+	if not Backpacks[Player] then
+		BackpackHandler:CreateBackpack(Player)
+	end
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
+end)
+EquipItem:Connect(function(Player : Player, EquippedItems : {any}) : {}
+	if not Backpacks[Player] then
+		BackpackHandler:CreateBackpack(Player)
+	end
+	Backpacks[Player]["ToolbarItems"] = EquippedItems
+end)
+
+function BackpackHandler:GetAmountOfItem(Player : Player, ItemName : string) : number
+	local Contents = BackpackHandler:GetContents(Player)
+	local Amount = 0
+	for i,v in pairs(Contents) do
+		if v.Name == ItemName then
+			Amount += v.Stack
+		end
+	end
+	return Amount
+end
+
 function BackpackHandler:CreateItem(ItemName : string, Amount : number) : table
 	if not ItemUtil:GetItemInfo(ItemName) then 
 		print("Item doesn't exist!") 
@@ -72,6 +97,7 @@ function BackpackHandler:CreateItem(ItemName : string, Amount : number) : table
 				["Name"] = Item.ItemName;
 				["Stack"] = Item.ItemStack;
 				["Type"] = Item.ItemType;
+				["ToolID"] = game:GetService("HttpService"):GenerateGUID()
 			}
 			table.insert(CreatedItems, Stack)
 		else
@@ -79,6 +105,7 @@ function BackpackHandler:CreateItem(ItemName : string, Amount : number) : table
 				["Name"] = Item.ItemName;
 				["Stack"] = TotalInLastStack;
 				["Type"] = Item.ItemType;
+				["ToolID"] = game:GetService("HttpService"):GenerateGUID()
 			}
 			table.insert(CreatedItems, Stack)
 		end
@@ -127,6 +154,7 @@ function BackpackHandler:CreateTool(Player : Player, ToolName : string, Amount :
 				["Name"] = Tool.ItemName;
 				["Stack"] = Tool.ItemStack;
 				["Type"] = Tool.ItemType;
+				["IsTool"] = true;
 			}
 			table.insert(CreatedTools, Stack)
 		else
@@ -134,6 +162,7 @@ function BackpackHandler:CreateTool(Player : Player, ToolName : string, Amount :
 				["Name"] = Tool.ItemName;
 				["Stack"] = TotalInLastStack;
 				["Type"] = Tool.ItemType;
+				["IsTool"] = true;
 			}
 			table.insert(CreatedTools, Stack)
 		end
@@ -220,7 +249,7 @@ end
 @Param Stack (Number): How many items should be added to the player's backpack.
 @Param ItemData (Any): Instead of creating a new item, the function will use this for all calculations. Used for things like existing items being picked up.
 ]]
-function BackpackHandler:AddItemToBackPack(Player : Player, ItemName:string, Stack : number,  ItemData : any) : ()
+function BackpackHandler:AddItemToBackPack(Player : Player, ItemName:string, Stack : number,  ItemData : any) : boolean
 	if not ItemData then
 		ItemData = BackpackHandler:CreateItem(ItemName, Stack)
 	end
@@ -232,7 +261,7 @@ function BackpackHandler:AddItemToBackPack(Player : Player, ItemName:string, Sta
 	if TargetBackpack["TotalItems"] + Stack > TargetBackpack["Size"] then
 		print("Not enough space in the backpack!")
 		ItemData = nil -- Delete the reference so garbage collection cleans it up
-		return
+		return false
 	end
 	local AddedWeight : number = ItemUtil:GetItemInfo(ItemName).ItemWeight * Stack
 	for i,v in pairs(ItemData) do
@@ -243,6 +272,8 @@ function BackpackHandler:AddItemToBackPack(Player : Player, ItemName:string, Sta
 	BackpackHandler:CalculateCurrentWeight(Player, AddedWeight)
 	TargetBackpack.Weight += AddedWeight
 	TargetBackpack.TotalItems += Stack 
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
+	return true
 end
 
 --[[
@@ -254,7 +285,7 @@ end
 @Param Durability (Number): What durability should the tool have.
 @Param Effectiveness (Number): What level is this tool (1-3).
 ]]
-function BackpackHandler:AddToolToBackPack(Player : Player, ItemName:string, Stack : number,  ItemData : any, Durability : number, Effectiveness : number) : ()
+function BackpackHandler:AddToolToBackPack(Player : Player, ItemName:string, Stack : number,  ItemData : any, Durability : number, Effectiveness : number) : boolean
 	if not ItemData then
 		ItemData = BackpackHandler:CreateTool(Player, ItemName, Stack, Durability, Effectiveness)
 	end
@@ -266,7 +297,7 @@ function BackpackHandler:AddToolToBackPack(Player : Player, ItemName:string, Sta
 	if TargetBackpack["TotalItems"] + Stack > TargetBackpack["Size"] then
 		print("Not enough space in the backpack!")
 		ItemData = nil -- Delete the reference so garbage collection cleans it up
-		return
+		return false
 	end
 	local AddedWeight : number = 0
 	for i,v in pairs(ItemData) do
@@ -274,11 +305,18 @@ function BackpackHandler:AddToolToBackPack(Player : Player, ItemName:string, Sta
 		table.insert(TargetBackpack["Contents"], v)
 		print(v)
 		print("Inserted ".. v.Name.. " at stack " .. v.Stack .. " with weight ".. ItemUtil:GetItemInfo(ItemName).ItemWeight)
-		table.insert(TargetBackpack["UseableItems"], v)
 	end
+	
 	BackpackHandler:CalculateCurrentWeight(Player, AddedWeight)
 	TargetBackpack.Weight += AddedWeight
 	TargetBackpack.TotalItems += Stack 
+	local Tool : Tool = game.ReplicatedStorage.ItemDrops:FindFirstChild(ItemName)
+	if Tool then
+		local Clone : Tool = Tool:Clone()
+		Clone.Parent = Player.Backpack
+	end
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
+	return true
 end
 
 --[[
@@ -344,6 +382,7 @@ function BackpackHandler:DropItem(Player:Player, ItemName : string, DropAmount :
 		end
 	end
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
 end
 
 --[[
@@ -375,6 +414,7 @@ function BackpackHandler:DestroyItem(Player:Player, ItemName : string, DestroyAm
 		end
 	end
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
 end
 
 --[[
@@ -391,6 +431,10 @@ function BackpackHandler:DropTool(Player:Player, ToolID : number) : ()
 	for c,v in pairs(TargetBackpack["Contents"]) do
 		--TODO: Get models and put a function here to interact with them and drop items
 		if v.ToolID and  v.ToolID == ToolID then
+			local Tool : Tool = Player.Backpack:FindFirstChild(v.Name)
+			if Tool then
+				Tool:Destroy()
+			end
 			v.Stack -= 1
 			TargetBackpack["Weight"] -= ItemUtil:GetItemInfo(v.Name).ItemWeight
 			TargetBackpack["TotalItems"] -= 1
@@ -398,13 +442,14 @@ function BackpackHandler:DropTool(Player:Player, ToolID : number) : ()
 			v.Weight = ItemUtil:GetItemInfo(v.Name).ItemWeight * v.Stack
 			if v.Stack <= 0 then
 				table.remove(TargetBackpack["Contents"], c)
-				table.remove(TargetBackpack["UsableItems"], c)
 				table.remove(TargetBackpack["ToolbarItems"], c)
 			end
 			break
 		end
 	end
+	
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
 end
 
 --[[
@@ -421,8 +466,11 @@ function BackpackHandler:DestroyTool(Player:Player, ToolID : number) : ()
 	for c,v in pairs(TargetBackpack["Contents"]) do
 		--TODO: Get models and put a function here to interact with them and drop items
 		if v.ID and  v.ID == ToolID then
+			local Tool : Tool = Player.Backpack:FindFirstChild(v.Name)
+			if Tool then
+				Tool:Destroy()
+			end
 			table.remove(TargetBackpack["Contents"], c)
-			table.remove(TargetBackpack["UseableItems"], c)
 			table.remove(TargetBackpack["ToolbarItems"], c)
 			TargetBackpack["Weight"] -= ItemUtil:GetItemInfo(v.Name).ItemWeight
 			TargetBackpack["TotalItems"] -= 1
@@ -432,6 +480,7 @@ function BackpackHandler:DestroyTool(Player:Player, ToolID : number) : ()
 		end
 	end
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
 end
 
 --[[
@@ -446,16 +495,24 @@ end
 @Param Player (Player): The player who will have their backpack created.
 @Param Size (Number): The size of the created backpack.
 ]]
-function BackpackHandler:CreateBackpack(Player : Player, Size : number) : ()
+function BackpackHandler:CreateBackpack(Player : Player, Size : number, Contents : {any}, ToolbarItems : {any}) : ()
 	if not Backpacks[Player] then
 		Backpacks[Player] = {
 			["Size"] = Size or BackpackSize;
 			["Weight"] = 0;
 			["TotalItems"] = 0;
-			["Contents"] = {};
-			["UseableItems"] = {};
-			["ToolbarItems"] = {};
+			["Contents"] = (Contents ~= nil and Contents) or {};
+			["ToolbarItems"] = (ToolbarItems ~= nil and ToolbarItems) or {};
 		}
+		for i,v in pairs(Backpacks[Player]["Contents"]) do
+			if v["ToolID"] then
+				local Tool : Tool = game.ReplicatedStorage.ItemDrops:FindFirstChild(v["Name"])
+				if Tool then
+					local Clone : Tool = Tool:Clone()
+					Clone.Parent = Player.Backpack
+				end
+			end
+		end
 	end
 end
 
@@ -479,6 +536,8 @@ function BackpackHandler:TestItems() : ()
 		print(BackpackHandler:GetTotalItems(v))
 		print(BackpackHandler:GetContents(v))
 		print(BackpackHandler:GetBackpackWeight(v))
+		local ret = BackpackHandler:GetAmountOfItem(v, "Coal")
+		print("Amount: ".. ret)
 		BackpackHandler:DropItem(v, "Coal", 50)
 		print(BackpackHandler:IsFull(v))
 		print(BackpackHandler:GetTotalItems(v))

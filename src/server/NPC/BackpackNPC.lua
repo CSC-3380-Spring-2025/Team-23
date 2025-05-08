@@ -408,6 +408,8 @@ function BackpackNPC.new(
 	if DeathHandler then
 		HandleDeath(self)
 	end
+	self.__AssignedStorage = nil--The storage designated for this resource NPC during AutoCollect
+	self.__AssignedStoragePos = nil--The Vector3 of the position of where the assigned storage is at
 	return self
 end
 
@@ -967,13 +969,21 @@ This function can be used to empty all items whitelsited by the storage device y
 	that a storage can take and dumps as much as possible into it.
 	@param StorageDevice (Instance) any instance used as a storage device
 --]]
-function BackpackNPC:EmptyInventoryToStorage(StorageDevice: Instance) : ()
+function BackpackNPC:EmptyInventoryToStorage(StorageDevice: Instance | number) : ()
 	local contents: {string}? = self:SeekBackpackContents()
 	if not contents then
 		--backpack empty
 		return
 	end
-	local storDesc: number = storageHandler:FindStorageByInstance(StorageDevice) 
+	local storDesc: number
+	if type(StorageDevice) == "number" then
+		if not storageHandler:ValidDescriptor(StorageDevice) then
+			return
+		end
+		storDesc = StorageDevice
+	else
+		storDesc = storageHandler:FindStorageByInstance(StorageDevice) 
+	end
 	if storDesc == -1 then
 		return--No such storage device
 	end
@@ -994,6 +1004,49 @@ function BackpackNPC:EmptyInventoryToStorage(StorageDevice: Instance) : ()
 			TransferItem(itemName, maxStore, storDesc, self)
 		end
 	end
+end
+
+local function GetStoragePos(StorageDescriptor)
+	local instance = storageHandler:GetInstanceFromDescriptor(StorageDescriptor)
+	if instance:IsA("Model") then
+		return instance:FindFirstChild("NPCPoint").Position
+	else
+		return instance.Position
+	end
+end
+
+--[[
+Assigns a given storage device to an NPC for automation
+--]]
+function BackpackNPC:AssignStorage(StorageDevice: number | Instance)
+	--Find storage device and assign its storage descriptor to the NPC
+	if type(StorageDevice) == "number" then
+		--Is the storage descriptor directly
+		self.__AssignedStorage = StorageDevice
+		self.__AssignedStoragePos = GetStoragePos(StorageDevice)
+		self:SetHomePoint(self.__AssignedStoragePos)--Set home point as storage location
+	else
+		--Is the instance so need to find the descriptor
+		local storageDescriptor = storageHandler:FindStorageByInstance(StorageDevice)
+		if storageDescriptor ~= -1 then
+			self.__AssignedStorage = storageDescriptor
+			self.__AssignedStoragePos = GetStoragePos(storageDescriptor)
+			self:SetHomePoint(self.__AssignedStoragePos)--Set home point as storage location
+		else
+			warn("Attempt to AssignStorage but storage device is not valid")
+		end
+	end
+end
+
+--[[
+Exactly like EmptyInventoryToStorage but the NPC gos to the storage first
+--]]
+function BackpackNPC:TraverseEmptyToStorage() : ()
+	self:ReturnHome()
+	while self:IsTraversing() do
+		task.wait(2)
+	end
+	self:EmptyInventoryToStorage(self.__AssignedStorage)
 end
 
 --[[
