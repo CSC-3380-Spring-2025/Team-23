@@ -58,7 +58,7 @@ Not applicable. The entire project is contained within Roblox/Roblox Studio, any
 
 Not applicable. The entire project is contained within Roblox/Roblox Studio and therefore can be played as a game.
 
-#Game Info:
+## Game Info
 Items may be sold to the merchant in the middle of the map to the Merchant.
 NPCs may be bought from the NPC Adviser in the same area.
 Press M to open Overhead view.
