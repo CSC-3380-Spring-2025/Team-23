@@ -4,8 +4,6 @@ local __PlaceBuildingBridge = BridgeNet2.ReferenceBridge("PlaceBuilding")
 local SpendResourcesToBuild = require(game.ServerScriptService.Server.Building.SpendResourcesToBuild)
 local PlaceBuildingRemoteFunction = ReplicatedStorage:FindFirstChild("PlaceBuildingRemoteFunction")
 local SpendResourcesToBuildInstance = SpendResourcesToBuild.new("SpendResourcesToBuildInstance")
-local BuildingInProgress = require(game.ServerScriptService.Server.Building.BuildingInProgress)
-local BuildingInProgressInstance = BuildingInProgress.new("BuildingInProgressInstance")
 
 --Recieve From client PlaceBuilding class to check if biulding schematic can be placed andp places it if it can.
 PlaceBuildingRemoteFunction.OnServerInvoke = function(player: Player, args: {})
@@ -18,7 +16,6 @@ PlaceBuildingRemoteFunction.OnServerInvoke = function(player: Player, args: {})
 	local building = ReplicatedStorage.Buildings:FindFirstChild(buildingName, true):Clone()
 	if not SpendResourcesToBuildInstance:AttemptToBuild(player, building) then return false end
 	--send to class that will turn it to a building in progress
-	BuildingInProgressInstance:SetBuildingToConstructionState(building, {})
 	if building:IsA("Model") then
 		building:SetPrimaryPartCFrame(CFrame.new(placementPosition))
 		building.Parent = parentFolder
