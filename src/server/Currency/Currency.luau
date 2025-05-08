@@ -79,15 +79,11 @@ function Currency:ModAmountBy(Player:Player, Value: number, NameOfCurrency: stri
 	local table = SessionDataManagerInstance:GetPlayerData(Player.UserId)
 	if table then
 		local currencyAmount: number = table.Currency[NameOfCurrency] 
-		if Value > 0 then
-			currencyAmount = currencyAmount + Value
-		elseif currencyAmount > Value then
-			currencyAmount = currencyAmount - Value
+		local newAmount = currencyAmount + Value
+		if newAmount <= 0 then
+			newAmount = 0
 		end
-		if 
-			currencyAmount < 0 then currencyAmount=0 
-		end
-	table.Currency[NameOfCurrency] = currencyAmount
+	table.Currency[NameOfCurrency] = newAmount
 	SessionDataManagerInstance:SetPlayerData(Player.UserId, table)
 	end
 end

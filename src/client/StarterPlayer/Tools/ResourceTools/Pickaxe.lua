@@ -8,8 +8,12 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local ResourceTool = require(script.Parent.ResourceTool)
+local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
 local Pickaxe = {}
 ResourceTool:Supersedes(Pickaxe)
+
+--Events
+local HandleAxeStrikeEvent: ExtType.Bridge = BridgeNet2.ReferenceBridge("GiveOre")
 
 --[[
 Constructor for a pick axe instance
@@ -132,6 +136,11 @@ local function GiveResource(Target: BasePart)
 		return
 	end
 	--Put item in players backpack here
+	local args = {
+		Amount = count,
+		Ore = ore
+	}
+	HandleAxeStrikeEvent:Fire(args)
 end
 
 --[[

@@ -41,9 +41,6 @@ DefaultPlayerData.testTable = {
 				BuildingTemplate = "BarracksLevel1",
 				health = 69,
 			},
-			constructionParams = {
-				Wheat = 12
-			}
 		},
 		{
 			buildingType = "model",

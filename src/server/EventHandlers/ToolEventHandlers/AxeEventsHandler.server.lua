@@ -1,8 +1,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService: ServerScriptService = game:GetService("ServerScriptService")
 local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 local Debris = game:GetService("Debris")
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
+local BackpackHandler = require(ServerScriptService.Server.Player.BackpackHandler)
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
 
 --Events
@@ -594,6 +596,7 @@ local function SpawnLumberResource(SpawnPos: Vector3, Count: number) : ()
     prompt.Triggered:Connect(function(Player: Player)
         --Handle all possible rewards
         --Give player lumber here
+        BackpackHandler:AddItemToBackPack(Player, "Lumber", 20)
         print("Gave player lumber in amount of: " .. Count)
         lumberDropClone:Destroy()--Remove chest after finished
     end)

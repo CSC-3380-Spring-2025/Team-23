@@ -79,15 +79,7 @@ end
 @Param Amount (Number): The amount of money that should be displayed.
 ]]
 function UIHandler:AdjustMoney(Amount: number): ()
-	local NumberValue: NumberValue = Instance.new("NumberValue")
-	local Tween: Tween = TS:Create(NumberValue, TweenInfo.new(0.4), { Value = Amount })
-
-	NumberValue:GetPropertyChangedSignal("Value"):Connect(function()
-		self.__UI.Bars.Money.Text = math.round(NumberValue.Value)
-	end)
-	Tween:Play()
-	task.wait(0.4)
-	NumberValue:Destroy()
+	Player.PlayerGui:WaitForChild("PlayerUI").Bars.Money.Text = math.round(Amount)
 end
 --[[
 @Description: A quick testing function that will run random commands on the UI to ensure that all bars and displays move as intended.
