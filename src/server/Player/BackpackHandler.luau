@@ -1,4 +1,4 @@
---[[  
+-[[  
  * THIS CLASS INHERITS FROM CLASS: OBJECT
  * This Class is designed in a nonstandard way and can simply be required and all its functions accessed without calling a constructor.
  * BackpackHandler - Superclass of all item and tool classes.  
@@ -40,6 +40,19 @@ local ItemUtil : {} = require(game.ReplicatedStorage.Shared.Items.ItemsUtils)
 @Param Amount (Number): How many of these items should be in the created stack.
 @Return CreatedItems (Table): Returns a table with all of the created item objects.
 ]]
+
+GetContents:Connect(function(Player : Player) : {}
+	if not Backpacks[Player] then
+		BackpackHandler:CreateBackpack(Player)
+	end
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
+end)
+EquipItem:Connect(function(Player : Player, EquippedItems : {any}) : {}
+	if not Backpacks[Player] then
+		BackpackHandler:CreateBackpack(Player)
+	end
+	Backpacks[Player]["ToolbarItems"] = EquippedItems
+end)
 function BackpackHandler:CreateItem(ItemName : string, Amount : number) : table
 	if not ItemUtil:GetItemInfo(ItemName) then 
 		print("Item doesn't exist!") 
@@ -72,6 +85,7 @@ function BackpackHandler:CreateItem(ItemName : string, Amount : number) : table
 				["Name"] = Item.ItemName;
 				["Stack"] = Item.ItemStack;
 				["Type"] = Item.ItemType;
+				["ToolID"] = game:GetService("HttpService"):GenerateGUID()
 			}
 			table.insert(CreatedItems, Stack)
 		else
@@ -79,6 +93,7 @@ function BackpackHandler:CreateItem(ItemName : string, Amount : number) : table
 				["Name"] = Item.ItemName;
 				["Stack"] = TotalInLastStack;
 				["Type"] = Item.ItemType;
+				["ToolID"] = game:GetService("HttpService"):GenerateGUID()
 			}
 			table.insert(CreatedItems, Stack)
 		end
@@ -127,6 +142,7 @@ function BackpackHandler:CreateTool(Player : Player, ToolName : string, Amount :
 				["Name"] = Tool.ItemName;
 				["Stack"] = Tool.ItemStack;
 				["Type"] = Tool.ItemType;
+				["IsTool"] = true;
 			}
 			table.insert(CreatedTools, Stack)
 		else
@@ -134,6 +150,7 @@ function BackpackHandler:CreateTool(Player : Player, ToolName : string, Amount :
 				["Name"] = Tool.ItemName;
 				["Stack"] = TotalInLastStack;
 				["Type"] = Tool.ItemType;
+				["IsTool"] = true;
 			}
 			table.insert(CreatedTools, Stack)
 		end
@@ -243,6 +260,7 @@ function BackpackHandler:AddItemToBackPack(Player : Player, ItemName:string, Sta
 	BackpackHandler:CalculateCurrentWeight(Player, AddedWeight)
 	TargetBackpack.Weight += AddedWeight
 	TargetBackpack.TotalItems += Stack 
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
 end
 
 --[[
@@ -274,11 +292,13 @@ function BackpackHandler:AddToolToBackPack(Player : Player, ItemName:string, Sta
 		table.insert(TargetBackpack["Contents"], v)
 		print(v)
 		print("Inserted ".. v.Name.. " at stack " .. v.Stack .. " with weight ".. ItemUtil:GetItemInfo(ItemName).ItemWeight)
-		table.insert(TargetBackpack["UseableItems"], v)
 	end
+	
 	BackpackHandler:CalculateCurrentWeight(Player, AddedWeight)
 	TargetBackpack.Weight += AddedWeight
 	TargetBackpack.TotalItems += Stack 
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
+
 end
 
 --[[
@@ -344,6 +364,7 @@ function BackpackHandler:DropItem(Player:Player, ItemName : string, DropAmount :
 		end
 	end
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
 end
 
 --[[
@@ -375,6 +396,7 @@ function BackpackHandler:DestroyItem(Player:Player, ItemName : string, DestroyAm
 		end
 	end
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
 end
 
 --[[
@@ -398,13 +420,13 @@ function BackpackHandler:DropTool(Player:Player, ToolID : number) : ()
 			v.Weight = ItemUtil:GetItemInfo(v.Name).ItemWeight * v.Stack
 			if v.Stack <= 0 then
 				table.remove(TargetBackpack["Contents"], c)
-				table.remove(TargetBackpack["UsableItems"], c)
 				table.remove(TargetBackpack["ToolbarItems"], c)
 			end
 			break
 		end
 	end
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
 end
 
 --[[
@@ -422,7 +444,6 @@ function BackpackHandler:DestroyTool(Player:Player, ToolID : number) : ()
 		--TODO: Get models and put a function here to interact with them and drop items
 		if v.ID and  v.ID == ToolID then
 			table.remove(TargetBackpack["Contents"], c)
-			table.remove(TargetBackpack["UseableItems"], c)
 			table.remove(TargetBackpack["ToolbarItems"], c)
 			TargetBackpack["Weight"] -= ItemUtil:GetItemInfo(v.Name).ItemWeight
 			TargetBackpack["TotalItems"] -= 1
@@ -432,6 +453,7 @@ function BackpackHandler:DestroyTool(Player:Player, ToolID : number) : ()
 		end
 	end
 	BackpackHandler:CalculateCurrentWeight(Player, 0)
+	GetContents:Fire(BridgeNet2.Players({Player}), Backpacks[Player])
 end
 
 --[[
@@ -446,16 +468,42 @@ end
 @Param Player (Player): The player who will have their backpack created.
 @Param Size (Number): The size of the created backpack.
 ]]
-function BackpackHandler:CreateBackpack(Player : Player, Size : number) : ()
+function BackpackHandler:CreateBackpack(Player : Player, Size : number, Contents : {any}, ToolbarItems : {any}) : ()
 	if not Backpacks[Player] then
 		Backpacks[Player] = {
 			["Size"] = Size or BackpackSize;
 			["Weight"] = 0;
 			["TotalItems"] = 0;
-			["Contents"] = {};
-			["UseableItems"] = {};
-			["ToolbarItems"] = {};
+			["Contents"] = (Contents ~= nil and Contents) or {
+				{
+				["Name"] = "Coal";
+				["Stack"] = 50;
+				["Type"] = "Ore";
+			};
+				{
+					["Name"] = "Pickaxe";
+					["Stack"] = 1;
+					["Type"] = "Tool";
+					["ToolID"] = "425epowtps[dgk34pt[ks[dfpkm"
+				};
+				{
+					["Name"] = "Axe";
+					["Stack"] = 1;
+					["Type"] = "Tool";
+					["ToolID"] = "345346erfg"
+				}
+			};
+			["ToolbarItems"] = (ToolbarItems ~= nil and ToolbarItems) or {};
 		}
+		for i,v in pairs(Backpacks[Player]["Contents"]) do
+			if v["ToolID"] then
+				local Tool : Tool = game.ReplicatedStorage.ItemDrops:FindFirstChild(v["Name"])
+				if Tool then
+					local Clone : Tool = Tool:Clone()
+					Clone.Parent = Player.Backpack
+				end
+			end
+		end
 	end
 end
 
