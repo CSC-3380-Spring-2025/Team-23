@@ -6,13 +6,11 @@ This includes mouse-based placement, keyboard/touchscreen controls, and raycasti
 
 --module scripts
 local Object = require(game.ReplicatedStorage.Shared.Utilities.Object.Object)
-local BridgeNet2 = require(game.ReplicatedStorage.BridgeNet2)
 
 --services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local __PlaceBuildingBridge = BridgeNet2.ReferenceBridge("PlaceBuilding")
-local PlaceBuildingRemoteFunction : RemoteFunction =  ReplicatedStorage.Shared.Buildings:FindFirstChild("PlaceBuildingRemoteFunction")
+local PlaceBuildingRemoteFunction : RemoteFunction =  ReplicatedStorage:FindFirstChild("PlaceBuildingRemoteFunction")
 
 
 

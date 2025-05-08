@@ -33,14 +33,14 @@ end
 ]]
 function SpendResourcesToBuild:AttemptToBuild(Player: Player, BuildingToBuild: Instance): boolean
 	local buildingToBuildName: string = BuildingToBuild.Name
-	local buildingCost: {} = BuildingRequirments:GetGoldFromName(buildingToBuildName)
+	local buildingCost: number = BuildingRequirments:GetGoldFromName(buildingToBuildName)
 	if ReplicatedStorage.Buildings:FindFirstChild(buildingToBuildName, true) and buildingCost then
 		local data = SessionDataManagerInstance:GetPlayerData(Player.UserId)
 		if not data then return false end
-		local playerGoldCount = data.Currency.Gold
-		local goldCost = buildingCost.Gold
+		local playerGoldCount = data.Currency.gold
+		local goldCost = buildingCost
 		if goldCost <= playerGoldCount then 
-			data.Currency.Gold -= goldCost
+			data.Currency.gold -= goldCost
 			return SessionDataManagerInstance:SetPlayerData(Player.UserId, data)
 		else
 			return false

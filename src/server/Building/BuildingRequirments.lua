@@ -57,12 +57,12 @@ local __Costs = {
 	},
 	House = {
 		HouseLevel1 = {
-			Gold = 10,
+			Gold = 5,
 			CostToBuild = {
 				Wood = 20,
 			},
 			GiveFromSell = {
-				Gold = 5,
+				Gold = 1,
 			},
 		},
 		HouseLevel2 = {
@@ -114,6 +114,17 @@ local __Costs = {
 			GiveFromSell = {
 				Gold = 10,
 				Coal = 5,
+			},
+		},
+	},
+	NPCs = {
+		NPCAdviserLevel1 = {
+			Gold = 10,
+			CostToBuild = {
+				Iron = 1,
+			},
+			GiveFromSell = {
+				Gold = 4,
 			},
 		},
 	},
