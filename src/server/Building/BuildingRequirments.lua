@@ -38,7 +38,7 @@ local __Costs = {
 		WheatFarmLevel1 = {
 			Gold = 5,
 			CostToBuild = {
-				Wood = 5,
+				Lumber = 5,
 			},
 			GiveFromSell = {
 				Gold = 2,
@@ -59,7 +59,7 @@ local __Costs = {
 		HouseLevel1 = {
 			Gold = 10,
 			CostToBuild = {
-				Wood = 20,
+				Lumber = 20,
 			},
 			GiveFromSell = {
 				Gold = 5,
@@ -96,7 +96,7 @@ local __Costs = {
 		CoalMineLevel1 = {
 			Gold = 20,
 			CostToBuild = {
-				Wood = 12,
+				Lumber = 12,
 			},
 			GiveFromSell = {
 				Gold = 3,
