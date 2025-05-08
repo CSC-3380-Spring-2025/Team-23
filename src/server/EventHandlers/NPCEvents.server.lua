@@ -3,10 +3,13 @@ local ServerStorage: ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ExtType = require(ReplicatedStorage.Shared.ExtType)
 local BridgeNet2 = require(ReplicatedStorage.BridgeNet2)
-local BuyMinerEvent: ExtType.Bridge = BridgeNet2.ReferenceBridge("BuyMiner")
 local MinerNPCObject = require(ServerScriptService.Server.NPC.ResourceNPC.MinerNPC)
 local NPCHandlerObject = require(ServerScriptService.Server.NPC.NPCHandlers.NPCHandler)
 local StorageHandlerObject = require(ServerScriptService.Server.ItemHandlers.StorageHandler)
+local GoldObject = require(ServerScriptService.Server.Currency.Gold)
+local BackpackHandler = require(ServerScriptService.Server.Player.BackpackHandler)
+local NPCs = ServerScriptService.Server.NPC
+local SwardsmanNPC = require(NPCs.CombatNPC.SwordsmanNPC)
 
 --Events
 local NPCEvents: Folder = ReplicatedStorage.Events.NPCEvents
@@ -23,46 +26,21 @@ local NPCEmptyToStorage: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCEmptyTo
 local NPCAttack: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCAttack")
 local NPCSentryMode: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCSentryMode")
 local NPCCollectResource: ExtType.Bridge = BridgeNet2.ReferenceBridge("NPCCollectResource")
+local BuyNPCEvent = BridgeNet2.ReferenceBridge("BuyNPC")
+local MerchantPurchase = BridgeNet2.ReferenceBridge("MerchantPurchase")
 
 --Instances
 local storageHandler: ExtType.ObjectInstance = StorageHandlerObject.new("NPCEventsStorageHandler")
 local NPCHandler: ExtType.ObjectInstance = NPCHandlerObject.new("NPCHandlerEvents")
+local GoldHandler: ExtType.ObjectInstance = GoldObject.new("NPCEvents")
 
 --Rigs
 local rigs: Folder = ServerStorage.NPC.Rigs
-local minerNPCRig: Model = rigs.MinerNPC
-
-
-BuyMinerEvent:Connect(function(Player: Player, Args: ExtType.StrDict)
-	local playerID = Player.UserId
-	--Attempt to remove money to "purchase"
-	--Make NPC and add it to the NPC Pool
-	local nameNPC: string = Player.Name .. "'s Miner"
-    local spawnPos: Vector3 = Vector3.new(0, 10, 0)
-	local newMiner: ExtType.ObjectInstance = MinerNPCObject.new(
-		nameNPC,
-		minerNPCRig,
-		100,
-		spawnPos,
-		16,
-		10,
-		100,
-		70,
-		100,
-		Args.ItemWhitelist,
-		nil,
-		nil,
-		{"Coal", "Iron"},
-		true,
-		nil
-	)
-    --Store NPC to players pool
-    NPCHandler:AddNPCToPlayerPool(newMiner, playerID)
-end)
+local minerNPCRig: Model = rigs.DefaultNPC
 
 NPCSetwaypoint:Connect(function(Player: Player, Args: ExtType.StrDict)
 	local NPCharacter: Model = Args.Character
-	local waypoint: Vector3 =  Args.Waypoint
+	local waypoint: Vector3 = Args.Waypoint
 	local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
 	NPCInstance:SetWaypoint(waypoint)
 end)
@@ -72,11 +50,9 @@ NPCTraverseWaypoints:Connect(function(Player: Player, NPCharacter: Model)
 	NPCInstance:TraverseWaypoints()
 end)
 
-
-
 TraverseNPCs:Connect(function(Player: Player, Args: ExtType.StrDict)
-	local NPCs: {Model} = Args.NPCs
-	local waypoints: {Vector3} = Args.Waypoints
+	local NPCs: { Model } = Args.NPCs
+	local waypoints: { Vector3 } = Args.Waypoints
 	local realNPCs: ExtType.ObjectInstance = {}
 	for _, character in pairs(NPCs) do
 		table.insert(realNPCs, NPCHandler:GetPlayerNPCByCharacter(character, Player.UserId))
@@ -101,7 +77,7 @@ end)
 Event that handles handles a reqst for a MinerNPC to harvest an Ore
 --]]
 MinerNPCsCollect:Connect(function(Player, Args)
-	local minerNPCs: {Model} = Args.MinerNPCs
+	local minerNPCs: { Model } = Args.MinerNPCs
 	local resourceTarget: BasePart = Args.Resource
 	local realNPCs: ExtType.ObjectInstance = {}
 	for _, character in pairs(minerNPCs) do
@@ -132,22 +108,22 @@ end)
 Returns a number key dictionary where the key is the storageDescriptor and the value is its whitelisted storage instance
 	@return ({[number]: Instance}?) the dictionary on success or nil otherwise
 --]]
-GetWhitelistedStorage.OnServerInvoke =  function(Player: Player, NPCharacter) :  {[number]: Instance}?
+GetWhitelistedStorage.OnServerInvoke = function(Player: Player, NPCharacter): { [number]: Instance }?
 	local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPCharacter, Player.UserId)
-	local resourceWhitelist: {string} = NPCInstance:GetResourceWhitelist()
+	local resourceWhitelist: { string } = NPCInstance:GetResourceWhitelist()
 	if resourceWhitelist == nil then
-		return nil--No whitelist set
+		return nil --No whitelist set
 	end
-	local playersStorage: {number}? = storageHandler:GetPlayersStorageDevices(Player.UserId)
+	local playersStorage: { number }? = storageHandler:GetPlayersStorageDevices(Player.UserId)
 	if playersStorage == nil then
-		return nil--No storage found for player
+		return nil --No storage found for player
 	end
 	--Loop through all storage and check if any of the NPCs whitelisted items are valid
-	local validStorages: {number} = {}
+	local validStorages: { number } = {}
 	for _, descriptor in pairs(playersStorage) do
 		for _, listedName in pairs(resourceWhitelist) do
 			if storageHandler:IsValidItem(descriptor, listedName) then
-				 table.insert(validStorages, descriptor)--Valid storage to set for NPC
+				table.insert(validStorages, descriptor) --Valid storage to set for NPC
 			end
 		end
 	end
@@ -158,7 +134,7 @@ GetWhitelistedStorage.OnServerInvoke =  function(Player: Player, NPCharacter) : 
 	end
 
 	--Loop through descriptors and get their instances to return
-	local storageInstancesDict: {[number]: Instance} = {}
+	local storageInstancesDict: { [number]: Instance } = {}
 	for _, descriptor in pairs(validStorages) do
 		local storageInstance: Instance = storageHandler:GetInstanceFromDescriptor(descriptor) :: Instance
 		storageInstancesDict[descriptor] = storageInstance
@@ -213,4 +189,62 @@ NPCCollectResource:Connect(function(Player: Player, Args: ExtType.StrDict)
 		local NPCInstance: ExtType.ObjectInstance = NPCHandler:GetPlayerNPCByCharacter(NPC, Player.UserId)
 		NPCInstance:HarvestResource(resourceObject)
 	end
+end)
+
+BuyNPCEvent:Connect(function(Player, Args)
+	local price: number = Args.Price
+	local NPC: string = Args.NPCName
+	local spawnPos = Args.SpawnPos
+	GoldHandler:ModAmountBy(Player, (-1 * price))
+	if NPC == "MinerNPC" then
+		local minerNPC = MinerNPCObject.new(
+			"Miner",
+			minerNPCRig,
+			100,
+			spawnPos,
+			16,
+			10,
+			100,
+			70,
+			100,
+			{ "Coal", "Iron", "Pickaxe", "Bread", "Water" },
+			nil,
+			nil,
+			{ "Coal" },
+			true
+		)
+		minerNPC:SetAttribute("AttachTo", "Head")
+		minerNPC:SetAttribute("NPC", true)
+		minerNPC:SetAttribute("Owner", Player.Name)
+		minerNPC:SetAttribute("Type", "Pickaxe")
+		minerNPC:AddTag("OverheadUnit")
+		NPCHandler:AddNPCToPlayerPool(minerNPC, Player.UserId)
+	elseif NPC == "SwordsmanNPC" then
+		local newSwordsman = SwardsmanNPC.new("Swordsman", minerNPCRig, 100, spawnPos, 16, 10, 100, 70, 100)
+		newSwordsman:SetAttribute("AttachTo", "Head")
+		newSwordsman:SetAttribute("NPC", true)
+		newSwordsman:SetAttribute("Owner", Player.Name)
+		newSwordsman:SetAttribute("Type", "Sword")
+		newSwordsman:AddTag("OverheadUnit")
+		NPCHandler:AddNPCToPlayerPool(newSwordsman, Player.UserId)
+	end
+end)
+
+local function GetAmountOfItem(Player, ItemName)
+    local Contents = BackpackHandler:GetContents(Player)
+	local Amount = 0
+	for i,v in pairs(Contents) do
+		if v.Name == ItemName then
+			Amount += v.Stack
+		end
+	end
+	return Amount
+end
+
+MerchantPurchase:Connect(function(Player, Args)
+	local amount = Args.Amount
+	local price = Args.Price
+	local resource = Args.Resource
+	BackpackHandler:DestroyItem(Player, resource, amount)
+	GoldHandler:ModAmountBy(Player, (price * amount))
 end)
